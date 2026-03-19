@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { searchAccounts } from '@/app/actions/accounts';
+import { useState, useEffect } from 'react';
 import { createContact } from '@/app/actions/contacts';
 import {
   Dialog,
@@ -12,13 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { AccountCombobox } from '@/components/account-combobox';
 import { toast } from 'sonner';
-import { Check } from 'lucide-react';
 
 interface QuickAddContactProps {
   open: boolean;
@@ -43,37 +37,12 @@ export function QuickAddContact({
   const [titleRole, setTitleRole] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Typeahead
-  const [accountSearch, setAccountSearch] = useState('');
-  const [accountResults, setAccountResults] = useState<{ id: string; display_name: string; type: string }[]>([]);
-  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
-
-  const searchAccountsDebounced = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setAccountResults([]);
-      return;
-    }
-    const results = await searchAccounts(q);
-    setAccountResults(results);
-    setShowAccountDropdown(true);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (accountSearch && !accountId) {
-        searchAccountsDebounced(accountSearch);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [accountSearch, accountId, searchAccountsDebounced]);
-
   // Reset on close
   useEffect(() => {
     if (open) {
       setName('');
       setAccountId(defaultAccountId ?? '');
       setAccountName(defaultAccountName ?? '');
-      setAccountSearch('');
       setPhone('');
       setEmail('');
       setTitleRole('');
@@ -128,38 +97,14 @@ export function QuickAddContact({
             {defaultAccountId ? (
               <Input value={accountName} disabled />
             ) : (
-              <Popover open={showAccountDropdown} onOpenChange={setShowAccountDropdown}>
-                <PopoverTrigger asChild>
-                  <Input
-                    value={accountId ? accountName : accountSearch}
-                    onChange={(e) => {
-                      setAccountSearch(e.target.value);
-                      setAccountId('');
-                      setAccountName('');
-                    }}
-                    placeholder="Search accounts..."
-                  />
-                </PopoverTrigger>
-                {accountResults.length > 0 && (
-                  <PopoverContent className="p-1 w-[var(--radix-popover-trigger-width)]" align="start">
-                    {accountResults.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-muted"
-                        onClick={() => {
-                          setAccountId(a.id);
-                          setAccountName(a.display_name);
-                          setShowAccountDropdown(false);
-                        }}
-                      >
-                        <span>{a.display_name}</span>
-                        {a.id === accountId && <Check className="h-4 w-4" />}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                )}
-              </Popover>
+              <AccountCombobox
+                accountId={accountId}
+                accountName={accountName}
+                onSelect={(id, n) => {
+                  setAccountId(id);
+                  setAccountName(n);
+                }}
+              />
             )}
           </div>
 

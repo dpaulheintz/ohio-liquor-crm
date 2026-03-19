@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/accounts/[id]/page.tsx\")",
+      "Bash(ls -la \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/\")",
+      "Bash(grep -E \"\\\\.tsx?$\")",
+      "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/admin/page.tsx\")",
+      "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/admin/approvals/page.tsx\")",
+      "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/visits/visit-card.tsx\")",
+      "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/admin/unmatched/page.tsx\")",
+      "Bash(rm -rf .next)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

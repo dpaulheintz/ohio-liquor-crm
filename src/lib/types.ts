@@ -29,6 +29,10 @@ export interface Account {
   state: string | null;
   zip: string | null;
   phone: string | null;
+  delivery_day: string | null;
+  warehouse: string | null;
+  linked_agency_name: string | null;
+  linked_agency_id: string | null;
   owner_rep_id: string | null;
   needs_review: boolean;
   created_at: string;
@@ -53,12 +57,16 @@ export interface Contact {
   account?: Account;
 }
 
+export const KPI_OPTIONS = ['Display', 'Menu', 'Feature', 'Event'] as const;
+export type KpiType = typeof KPI_OPTIONS[number];
+
 export interface VisitLog {
   id: string;
   account_id: string;
   rep_id: string;
   visited_at: string;
   notes: string | null;
+  kpi: string | null;
   created_at: string;
   // Joined
   account?: Account;

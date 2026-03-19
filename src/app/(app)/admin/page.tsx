@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getRepActivity } from '@/app/actions/visits';
-import { getUploadBatches } from '@/app/actions/csv-upload';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   BarChart3,
-  Upload,
+  FileUp,
   Users,
-  AlertCircle,
   ClipboardCheck,
   MapPin,
 } from 'lucide-react';
@@ -32,18 +30,13 @@ interface RepStats {
 
 export default function AdminDashboard() {
   const [repStats, setRepStats] = useState<RepStats[]>([]);
-  const [batchCount, setBatchCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [stats, batches] = await Promise.all([
-        getRepActivity(),
-        getUploadBatches(),
-      ]);
+      const stats = await getRepActivity();
       setRepStats(stats);
-      setBatchCount(batches.length);
     } catch (err) {
       console.error('Dashboard load failed:', err);
     } finally {
@@ -70,7 +63,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold">{totalVisitsWeek}</p>
@@ -87,12 +80,6 @@ export default function AdminDashboard() {
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold">{repStats.length}</p>
                 <p className="text-xs text-muted-foreground">Active Reps</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold">{batchCount}</p>
-                <p className="text-xs text-muted-foreground">Data Uploads</p>
               </CardContent>
             </Card>
           </div>
@@ -151,19 +138,11 @@ export default function AdminDashboard() {
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Quick Actions</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Link href="/admin/upload">
+              <Link href="/admin/import">
                 <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <Upload className="h-6 w-6 text-primary" />
-                    <span className="text-sm font-medium">Upload CSV</span>
-                  </CardContent>
-                </Card>
-              </Link>
-              <Link href="/admin/unmatched">
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                  <CardContent className="p-4 flex flex-col items-center gap-2">
-                    <AlertCircle className="h-6 w-6 text-orange-500" />
-                    <span className="text-sm font-medium">Unmatched</span>
+                    <FileUp className="h-6 w-6 text-primary" />
+                    <span className="text-sm font-medium">Import Agencies</span>
                   </CardContent>
                 </Card>
               </Link>
@@ -172,6 +151,14 @@ export default function AdminDashboard() {
                   <CardContent className="p-4 flex flex-col items-center gap-2">
                     <ClipboardCheck className="h-6 w-6 text-blue-500" />
                     <span className="text-sm font-medium">Approvals</span>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/admin/kpi">
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+                  <CardContent className="p-4 flex flex-col items-center gap-2">
+                    <BarChart3 className="h-6 w-6 text-orange-500" />
+                    <span className="text-sm font-medium">KPI Report</span>
                   </CardContent>
                 </Card>
               </Link>

@@ -8,8 +8,8 @@ import {
   Users,
   Shield,
   LogOut,
-  Upload,
-  AlertCircle,
+  FileUp,
+  BarChart3,
   ClipboardCheck,
   UserCog,
 } from 'lucide-react';
@@ -27,9 +27,9 @@ const navItems = [
 
 const adminItems = [
   { href: '/admin', label: 'Dashboard', icon: Shield },
-  { href: '/admin/upload', label: 'Upload CSV', icon: Upload },
-  { href: '/admin/unmatched', label: 'Unmatched', icon: AlertCircle },
+  { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
+  { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: UserCog },
 ];
 

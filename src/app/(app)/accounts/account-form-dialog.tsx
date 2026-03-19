@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+const DELIVERY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 interface AccountFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,6 +37,7 @@ export function AccountFormDialog({
   account,
 }: AccountFormDialogProps) {
   const [type, setType] = useState<string>(account?.type || 'agency');
+  const [deliveryDay, setDeliveryDay] = useState<string>(account?.delivery_day || '');
   const [loading, setLoading] = useState(false);
   const isEditing = !!account;
 
@@ -45,6 +48,7 @@ export function AccountFormDialog({
     try {
       const formData = new FormData(e.currentTarget);
       formData.set('type', type);
+      formData.set('delivery_day', deliveryDay);
 
       if (isEditing) {
         await updateAccount(account.id, formData);
@@ -85,7 +89,9 @@ export function AccountFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="display_name">Display Name *</Label>
+            <Label htmlFor="display_name">
+              {type === 'wholesale' ? 'Name *' : 'Display Name *'}
+            </Label>
             <Input
               id="display_name"
               name="display_name"
@@ -94,86 +100,164 @@ export function AccountFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="legal_name">Legal Name</Label>
-            <Input
-              id="legal_name"
-              name="legal_name"
-              defaultValue={account?.legal_name ?? ''}
-            />
-          </div>
-
           {type === 'agency' && (
-            <div className="space-y-2">
-              <Label htmlFor="agency_id">Agency ID</Label>
-              <Input
-                id="agency_id"
-                name="agency_id"
-                defaultValue={account?.agency_id ?? ''}
-                placeholder="State-assigned ID"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="agency_id">Agency ID *</Label>
+                <Input
+                  id="agency_id"
+                  name="agency_id"
+                  required
+                  defaultValue={account?.agency_id ?? ''}
+                  placeholder="State-assigned ID"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Delivery Day</Label>
+                  <Select value={deliveryDay} onValueChange={setDeliveryDay}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DELIVERY_DAYS.map((day) => (
+                        <SelectItem key={day} value={day}>{day}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warehouse">Warehouse</Label>
+                  <Input
+                    id="warehouse"
+                    name="warehouse"
+                    defaultValue={account?.warehouse ?? ''}
+                    placeholder="e.g., GPT"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  defaultValue={account?.address ?? ''}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    defaultValue={account?.city ?? ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zip">ZIP</Label>
+                  <Input
+                    id="zip"
+                    name="zip"
+                    defaultValue={account?.zip ?? ''}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  defaultValue={account?.phone ?? ''}
+                />
+              </div>
+            </>
           )}
 
           {type === 'wholesale' && (
-            <div className="space-y-2">
-              <Label htmlFor="permit_number">Permit Number</Label>
-              <Input
-                id="permit_number"
-                name="permit_number"
-                defaultValue={account?.permit_number ?? ''}
-                placeholder="State-assigned permit"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="permit_number">Permit Number</Label>
+                <Input
+                  id="permit_number"
+                  name="permit_number"
+                  defaultValue={account?.permit_number ?? ''}
+                  placeholder="State-assigned permit"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="linked_agency_name">Agency Name</Label>
+                <Input
+                  id="linked_agency_name"
+                  name="linked_agency_name"
+                  defaultValue={account?.linked_agency_name ?? ''}
+                  placeholder="Parent agency name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="linked_agency_id">Agency ID</Label>
+                <Input
+                  id="linked_agency_id"
+                  name="linked_agency_id"
+                  defaultValue={account?.linked_agency_id ?? ''}
+                  placeholder="Parent agency ID"
+                />
+              </div>
+
+              {/* Optional fields for wholesale */}
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  defaultValue={account?.address ?? ''}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    name="city"
+                    defaultValue={account?.city ?? ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zip">ZIP</Label>
+                  <Input
+                    id="zip"
+                    name="zip"
+                    defaultValue={account?.zip ?? ''}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    defaultValue={account?.phone ?? ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="district">District</Label>
+                  <Input
+                    id="district"
+                    name="district"
+                    defaultValue={account?.district ?? ''}
+                  />
+                </div>
+              </div>
+            </>
           )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="district">District</Label>
-              <Input
-                id="district"
-                name="district"
-                defaultValue={account?.district ?? ''}
-                placeholder="e.g., GPT"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={account?.phone ?? ''}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              name="address"
-              defaultValue={account?.address ?? ''}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                defaultValue={account?.city ?? ''}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zip">ZIP</Label>
-              <Input
-                id="zip"
-                name="zip"
-                defaultValue={account?.zip ?? ''}
-              />
-            </div>
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getPendingApprovalAccounts } from '@/app/actions/csv-upload';
+import { getPendingApprovalAccounts } from '@/app/actions/accounts';
 import { approveAccount } from '@/app/actions/accounts';
 import { Account } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';

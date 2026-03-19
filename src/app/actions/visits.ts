@@ -55,11 +55,13 @@ export async function getVisitsByAccount(accountId: string) {
 export async function createVisit({
   accountId,
   notes,
+  kpi,
   visitedAt,
   photoUrls,
 }: {
   accountId: string;
   notes?: string;
+  kpi?: string;
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
@@ -77,6 +79,7 @@ export async function createVisit({
       account_id: accountId,
       rep_id: user.id,
       notes: notes || null,
+      kpi: kpi || null,
       visited_at: visitedAt || new Date().toISOString(),
     })
     .select()

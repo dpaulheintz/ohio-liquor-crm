@@ -2,6 +2,7 @@
 
 import { VisitLog, Profile, Account, VisitPhoto } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -51,11 +52,18 @@ export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
                   </>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                {formatDistanceToNow(new Date(visit.visited_at), {
-                  addSuffix: true,
-                })}
-              </span>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                {visit.kpi && (
+                  <Badge variant="outline" className="text-xs">
+                    {visit.kpi}
+                  </Badge>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(visit.visited_at), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </div>
             </div>
 
             {/* Notes */}

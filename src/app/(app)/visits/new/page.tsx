@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { searchAccounts } from '@/app/actions/accounts';
 import { createVisit } from '@/app/actions/visits';
 import { createClient } from '@/lib/supabase/client';
 import imageCompression from 'browser-image-compression';
@@ -12,11 +11,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { ArrowLeft, Camera, X, Check } from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AccountCombobox } from '@/components/account-combobox';
+import { KPI_OPTIONS } from '@/lib/types';
+import { ArrowLeft, Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PhotoItem {
@@ -40,14 +43,10 @@ function NewVisitForm() {
 
   const [accountId, setAccountId] = useState(presetAccountId ?? '');
   const [accountName, setAccountName] = useState('');
-  const [accountSearch, setAccountSearch] = useState('');
-  const [accountResults, setAccountResults] = useState<
-    { id: string; display_name: string }[]
-  >([]);
-  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [notes, setNotes] = useState('');
+  const [kpi, setKpi] = useState('');
   const [visitedAt, setVisitedAt] = useState(
     new Date().toISOString().slice(0, 16)
   );
@@ -67,26 +66,6 @@ function NewVisitForm() {
         });
     }
   }, [presetAccountId]);
-
-  // Account typeahead
-  const searchAccountsDebounced = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setAccountResults([]);
-      return;
-    }
-    const results = await searchAccounts(q);
-    setAccountResults(results);
-    setShowAccountDropdown(true);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (accountSearch && !accountId) {
-        searchAccountsDebounced(accountSearch);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [accountSearch, accountId, searchAccountsDebounced]);
 
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -168,6 +147,7 @@ function NewVisitForm() {
       await createVisit({
         accountId,
         notes: notes || undefined,
+        kpi: kpi || undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -201,44 +181,14 @@ function NewVisitForm() {
               {presetAccountId ? (
                 <Input value={accountName} disabled />
               ) : (
-                <Popover
-                  open={showAccountDropdown}
-                  onOpenChange={setShowAccountDropdown}
-                >
-                  <PopoverTrigger asChild>
-                    <Input
-                      value={accountId ? accountName : accountSearch}
-                      onChange={(e) => {
-                        setAccountSearch(e.target.value);
-                        setAccountId('');
-                        setAccountName('');
-                      }}
-                      placeholder="Search accounts..."
-                    />
-                  </PopoverTrigger>
-                  {accountResults.length > 0 && (
-                    <PopoverContent
-                      className="p-1 w-[var(--radix-popover-trigger-width)]"
-                      align="start"
-                    >
-                      {accountResults.map((a) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          className="flex w-full items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-muted"
-                          onClick={() => {
-                            setAccountId(a.id);
-                            setAccountName(a.display_name);
-                            setShowAccountDropdown(false);
-                          }}
-                        >
-                          <span>{a.display_name}</span>
-                          {a.id === accountId && <Check className="h-4 w-4" />}
-                        </button>
-                      ))}
-                    </PopoverContent>
-                  )}
-                </Popover>
+                <AccountCombobox
+                  accountId={accountId}
+                  accountName={accountName}
+                  onSelect={(id, name) => {
+                    setAccountId(id);
+                    setAccountName(name);
+                  }}
+                />
               )}
             </div>
 
@@ -295,6 +245,23 @@ function NewVisitForm() {
                 placeholder="Visit notes..."
                 rows={3}
               />
+            </div>
+
+            {/* KPI */}
+            <div className="space-y-1.5">
+              <Label>KPI</Label>
+              <Select value={kpi} onValueChange={setKpi}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select KPI (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {KPI_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Date/Time */}

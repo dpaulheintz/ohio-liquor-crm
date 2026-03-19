@@ -150,6 +150,18 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
             {account.permit_number && (
               <span className="text-muted-foreground">Permit: <strong>{account.permit_number}</strong></span>
             )}
+            {account.delivery_day && (
+              <span className="text-muted-foreground">Delivery: <strong>{account.delivery_day}</strong></span>
+            )}
+            {account.warehouse && (
+              <span className="text-muted-foreground">Warehouse: <strong>{account.warehouse}</strong></span>
+            )}
+            {account.linked_agency_name && (
+              <span className="text-muted-foreground">Agency: <strong>{account.linked_agency_name}</strong></span>
+            )}
+            {account.linked_agency_id && (
+              <span className="text-muted-foreground">Agency ID: <strong>{account.linked_agency_id}</strong></span>
+            )}
           </div>
 
           {(account.address || account.city) && (
@@ -204,9 +216,6 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           </TabsTrigger>
           <TabsTrigger value="visits" className="flex-1">
             Visits ({visits.length})
-          </TabsTrigger>
-          <TabsTrigger value="sales" className="flex-1" disabled>
-            Sales (Phase 2)
           </TabsTrigger>
         </TabsList>
 
@@ -265,11 +274,6 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           )}
         </TabsContent>
 
-        <TabsContent value="sales" className="mt-4">
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            Sales data visualization coming in Phase 2
-          </p>
-        </TabsContent>
       </Tabs>
 
       <AccountFormDialog

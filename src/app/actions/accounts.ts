@@ -114,6 +114,10 @@ export async function createAccount(formData: FormData) {
     city: (formData.get('city') as string) || null,
     zip: (formData.get('zip') as string) || null,
     phone: (formData.get('phone') as string) || null,
+    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || null : null,
+    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || null : null,
+    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || null : null,
+    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || null : null,
   };
 
   const { data, error } = await supabase
@@ -142,6 +146,10 @@ export async function updateAccount(id: string, formData: FormData) {
     city: (formData.get('city') as string) || null,
     zip: (formData.get('zip') as string) || null,
     phone: (formData.get('phone') as string) || null,
+    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || null : null,
+    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || null : null,
+    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || null : null,
+    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || null : null,
   };
 
   const { error } = await supabase
@@ -229,5 +237,18 @@ export async function searchAccounts(query: string) {
     .ilike('display_name', `%${query}%`)
     .limit(10);
 
+  return data ?? [];
+}
+
+export async function getPendingApprovalAccounts() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('*')
+    .eq('needs_review', true)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
   return data ?? [];
 }
