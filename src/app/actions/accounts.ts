@@ -298,7 +298,7 @@ export async function searchAccounts(query: string) {
 
   let q = supabase
     .from('accounts')
-    .select('id, display_name, type, district, city');
+    .select('id, display_name, type, district, city, agency_id');
 
   for (const rawTerm of terms) {
     const term = sanitizeFilterValue(rawTerm);

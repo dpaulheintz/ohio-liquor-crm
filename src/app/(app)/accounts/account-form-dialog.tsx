@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createAccount, updateAccount } from '@/app/actions/accounts';
+import { createContact } from '@/app/actions/contacts';
 import { Account } from '@/lib/types';
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -41,6 +43,12 @@ export function AccountFormDialog({
   const [loading, setLoading] = useState(false);
   const isEditing = !!account;
 
+  // Optional contact fields (only for new accounts)
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactTitle, setContactTitle] = useState('');
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -54,7 +62,19 @@ export function AccountFormDialog({
         await updateAccount(account.id, formData);
         toast.success('Account updated');
       } else {
-        await createAccount(formData);
+        const newAccount = await createAccount(formData);
+
+        // Create contact if a name was provided
+        if (contactName.trim()) {
+          await createContact({
+            name: contactName.trim(),
+            account_id: newAccount.id,
+            phone: contactPhone || undefined,
+            email: contactEmail || undefined,
+            title_role: contactTitle || undefined,
+          });
+        }
+
         toast.success('Account created');
       }
       onOpenChange(false);
@@ -255,6 +275,52 @@ export function AccountFormDialog({
                     defaultValue={account?.district ?? ''}
                   />
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* Optional contact (new accounts only) */}
+          {!isEditing && (
+            <>
+              <Separator />
+              <p className="text-sm font-medium text-muted-foreground">Add a Contact (optional)</p>
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contact Name</Label>
+                <Input
+                  id="contact_name"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_phone">Phone</Label>
+                  <Input
+                    id="contact_phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    type="tel"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Email</Label>
+                  <Input
+                    id="contact_email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    type="email"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact_title_role">Title / Role</Label>
+                <Input
+                  id="contact_title_role"
+                  value={contactTitle}
+                  onChange={(e) => setContactTitle(e.target.value)}
+                  placeholder="e.g., Store Manager"
+                />
               </div>
             </>
           )}

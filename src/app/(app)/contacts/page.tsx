@@ -65,7 +65,7 @@ export default function ContactsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name, phone, email, or role..."
+          placeholder="Search by name, phone, email, role, or account..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="pl-9"
@@ -102,6 +102,9 @@ export default function ContactsPage() {
                         className="hover:underline text-primary"
                       >
                         {acct.display_name}
+                        {(acct as { city?: string | null }).city && (
+                          <span className="text-muted-foreground"> — {(acct as { city?: string | null }).city}</span>
+                        )}
                       </Link>
                     )}
                   </div>
