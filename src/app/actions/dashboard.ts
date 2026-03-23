@@ -184,25 +184,19 @@ export async function getDashboardData(): Promise<DashboardData> {
     .sort((a, b) => b.visitsThisMonth - a.visitsThisMonth);
 
   // --- Recent Activity ---
-  interface JoinedVisit {
-    id: string;
-    visited_at: string;
-    notes: string | null;
-    kpi: string | null;
-    rep: { id: string; full_name: string | null; email: string } | null;
-    account: { id: string; display_name: string } | null;
-  }
-
-  const recentActivity = (recentVisits as JoinedVisit[]).map((v) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recentActivity = recentVisits.map((v: any) => {
+    const rep = v.rep;
+    const account = v.account;
     return {
       id: v.id,
       visitedAt: v.visited_at,
       notes: v.notes,
       kpi: v.kpi,
-      repName: v.rep?.full_name ?? null,
-      repEmail: v.rep?.email ?? '',
-      accountId: v.account?.id ?? '',
-      accountName: v.account?.display_name ?? 'Unknown',
+      repName: rep?.full_name ?? null,
+      repEmail: rep?.email ?? '',
+      accountId: account?.id ?? '',
+      accountName: account?.display_name ?? 'Unknown',
     };
   });
 
