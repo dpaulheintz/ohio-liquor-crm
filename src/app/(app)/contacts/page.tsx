@@ -65,7 +65,7 @@ export default function ContactsPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name..."
+          placeholder="Search by name, phone, email, or role..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="pl-9"
@@ -86,7 +86,7 @@ export default function ContactsPage() {
       ) : (
         <div className="space-y-2">
           {contacts.map((contact) => {
-            const acct = contact.account as unknown as Pick<Account, 'id' | 'display_name' | 'type'> | null;
+            const acct = contact.account;
             return (
               <div
                 key={contact.id}

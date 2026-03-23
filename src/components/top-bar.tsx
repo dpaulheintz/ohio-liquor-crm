@@ -10,10 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
+import Link from 'next/link';
 
 export function TopBar() {
-  const { profile } = useUser();
+  const { profile, isAdmin } = useUser();
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -28,7 +29,18 @@ export function TopBar() {
       <h1 className="text-lg font-bold md:hidden">High Bank CRM</h1>
       <div className="hidden md:block" />
 
-      <DropdownMenu>
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Shield className="h-4 w-4" />
+            <span className="hidden sm:inline">Admin Dashboard</span>
+          </Link>
+        )}
+
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full md:hidden">
             <Avatar className="h-8 w-8">
@@ -46,6 +58,7 @@ export function TopBar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }

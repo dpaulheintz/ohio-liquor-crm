@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 export async function getContacts({
   search,
@@ -21,7 +22,10 @@ export async function getContacts({
     });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%`);
+    const sanitized = search.replace(/[,()]/g, '');
+    query = query.or(
+      `name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%,title_role.ilike.%${sanitized}%`
+    );
   }
 
   const from = (page - 1) * pageSize;
@@ -61,6 +65,16 @@ export async function getContactsByAccount(accountId: string) {
   return data ?? [];
 }
 
+const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(300),
+  account_id: z.string().uuid('Invalid account ID'),
+  phone: z.string().max(50).optional(),
+  email: z.string().email('Invalid email').max(300).optional().or(z.literal('')),
+  title_role: z.string().max(200).optional(),
+});
+
+const contactUpdateSchema = contactSchema.omit('account_id');
+
 export async function createContact(formData: {
   name: string;
   account_id: string;
@@ -68,16 +82,17 @@ export async function createContact(formData: {
   email?: string;
   title_role?: string;
 }) {
+  const parsed = contactSchema.parse(formData);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('contacts')
     .insert({
-      name: formData.name,
-      account_id: formData.account_id,
-      phone: formData.phone || null,
-      email: formData.email || null,
-      title_role: formData.title_role || null,
+      name: parsed.name,
+      account_id: parsed.account_id,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      title_role: parsed.title_role || null,
     })
     .select()
     .single();
@@ -85,7 +100,7 @@ export async function createContact(formData: {
   if (error) throw error;
 
   revalidatePath('/contacts');
-  revalidatePath(`/accounts/${formData.account_id}`);
+  revalidatePath(`/accounts/${parsed.account_id}`);
   return data;
 }
 
@@ -98,15 +113,16 @@ export async function updateContact(
     title_role?: string;
   }
 ) {
+  const parsed = contactUpdateSchema.parse(formData);
   const supabase = await createClient();
 
   const { error } = await supabase
     .from('contacts')
     .update({
-      name: formData.name,
-      phone: formData.phone || null,
-      email: formData.email || null,
-      title_role: formData.title_role || null,
+      name: parsed.name,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      title_role: parsed.title_role || null,
     })
     .eq('id', id);
 

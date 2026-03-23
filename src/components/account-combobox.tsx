@@ -21,7 +21,7 @@ export function AccountCombobox({
   placeholder = 'Search accounts...',
 }: AccountComboboxProps) {
   const [search, setSearch] = useState('');
-  const [results, setResults] = useState<{ id: string; display_name: string }[]>([]);
+  const [results, setResults] = useState<{ id: string; display_name: string; city?: string | null; district?: string | null }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +86,14 @@ export function AccountCombobox({
                 setSearch('');
               }}
             >
-              <span>{a.display_name}</span>
+              <span>
+                {a.display_name}
+                {(a.city || a.district) && (
+                  <span className="ml-1 text-muted-foreground">
+                    — {[a.city, a.district].filter(Boolean).join(', ')}
+                  </span>
+                )}
+              </span>
               {a.id === accountId && <Check className="h-4 w-4" />}
             </button>
           ))}

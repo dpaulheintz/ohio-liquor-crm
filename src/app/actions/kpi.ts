@@ -24,7 +24,9 @@ export async function getKpiSummary({
     query = query.gte('visited_at', startDate);
   }
   if (endDate) {
-    query = query.lte('visited_at', endDate);
+    // If only a date was provided (no time component), include the full day
+    const endValue = endDate.length === 10 ? `${endDate}T23:59:59.999Z` : endDate;
+    query = query.lte('visited_at', endValue);
   }
   if (repId) {
     query = query.eq('rep_id', repId);

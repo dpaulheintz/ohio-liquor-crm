@@ -2,6 +2,22 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+// Sanitize search terms for PostgREST .or() filter syntax
+function sanitizeFilterValue(value: string): string {
+  return value.replace(/[,()]/g, '');
+}
+
+const SEARCHABLE_FIELDS = [
+  'display_name',
+  'agency_id',
+  'permit_number',
+  'city',
+  'legal_name',
+  'address',
+  'warehouse',
+];
 
 export async function getAccounts({
   search,
@@ -28,6 +44,18 @@ export async function getAccounts({
 } = {}) {
   const supabase = await createClient();
 
+  // If neverVisited filter is on, get visited account IDs first so the DB
+  // handles filtering and pagination stays correct.
+  let visitedAccountIds: string[] | null = null;
+  if (neverVisited) {
+    const { data: visitedData } = await supabase
+      .from('visit_logs')
+      .select('account_id');
+    visitedAccountIds = [
+      ...new Set(visitedData?.map((v) => v.account_id) ?? []),
+    ];
+  }
+
   let query = supabase
     .from('accounts')
     .select(
@@ -35,10 +63,18 @@ export async function getAccounts({
       { count: 'exact' }
     );
 
+  // Multi-term search: split input into words, each word must match at least
+  // one searchable field. Multiple .or() calls are ANDed together.
   if (search) {
-    query = query.or(
-      `display_name.ilike.%${search}%,agency_id.ilike.%${search}%,permit_number.ilike.%${search}%`
-    );
+    const terms = search.trim().split(/\s+/).filter(Boolean);
+    for (const rawTerm of terms) {
+      const term = sanitizeFilterValue(rawTerm);
+      if (!term) continue;
+      const orClause = SEARCHABLE_FIELDS.map(
+        (field) => `${field}.ilike.%${term}%`
+      ).join(',');
+      query = query.or(orClause);
+    }
   }
 
   if (type) {
@@ -57,6 +93,11 @@ export async function getAccounts({
     query = query.eq('needs_review', true);
   }
 
+  // Exclude accounts that have been visited (server-side)
+  if (visitedAccountIds && visitedAccountIds.length > 0) {
+    query = query.not('id', 'in', `(${visitedAccountIds.join(',')})`);
+  }
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -65,21 +106,6 @@ export async function getAccounts({
   const { data, count, error } = await query;
 
   if (error) throw error;
-
-  // If neverVisited filter is on, we need to filter client-side after
-  // checking which accounts have visits. For MVP, this is acceptable.
-  if (neverVisited && data) {
-    const accountIds = data.map((a) => a.id);
-    const { data: visited } = await supabase
-      .from('visit_logs')
-      .select('account_id')
-      .in('account_id', accountIds);
-    const visitedIds = new Set(visited?.map((v) => v.account_id) ?? []);
-    return {
-      accounts: data.filter((a) => !visitedIds.has(a.id)),
-      total: count ?? 0,
-    };
-  }
 
   return { accounts: data ?? [], total: count ?? 0 };
 }
@@ -99,26 +125,65 @@ export async function getAccount(id: string) {
   return data;
 }
 
+const accountSchema = z.object({
+  type: z.enum(['agency', 'wholesale']),
+  display_name: z.string().min(1, 'Display name is required').max(500),
+  legal_name: z.string().max(500).optional(),
+  agency_id: z.string().max(100).optional(),
+  permit_number: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  city: z.string().max(200).optional(),
+  zip: z.string().max(20).optional(),
+  phone: z.string().max(50).optional(),
+  delivery_day: z.string().max(20).optional(),
+  warehouse: z.string().max(200).optional(),
+  linked_agency_name: z.string().max(500).optional(),
+  linked_agency_id: z.string().max(100).optional(),
+});
+
+function parseAccountFormData(formData: FormData) {
+  const type = formData.get('type') as string;
+  const raw = {
+    type,
+    display_name: (formData.get('display_name') as string) || '',
+    legal_name: (formData.get('legal_name') as string) || undefined,
+    agency_id: type === 'agency' ? (formData.get('agency_id') as string) || undefined : undefined,
+    permit_number: type === 'wholesale' ? (formData.get('permit_number') as string) || undefined : undefined,
+    district: (formData.get('district') as string) || undefined,
+    address: (formData.get('address') as string) || undefined,
+    city: (formData.get('city') as string) || undefined,
+    zip: (formData.get('zip') as string) || undefined,
+    phone: (formData.get('phone') as string) || undefined,
+    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || undefined : undefined,
+    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || undefined : undefined,
+    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || undefined : undefined,
+    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || undefined : undefined,
+  };
+
+  const parsed = accountSchema.parse(raw);
+
+  return {
+    type: parsed.type,
+    display_name: parsed.display_name,
+    legal_name: parsed.legal_name || null,
+    agency_id: parsed.agency_id || null,
+    permit_number: parsed.permit_number || null,
+    district: parsed.district || null,
+    address: parsed.address || null,
+    city: parsed.city || null,
+    zip: parsed.zip || null,
+    phone: parsed.phone || null,
+    delivery_day: parsed.delivery_day || null,
+    warehouse: parsed.warehouse || null,
+    linked_agency_name: parsed.linked_agency_name || null,
+    linked_agency_id: parsed.linked_agency_id || null,
+  };
+}
+
 export async function createAccount(formData: FormData) {
   const supabase = await createClient();
-
-  const type = formData.get('type') as string;
-  const account = {
-    type,
-    display_name: formData.get('display_name') as string,
-    legal_name: (formData.get('legal_name') as string) || null,
-    agency_id: type === 'agency' ? (formData.get('agency_id') as string) || null : null,
-    permit_number: type === 'wholesale' ? (formData.get('permit_number') as string) || null : null,
-    district: (formData.get('district') as string) || null,
-    address: (formData.get('address') as string) || null,
-    city: (formData.get('city') as string) || null,
-    zip: (formData.get('zip') as string) || null,
-    phone: (formData.get('phone') as string) || null,
-    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || null : null,
-    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || null : null,
-    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || null : null,
-    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || null : null,
-  };
+  const account = parseAccountFormData(formData);
 
   const { data, error } = await supabase
     .from('accounts')
@@ -135,22 +200,19 @@ export async function createAccount(formData: FormData) {
 export async function updateAccount(id: string, formData: FormData) {
   const supabase = await createClient();
 
-  const type = formData.get('type') as string;
-  const updates = {
-    display_name: formData.get('display_name') as string,
-    legal_name: (formData.get('legal_name') as string) || null,
-    agency_id: type === 'agency' ? (formData.get('agency_id') as string) || null : null,
-    permit_number: type === 'wholesale' ? (formData.get('permit_number') as string) || null : null,
-    district: (formData.get('district') as string) || null,
-    address: (formData.get('address') as string) || null,
-    city: (formData.get('city') as string) || null,
-    zip: (formData.get('zip') as string) || null,
-    phone: (formData.get('phone') as string) || null,
-    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || null : null,
-    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || null : null,
-    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || null : null,
-    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || null : null,
-  };
+  // Fetch existing account to ensure type isn't changed
+  const { data: existing } = await supabase
+    .from('accounts')
+    .select('type')
+    .eq('id', id)
+    .single();
+
+  const updates = parseAccountFormData(formData);
+
+  // Prevent type change on update
+  if (existing && updates.type !== existing.type) {
+    throw new Error('Cannot change account type after creation');
+  }
 
   const { error } = await supabase
     .from('accounts')
@@ -231,11 +293,23 @@ export async function getReps() {
 export async function searchAccounts(query: string) {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return [];
+
+  let q = supabase
     .from('accounts')
-    .select('id, display_name, type, district')
-    .ilike('display_name', `%${query}%`)
-    .limit(10);
+    .select('id, display_name, type, district, city');
+
+  for (const rawTerm of terms) {
+    const term = sanitizeFilterValue(rawTerm);
+    if (!term) continue;
+    const orClause = SEARCHABLE_FIELDS.map(
+      (field) => `${field}.ilike.%${term}%`
+    ).join(',');
+    q = q.or(orClause);
+  }
+
+  const { data } = await q.limit(10);
 
   return data ?? [];
 }
