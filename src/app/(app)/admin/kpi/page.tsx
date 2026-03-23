@@ -42,7 +42,7 @@ export default function KpiReportPage() {
     try {
       const result = await getKpiSummary({
         startDate: startDate || undefined,
-        endDate: endDate ? `${endDate}T23:59:59` : undefined,
+        endDate: endDate || undefined,
         repId: repId !== 'all' ? repId : undefined,
       });
       setCounts(result.counts);
@@ -152,17 +152,16 @@ export default function KpiReportPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">{visit.kpi}</Badge>
                           <span className="font-medium truncate">
-                            {(visit.rep as { full_name: string | null; email: string })?.full_name ||
-                              (visit.rep as { email: string })?.email}
+                            {visit.rep?.full_name || visit.rep?.email}
                           </span>
                           {visit.account && (
                             <>
                               <span className="text-muted-foreground">at</span>
                               <Link
-                                href={`/accounts/${(visit.account as { id: string }).id}`}
+                                href={`/accounts/${visit.account.id}`}
                                 className="text-primary hover:underline truncate"
                               >
-                                {(visit.account as { display_name: string }).display_name}
+                                {visit.account.display_name}
                               </Link>
                             </>
                           )}

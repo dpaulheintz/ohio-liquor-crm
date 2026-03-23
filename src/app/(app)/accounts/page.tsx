@@ -93,7 +93,7 @@ export default function AccountsPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name, agency ID, or permit number..."
+            placeholder="Search by name, city, agency ID, permit..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9"
@@ -201,7 +201,7 @@ export default function AccountsPage() {
               </div>
               {account.owner_rep && (
                 <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                  {(account.owner_rep as unknown as Profile).full_name || (account.owner_rep as unknown as Profile).email}
+                  {account.owner_rep.full_name || account.owner_rep.email}
                 </span>
               )}
             </Link>

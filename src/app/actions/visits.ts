@@ -2,6 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { KPI_OPTIONS } from '@/lib/types';
+
+const MAX_PHOTOS = 5;
 
 export async function getVisits({
   repId,
@@ -52,19 +56,31 @@ export async function getVisitsByAccount(accountId: string) {
   return data ?? [];
 }
 
-export async function createVisit({
-  accountId,
-  notes,
-  kpi,
-  visitedAt,
-  photoUrls,
-}: {
+const visitSchema = z.object({
+  accountId: z.string().uuid('Invalid account ID'),
+  notes: z.string().max(5000).optional(),
+  kpi: z.enum(KPI_OPTIONS).optional(),
+  visitedAt: z.string().datetime({ offset: true }).optional(),
+  photoUrls: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        caption: z.string().max(140).optional(),
+        sort_order: z.number().int().min(0),
+      })
+    )
+    .max(MAX_PHOTOS, `Maximum ${MAX_PHOTOS} photos allowed`)
+    .optional(),
+});
+
+export async function createVisit(input: {
   accountId: string;
   notes?: string;
   kpi?: string;
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
+  const parsed = visitSchema.parse(input);
   const supabase = await createClient();
 
   const {
@@ -76,20 +92,20 @@ export async function createVisit({
   const { data: visit, error: visitError } = await supabase
     .from('visit_logs')
     .insert({
-      account_id: accountId,
+      account_id: parsed.accountId,
       rep_id: user.id,
-      notes: notes || null,
-      kpi: kpi || null,
-      visited_at: visitedAt || new Date().toISOString(),
+      notes: parsed.notes || null,
+      kpi: parsed.kpi || null,
+      visited_at: parsed.visitedAt || new Date().toISOString(),
     })
     .select()
     .single();
 
   if (visitError) throw visitError;
 
-  // Create photo records if any
-  if (photoUrls && photoUrls.length > 0) {
-    const photoRecords = photoUrls.map((p) => ({
+  // Create photo records if any (max 5 enforced by schema)
+  if (parsed.photoUrls && parsed.photoUrls.length > 0) {
+    const photoRecords = parsed.photoUrls.map((p) => ({
       visit_id: visit.id,
       photo_url: p.url,
       caption: p.caption || null,
@@ -104,7 +120,7 @@ export async function createVisit({
   }
 
   revalidatePath('/');
-  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath(`/accounts/${parsed.accountId}`);
   return visit;
 }
 
