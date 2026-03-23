@@ -15,17 +15,50 @@ export async function getContacts({
 } = {}) {
   const supabase = await createClient();
 
+  // Supabase PostgREST doesn't support .or() across joined tables,
+  // so when the search includes terms that don't match contact fields
+  // we need to find matching account IDs first and include them.
+  let accountIds: string[] | null = null;
+
+  if (search) {
+    const sanitized = search.replace(/[,()]/g, '');
+    const terms = sanitized.trim().split(/\s+/).filter(Boolean);
+
+    if (terms.length > 0) {
+      // Search accounts by all searchable fields (name, city, agency_id, etc.)
+      let accountQuery = supabase
+        .from('accounts')
+        .select('id');
+
+      for (const term of terms) {
+        const orClause = [
+          'display_name', 'city', 'agency_id', 'address', 'district', 'legal_name',
+        ].map((f) => `${f}.ilike.%${term}%`).join(',');
+        accountQuery = accountQuery.or(orClause);
+      }
+
+      const { data: matchedAccounts } = await accountQuery;
+      accountIds = matchedAccounts?.map((a) => a.id) ?? [];
+    }
+  }
+
   let query = supabase
     .from('contacts')
-    .select('*, account:accounts!contacts_account_id_fkey(id, display_name, type)', {
+    .select('*, account:accounts!contacts_account_id_fkey(id, display_name, type, city)', {
       count: 'exact',
     });
 
   if (search) {
     const sanitized = search.replace(/[,()]/g, '');
-    query = query.or(
-      `name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%,title_role.ilike.%${sanitized}%`
-    );
+
+    // Build OR: match contact fields OR belong to a matching account
+    let orParts = `name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%,title_role.ilike.%${sanitized}%`;
+
+    if (accountIds && accountIds.length > 0) {
+      orParts += `,account_id.in.(${accountIds.join(',')})`;
+    }
+
+    query = query.or(orParts);
   }
 
   const from = (page - 1) * pageSize;

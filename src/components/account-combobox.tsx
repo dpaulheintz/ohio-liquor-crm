@@ -21,7 +21,7 @@ export function AccountCombobox({
   placeholder = 'Search accounts...',
 }: AccountComboboxProps) {
   const [search, setSearch] = useState('');
-  const [results, setResults] = useState<{ id: string; display_name: string; city?: string | null; district?: string | null }[]>([]);
+  const [results, setResults] = useState<{ id: string; display_name: string; city?: string | null; district?: string | null; agency_id?: string | null }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -88,9 +88,9 @@ export function AccountCombobox({
             >
               <span>
                 {a.display_name}
-                {(a.city || a.district) && (
+                {(a.city || a.district || a.agency_id) && (
                   <span className="ml-1 text-muted-foreground">
-                    — {[a.city, a.district].filter(Boolean).join(', ')}
+                    — {[a.agency_id, a.city, a.district].filter(Boolean).join(', ')}
                   </span>
                 )}
               </span>

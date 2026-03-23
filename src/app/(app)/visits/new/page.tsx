@@ -21,6 +21,7 @@ import { AccountCombobox } from '@/components/account-combobox';
 import { KPI_OPTIONS } from '@/lib/types';
 import { ArrowLeft, Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { nowESTDatetimeLocal } from '@/lib/date-utils';
 
 interface PhotoItem {
   file: File;
@@ -47,23 +48,17 @@ function NewVisitForm() {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [notes, setNotes] = useState('');
   const [kpi, setKpi] = useState('');
-  const [visitedAt, setVisitedAt] = useState(
-    new Date().toISOString().slice(0, 16)
-  );
+  const [visitedAt, setVisitedAt] = useState(nowESTDatetimeLocal());
   const [loading, setLoading] = useState(false);
 
-  // Load preset account name
+  // Load preset account name via server action (avoids RLS issues)
   useEffect(() => {
     if (presetAccountId) {
-      const supabase = createClient();
-      supabase
-        .from('accounts')
-        .select('display_name')
-        .eq('id', presetAccountId)
-        .single()
-        .then(({ data }) => {
+      import('@/app/actions/accounts').then(({ getAccount }) =>
+        getAccount(presetAccountId).then((data) => {
           if (data) setAccountName(data.display_name);
-        });
+        }).catch(() => {})
+      );
     }
   }, [presetAccountId]);
 
@@ -266,7 +261,7 @@ function NewVisitForm() {
 
             {/* Date/Time */}
             <div className="space-y-1.5">
-              <Label htmlFor="visited_at">Date & Time</Label>
+              <Label htmlFor="visited_at">Date & Time (EST)</Label>
               <Input
                 id="visited_at"
                 type="datetime-local"
