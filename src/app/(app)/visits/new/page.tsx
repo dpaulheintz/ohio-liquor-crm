@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createVisit } from '@/app/actions/visits';
+import { createAccount } from '@/app/actions/accounts';
+import { createContact } from '@/app/actions/contacts';
 import { createClient } from '@/lib/supabase/client';
 import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
@@ -10,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -19,9 +22,11 @@ import {
 } from '@/components/ui/select';
 import { AccountCombobox } from '@/components/account-combobox';
 import { KPI_OPTIONS } from '@/lib/types';
-import { ArrowLeft, Camera, X } from 'lucide-react';
+import { ArrowLeft, Camera, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { nowESTDatetimeLocal } from '@/lib/date-utils';
+
+const DELIVERY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface PhotoItem {
   file: File;
@@ -50,6 +55,29 @@ function NewVisitForm() {
   const [kpi, setKpi] = useState('');
   const [visitedAt, setVisitedAt] = useState(nowESTDatetimeLocal());
   const [loading, setLoading] = useState(false);
+
+  // Inline new account state
+  const [creatingNewAccount, setCreatingNewAccount] = useState(false);
+  const [newAcctType, setNewAcctType] = useState<string>('agency');
+  const [newAcctName, setNewAcctName] = useState('');
+  const [newAcctAgencyId, setNewAcctAgencyId] = useState('');
+  const [newAcctPermitNumber, setNewAcctPermitNumber] = useState('');
+  const [newAcctDeliveryDay, setNewAcctDeliveryDay] = useState('');
+  const [newAcctWarehouse, setNewAcctWarehouse] = useState('');
+  const [newAcctAddress, setNewAcctAddress] = useState('');
+  const [newAcctCity, setNewAcctCity] = useState('');
+  const [newAcctZip, setNewAcctZip] = useState('');
+  const [newAcctPhone, setNewAcctPhone] = useState('');
+  const [newAcctDistrict, setNewAcctDistrict] = useState('');
+  const [newAcctLinkedName, setNewAcctLinkedName] = useState('');
+  const [newAcctLinkedId, setNewAcctLinkedId] = useState('');
+
+  // Inline new contact state
+  const [creatingNewContact, setCreatingNewContact] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactTitle, setNewContactTitle] = useState('');
 
   // Load preset account name via server action (avoids RLS issues)
   useEffect(() => {
@@ -94,30 +122,79 @@ function NewVisitForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!accountId) {
+
+    let resolvedAccountId = accountId;
+
+    // Validate: need either a selected account or a new account being created
+    if (creatingNewAccount) {
+      if (!newAcctName.trim()) {
+        toast.error('Please enter a name for the new account');
+        return;
+      }
+      if (newAcctType === 'agency' && !newAcctAgencyId.trim()) {
+        toast.error('Agency ID is required for agency accounts');
+        return;
+      }
+    } else if (!resolvedAccountId) {
       toast.error('Please select an account');
+      return;
+    }
+
+    // Validate new contact if toggled
+    if (creatingNewContact && !newContactName.trim()) {
+      toast.error('Please enter a name for the new contact');
       return;
     }
 
     setLoading(true);
     try {
-      const supabase = createClient();
+      // Step 1: Create account if needed
+      if (creatingNewAccount) {
+        const formData = new FormData();
+        formData.set('type', newAcctType);
+        formData.set('display_name', newAcctName);
+        formData.set('delivery_day', newAcctDeliveryDay);
+        if (newAcctAgencyId) formData.set('agency_id', newAcctAgencyId);
+        if (newAcctPermitNumber) formData.set('permit_number', newAcctPermitNumber);
+        if (newAcctWarehouse) formData.set('warehouse', newAcctWarehouse);
+        if (newAcctAddress) formData.set('address', newAcctAddress);
+        if (newAcctCity) formData.set('city', newAcctCity);
+        if (newAcctZip) formData.set('zip', newAcctZip);
+        if (newAcctPhone) formData.set('phone', newAcctPhone);
+        if (newAcctDistrict) formData.set('district', newAcctDistrict);
+        if (newAcctLinkedName) formData.set('linked_agency_name', newAcctLinkedName);
+        if (newAcctLinkedId) formData.set('linked_agency_id', newAcctLinkedId);
 
-      // Upload and compress photos
-      const photoUrls: { url: string; caption?: string; sort_order: number }[] =
-        [];
+        const newAccount = await createAccount(formData);
+        resolvedAccountId = newAccount.id;
+        toast.success('Account created');
+      }
+
+      // Step 2: Create contact if needed
+      if (creatingNewContact && newContactName.trim()) {
+        await createContact({
+          name: newContactName.trim(),
+          account_id: resolvedAccountId,
+          phone: newContactPhone || undefined,
+          email: newContactEmail || undefined,
+          title_role: newContactTitle || undefined,
+        });
+        toast.success('Contact added');
+      }
+
+      // Step 3: Upload and compress photos
+      const supabase = createClient();
+      const photoUrls: { url: string; caption?: string; sort_order: number }[] = [];
 
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
 
-        // Compress
         const compressed = await imageCompression(photo.file, {
           maxSizeMB: 0.8,
           maxWidthOrHeight: 1920,
           useWebWorker: true,
         });
 
-        // Upload
         const fileName = `${Date.now()}-${i}-${compressed.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('visit-photos')
@@ -139,8 +216,9 @@ function NewVisitForm() {
         });
       }
 
+      // Step 4: Create visit
       await createVisit({
-        accountId,
+        accountId: resolvedAccountId,
         notes: notes || undefined,
         kpi: kpi || undefined,
         visitedAt: new Date(visitedAt).toISOString(),
@@ -148,7 +226,7 @@ function NewVisitForm() {
       });
 
       toast.success('Visit logged');
-      router.push(presetAccountId ? `/accounts/${presetAccountId}` : '/');
+      router.push(presetAccountId ? `/accounts/${presetAccountId}` : `/accounts/${resolvedAccountId}`);
     } catch (err) {
       console.error('Failed to log visit:', err);
       toast.error('Failed to log visit');
@@ -170,11 +248,18 @@ function NewVisitForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account */}
+            {/* Account Selection */}
             <div className="space-y-1.5">
               <Label>Account *</Label>
               {presetAccountId ? (
                 <Input value={accountName} disabled />
+              ) : creatingNewAccount ? (
+                <Input
+                  value={newAcctName}
+                  disabled
+                  placeholder="Fill in account details below"
+                  className="text-muted-foreground"
+                />
               ) : (
                 <AccountCombobox
                   accountId={accountId}
@@ -186,6 +271,212 @@ function NewVisitForm() {
                 />
               )}
             </div>
+
+            {/* Toggle: Create New Account */}
+            {!presetAccountId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingNewAccount(!creatingNewAccount);
+                  if (!creatingNewAccount) {
+                    setAccountId('');
+                    setAccountName('');
+                  }
+                }}
+                className="text-sm text-primary flex items-center gap-1 hover:underline"
+              >
+                {creatingNewAccount ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                Creating a new account?
+              </button>
+            )}
+
+            {/* Inline New Account Fields */}
+            {creatingNewAccount && (
+              <div className="space-y-3 pl-3 border-l-2 border-primary/20">
+                <div className="space-y-1.5">
+                  <Label>Account Type</Label>
+                  <Select value={newAcctType} onValueChange={setNewAcctType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="agency">Agency (Liquor Store)</SelectItem>
+                      <SelectItem value="wholesale">Wholesale (Bar/Restaurant)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>{newAcctType === 'wholesale' ? 'Name *' : 'Display Name *'}</Label>
+                  <Input
+                    value={newAcctName}
+                    onChange={(e) => setNewAcctName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {newAcctType === 'agency' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label>Agency ID *</Label>
+                      <Input
+                        value={newAcctAgencyId}
+                        onChange={(e) => setNewAcctAgencyId(e.target.value)}
+                        placeholder="State-assigned ID"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Delivery Day</Label>
+                        <Select value={newAcctDeliveryDay} onValueChange={setNewAcctDeliveryDay}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select day" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DELIVERY_DAYS.map((day) => (
+                              <SelectItem key={day} value={day}>{day}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Warehouse</Label>
+                        <Input
+                          value={newAcctWarehouse}
+                          onChange={(e) => setNewAcctWarehouse(e.target.value)}
+                          placeholder="e.g., GPT"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {newAcctType === 'wholesale' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label>Permit Number</Label>
+                      <Input
+                        value={newAcctPermitNumber}
+                        onChange={(e) => setNewAcctPermitNumber(e.target.value)}
+                        placeholder="State-assigned permit"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Agency Name</Label>
+                        <Input
+                          value={newAcctLinkedName}
+                          onChange={(e) => setNewAcctLinkedName(e.target.value)}
+                          placeholder="Parent agency"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Agency ID</Label>
+                        <Input
+                          value={newAcctLinkedId}
+                          onChange={(e) => setNewAcctLinkedId(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label>Address</Label>
+                  <Input
+                    value={newAcctAddress}
+                    onChange={(e) => setNewAcctAddress(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>City</Label>
+                    <Input
+                      value={newAcctCity}
+                      onChange={(e) => setNewAcctCity(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ZIP</Label>
+                    <Input
+                      value={newAcctZip}
+                      onChange={(e) => setNewAcctZip(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Phone</Label>
+                    <Input
+                      value={newAcctPhone}
+                      onChange={(e) => setNewAcctPhone(e.target.value)}
+                      type="tel"
+                    />
+                  </div>
+                  {newAcctType === 'wholesale' && (
+                    <div className="space-y-1.5">
+                      <Label>District</Label>
+                      <Input
+                        value={newAcctDistrict}
+                        onChange={(e) => setNewAcctDistrict(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Toggle: Add New Contact */}
+            <button
+              type="button"
+              onClick={() => setCreatingNewContact(!creatingNewContact)}
+              className="text-sm text-primary flex items-center gap-1 hover:underline"
+            >
+              {creatingNewContact ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              Adding a new contact?
+            </button>
+
+            {/* Inline New Contact Fields */}
+            {creatingNewContact && (
+              <div className="space-y-3 pl-3 border-l-2 border-primary/20">
+                <div className="space-y-1.5">
+                  <Label>Contact Name *</Label>
+                  <Input
+                    value={newContactName}
+                    onChange={(e) => setNewContactName(e.target.value)}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Phone</Label>
+                    <Input
+                      value={newContactPhone}
+                      onChange={(e) => setNewContactPhone(e.target.value)}
+                      type="tel"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Email</Label>
+                    <Input
+                      value={newContactEmail}
+                      onChange={(e) => setNewContactEmail(e.target.value)}
+                      type="email"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Title / Role</Label>
+                  <Input
+                    value={newContactTitle}
+                    onChange={(e) => setNewContactTitle(e.target.value)}
+                    placeholder="e.g., Store Manager"
+                  />
+                </div>
+              </div>
+            )}
+
+            <Separator />
 
             {/* Photos */}
             <div className="space-y-1.5">
