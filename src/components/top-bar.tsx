@@ -26,7 +26,12 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
-      <h1 className="text-lg font-bold md:hidden">High Bank CRM</h1>
+      <h1 className="text-lg font-bold md:hidden">
+        High Bank CRM
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          {process.env.NEXT_PUBLIC_BUILD_SHA}
+        </span>
+      </h1>
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-2">
