@@ -256,17 +256,17 @@ function NewVisitForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Selection */}
             <div className="space-y-1.5">
-              <Label htmlFor="visit-account">Account *</Label>
+              <Label htmlFor="visit-store">Account *</Label>
               {presetAccountId ? (
                 <Input
-                  id="visit-account"
+                  id="visit-store"
                   value={loadingAccount ? 'Loading account...' : accountName}
                   disabled
                   className={loadingAccount ? 'text-muted-foreground italic' : ''}
                 />
               ) : creatingNewAccount ? (
                 <Input
-                  id="visit-account"
+                  id="visit-store"
                   value={newAcctName}
                   disabled
                   placeholder="Fill in account details below"
@@ -275,7 +275,7 @@ function NewVisitForm() {
               ) : accountId ? (
                 <div className="relative">
                   <Input
-                    id="visit-account"
+                    id="visit-store"
                     value={accountName}
                     readOnly
                   />
@@ -291,13 +291,14 @@ function NewVisitForm() {
               ) : (
                 <>
                   <Input
-                    id="visit-account"
-                    type="text"
+                    id="visit-store"
+                    name="store-search"
+                    type="search"
                     value={acctSearch.search}
                     onChange={(e) => acctSearch.setSearch(e.target.value)}
                     onFocus={() => { if (acctSearch.results.length > 0) acctSearch.setOpen(true); }}
                     placeholder="Search accounts..."
-                    autoComplete="off"
+                    autoComplete="nope"
                   />
                   {acctSearch.open && acctSearch.results.length > 0 && (
                     <div className="relative">
