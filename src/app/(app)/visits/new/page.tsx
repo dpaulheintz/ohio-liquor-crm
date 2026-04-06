@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAccountSearch } from '@/hooks/useAccountSearch';
+import { AccountSearchDialog } from '@/components/account-search-dialog';
 import { KPI_OPTIONS } from '@/lib/types';
 import { ArrowLeft, Camera, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -80,9 +80,6 @@ function NewVisitForm() {
   const [newContactTitle, setNewContactTitle] = useState('');
 
   const [loadingAccount, setLoadingAccount] = useState(!!presetAccountId);
-
-  // Account search (inline — no child component)
-  const acctSearch = useAccountSearch();
 
   // Load preset account name via server action (avoids RLS issues)
   useEffect(() => {
@@ -256,77 +253,29 @@ function NewVisitForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Selection */}
             <div className="space-y-1.5">
-              <Label htmlFor="visit-store">Account *</Label>
+              <Label>Account *</Label>
               {presetAccountId ? (
                 <Input
-                  id="visit-store"
                   value={loadingAccount ? 'Loading account...' : accountName}
                   disabled
                   className={loadingAccount ? 'text-muted-foreground italic' : ''}
                 />
               ) : creatingNewAccount ? (
                 <Input
-                  id="visit-store"
                   value={newAcctName}
                   disabled
                   placeholder="Fill in account details below"
                   className="text-muted-foreground"
                 />
-              ) : accountId ? (
-                <div className="relative">
-                  <Input
-                    id="visit-store"
-                    value={accountName}
-                    readOnly
-                  />
-                  <button
-                    type="button"
-                    onClick={() => { setAccountId(''); setAccountName(''); acctSearch.reset(); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear selection"
-                  >
-                    ✕
-                  </button>
-                </div>
               ) : (
-                <>
-                  <Input
-                    id="visit-store"
-                    name="store-search"
-                    type="search"
-                    value={acctSearch.search}
-                    onChange={(e) => acctSearch.setSearch(e.target.value)}
-                    onFocus={() => { if (acctSearch.results.length > 0) acctSearch.setOpen(true); }}
-                    placeholder="Search accounts..."
-                    autoComplete="nope"
-                  />
-                  {acctSearch.open && acctSearch.results.length > 0 && (
-                    <div className="relative">
-                      <div className="absolute left-0 right-0 top-0 z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md">
-                        {acctSearch.results.map((a) => {
-                          const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
-                          return (
-                            <button
-                              key={a.id}
-                              type="button"
-                              onClick={() => {
-                                const selected = acctSearch.selectAccount(a);
-                                setAccountId(selected.id);
-                                setAccountName(selected.name);
-                              }}
-                              className="block w-full border-b border-border/50 px-3 py-2.5 text-left text-sm hover:bg-accent"
-                            >
-                              <div className="font-medium">{a.display_name}</div>
-                              {details && (
-                                <div className="mt-0.5 text-xs text-muted-foreground">{details}</div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
+                <AccountSearchDialog
+                  accountId={accountId}
+                  accountName={accountName}
+                  onSelect={(id, name) => {
+                    setAccountId(id);
+                    setAccountName(name);
+                  }}
+                />
               )}
             </div>
 

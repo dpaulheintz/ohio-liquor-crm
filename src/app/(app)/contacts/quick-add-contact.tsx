@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAccountSearch } from '@/hooks/useAccountSearch';
+import { AccountSearchDialog } from '@/components/account-search-dialog';
 import { toast } from 'sonner';
 
 interface QuickAddContactProps {
@@ -37,8 +37,6 @@ export function QuickAddContact({
   const [titleRole, setTitleRole] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const acctSearch = useAccountSearch();
-
   // Reset on close
   useEffect(() => {
     if (open) {
@@ -48,9 +46,7 @@ export function QuickAddContact({
       setPhone('');
       setEmail('');
       setTitleRole('');
-      acctSearch.reset();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultAccountId, defaultAccountName]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -96,60 +92,18 @@ export function QuickAddContact({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="contact-store">Account *</Label>
+            <Label>Account *</Label>
             {defaultAccountId ? (
-              <Input id="contact-store" value={accountName} disabled />
-            ) : accountId ? (
-              <div className="relative">
-                <Input id="contact-store" value={accountName} readOnly />
-                <button
-                  type="button"
-                  onClick={() => { setAccountId(''); setAccountName(''); acctSearch.reset(); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear selection"
-                >
-                  ✕
-                </button>
-              </div>
+              <Input value={accountName} disabled />
             ) : (
-              <>
-                <Input
-                  id="contact-store"
-                  name="store-search"
-                  type="search"
-                  value={acctSearch.search}
-                  onChange={(e) => acctSearch.setSearch(e.target.value)}
-                  onFocus={() => { if (acctSearch.results.length > 0) acctSearch.setOpen(true); }}
-                  placeholder="Search accounts..."
-                  autoComplete="nope"
-                />
-                {acctSearch.open && acctSearch.results.length > 0 && (
-                  <div className="relative">
-                    <div className="absolute left-0 right-0 top-0 z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md">
-                      {acctSearch.results.map((a) => {
-                        const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
-                        return (
-                          <button
-                            key={a.id}
-                            type="button"
-                            onClick={() => {
-                              const selected = acctSearch.selectAccount(a);
-                              setAccountId(selected.id);
-                              setAccountName(selected.name);
-                            }}
-                            className="block w-full border-b border-border/50 px-3 py-2.5 text-left text-sm hover:bg-accent"
-                          >
-                            <div className="font-medium">{a.display_name}</div>
-                            {details && (
-                              <div className="mt-0.5 text-xs text-muted-foreground">{details}</div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
+              <AccountSearchDialog
+                accountId={accountId}
+                accountName={accountName}
+                onSelect={(id, n) => {
+                  setAccountId(id);
+                  setAccountName(n);
+                }}
+              />
             )}
           </div>
 
