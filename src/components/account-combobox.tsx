@@ -2,22 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { searchAccounts } from '@/app/actions/accounts';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 
 interface AccountResult {
   id: string;
@@ -42,9 +26,9 @@ export function AccountCombobox({
   disabled = false,
   placeholder = 'Search accounts...',
 }: AccountComboboxProps) {
-  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<AccountResult[]>([]);
+  const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
 
   const doSearch = useCallback(async (q: string) => {
@@ -56,6 +40,7 @@ export function AccountCombobox({
     try {
       const data = await searchAccounts(q);
       setResults(data);
+      setOpen(true);
     } finally {
       setSearching(false);
     }
@@ -63,93 +48,164 @@ export function AccountCombobox({
 
   // Debounced search
   useEffect(() => {
-    if (!open) return;
-    const timer = setTimeout(() => {
-      if (search) {
-        doSearch(search);
-      } else {
-        setResults([]);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [search, open, doSearch]);
-
-  // Reset search when popover closes
-  useEffect(() => {
-    if (!open) {
-      setSearch('');
+    if (!search || accountId) {
       setResults([]);
+      return;
     }
-  }, [open]);
+    const timer = setTimeout(() => doSearch(search), 250);
+    return () => clearTimeout(timer);
+  }, [search, accountId, doSearch]);
 
-  function formatSubtext(a: AccountResult) {
-    const parts = [a.agency_id, a.city, a.district].filter(Boolean);
-    return parts.length > 0 ? parts.join(', ') : null;
+  function handleSelect(a: AccountResult) {
+    onSelect(a.id, a.display_name);
+    setSearch('');
+    setOpen(false);
+    setResults([]);
+  }
+
+  function handleClear() {
+    onSelect('', '');
+    setSearch('');
+    setResults([]);
+  }
+
+  // If an account is selected, show it with a clear button
+  if (accountId) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          height: '36px',
+          padding: '0 12px',
+          border: '1px solid #e2e2e2',
+          borderRadius: '6px',
+          backgroundColor: '#f9f9f9',
+          fontSize: '14px',
+        }}
+      >
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {accountName}
+        </span>
+        <button
+          type="button"
+          onClick={handleClear}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '4px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            lineHeight: 1,
+            color: '#666',
+          }}
+          aria-label="Clear selection"
+        >
+          ✕
+        </button>
+      </div>
+    );
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className="w-full justify-between font-normal h-9"
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Plain native input - no library wrappers */}
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onFocus={() => {
+          if (results.length > 0) setOpen(true);
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        style={{
+          width: '100%',
+          height: '36px',
+          padding: '0 12px',
+          border: '1px solid #e2e2e2',
+          borderRadius: '6px',
+          fontSize: '14px',
+          outline: 'none',
+          backgroundColor: 'white',
+          WebkitAppearance: 'none',
+          appearance: 'none',
+        }}
+      />
+
+      {/* Search status */}
+      {searching && (
+        <div style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '12px',
+          color: '#999',
+        }}>
+          ...
+        </div>
+      )}
+
+      {/* Results dropdown - plain HTML, no portals */}
+      {open && results.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            maxHeight: '200px',
+            overflowY: 'auto',
+            backgroundColor: 'white',
+            border: '1px solid #e2e2e2',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 99999,
+            WebkitOverflowScrolling: 'touch',
+          }}
         >
-          <span className={cn('truncate', !accountId && 'text-muted-foreground')}>
-            {accountId ? accountName : placeholder}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Type to search..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            {search.length < 2 ? (
-              <CommandEmpty>Type at least 2 characters to search</CommandEmpty>
-            ) : searching ? (
-              <CommandEmpty>Searching...</CommandEmpty>
-            ) : results.length === 0 ? (
-              <CommandEmpty>No accounts found</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {results.map((a) => {
-                  const subtext = formatSubtext(a);
-                  return (
-                    <CommandItem
-                      key={a.id}
-                      value={a.id}
-                      onSelect={() => {
-                        onSelect(a.id, a.display_name);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          accountId === a.id ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span>{a.display_name}</span>
-                        {subtext && (
-                          <span className="text-xs text-muted-foreground">{subtext}</span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          {results.map((a) => {
+            const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => handleSelect(a)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  handleSelect(a);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: 'none',
+                  borderBottom: '1px solid #f0f0f0',
+                  backgroundColor: 'transparent',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'rgba(0,0,0,0.05)',
+                }}
+              >
+                <div style={{ fontWeight: 500 }}>{a.display_name}</div>
+                {details && (
+                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                    {details}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
