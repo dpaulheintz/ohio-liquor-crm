@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { searchAccounts } from '@/app/actions/accounts';
+import { Input } from '@/components/ui/input';
 
 interface AccountResult {
   id: string;
@@ -56,6 +57,19 @@ export function AccountCombobox({
     return () => clearTimeout(timer);
   }, [search, accountId, doSearch]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-account-combobox]')) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [open]);
+
   function handleSelect(a: AccountResult) {
     onSelect(a.id, a.display_name);
     setSearch('');
@@ -72,35 +86,12 @@ export function AccountCombobox({
   // If an account is selected, show it with a clear button
   if (accountId) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          height: '36px',
-          padding: '0 12px',
-          border: '1px solid #e2e2e2',
-          borderRadius: '6px',
-          backgroundColor: '#f9f9f9',
-          fontSize: '14px',
-        }}
-      >
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {accountName}
-        </span>
+      <div className="relative" data-account-combobox>
+        <Input value={accountName} disabled readOnly />
         <button
           type="button"
           onClick={handleClear}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '4px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            lineHeight: 1,
-            color: '#666',
-          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
           aria-label="Clear selection"
         >
           ✕
@@ -110,9 +101,8 @@ export function AccountCombobox({
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      {/* Plain native input - no library wrappers */}
-      <input
+    <div className="relative" data-account-combobox>
+      <Input
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -122,55 +112,18 @@ export function AccountCombobox({
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        style={{
-          width: '100%',
-          height: '36px',
-          padding: '0 12px',
-          border: '1px solid #e2e2e2',
-          borderRadius: '6px',
-          fontSize: '14px',
-          outline: 'none',
-          backgroundColor: 'white',
-          WebkitAppearance: 'none',
-          appearance: 'none',
-        }}
       />
 
-      {/* Search status */}
+      {/* Search indicator */}
       {searching && (
-        <div style={{
-          position: 'absolute',
-          right: '12px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: '12px',
-          color: '#999',
-        }}>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
           ...
-        </div>
+        </span>
       )}
 
-      {/* Results dropdown - plain HTML, no portals */}
+      {/* Results dropdown */}
       {open && results.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            maxHeight: '200px',
-            overflowY: 'auto',
-            backgroundColor: 'white',
-            border: '1px solid #e2e2e2',
-            borderRadius: '6px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 99999,
-            WebkitOverflowScrolling: 'touch',
-          }}
-        >
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md">
           {results.map((a) => {
             const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
             return (
@@ -178,28 +131,11 @@ export function AccountCombobox({
                 key={a.id}
                 type="button"
                 onClick={() => handleSelect(a)}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  handleSelect(a);
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: 'none',
-                  borderBottom: '1px solid #f0f0f0',
-                  backgroundColor: 'transparent',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'rgba(0,0,0,0.05)',
-                }}
+                className="block w-full border-b border-border/50 px-3 py-2.5 text-left text-sm hover:bg-accent"
               >
-                <div style={{ fontWeight: 500 }}>{a.display_name}</div>
+                <div className="font-medium">{a.display_name}</div>
                 {details && (
-                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
-                    {details}
-                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{details}</div>
                 )}
               </button>
             );
