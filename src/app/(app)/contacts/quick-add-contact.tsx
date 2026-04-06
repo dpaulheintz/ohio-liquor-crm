@@ -96,12 +96,12 @@ export function QuickAddContact({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="contact-account">Account *</Label>
+            <Label htmlFor="contact-store">Account *</Label>
             {defaultAccountId ? (
-              <Input id="contact-account" value={accountName} disabled />
+              <Input id="contact-store" value={accountName} disabled />
             ) : accountId ? (
               <div className="relative">
-                <Input id="contact-account" value={accountName} readOnly />
+                <Input id="contact-store" value={accountName} readOnly />
                 <button
                   type="button"
                   onClick={() => { setAccountId(''); setAccountName(''); acctSearch.reset(); }}
@@ -114,13 +114,14 @@ export function QuickAddContact({
             ) : (
               <>
                 <Input
-                  id="contact-account"
-                  type="text"
+                  id="contact-store"
+                  name="store-search"
+                  type="search"
                   value={acctSearch.search}
                   onChange={(e) => acctSearch.setSearch(e.target.value)}
                   onFocus={() => { if (acctSearch.results.length > 0) acctSearch.setOpen(true); }}
                   placeholder="Search accounts..."
-                  autoComplete="off"
+                  autoComplete="nope"
                 />
                 {acctSearch.open && acctSearch.results.length > 0 && (
                   <div className="relative">
