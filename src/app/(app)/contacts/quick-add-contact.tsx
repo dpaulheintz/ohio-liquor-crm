@@ -74,7 +74,7 @@ export function QuickAddContact({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm overflow-visible">
         <DialogHeader>
           <DialogTitle>Quick Add Contact</DialogTitle>
         </DialogHeader>

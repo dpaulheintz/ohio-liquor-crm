@@ -79,14 +79,17 @@ function NewVisitForm() {
   const [newContactEmail, setNewContactEmail] = useState('');
   const [newContactTitle, setNewContactTitle] = useState('');
 
+  const [loadingAccount, setLoadingAccount] = useState(!!presetAccountId);
+
   // Load preset account name via server action (avoids RLS issues)
   useEffect(() => {
     if (presetAccountId) {
+      setLoadingAccount(true);
       import('@/app/actions/accounts').then(({ getAccount }) =>
         getAccount(presetAccountId).then((data) => {
           if (data) setAccountName(data.display_name);
         }).catch(() => {})
-      );
+      ).finally(() => setLoadingAccount(false));
     }
   }, [presetAccountId]);
 
@@ -252,7 +255,11 @@ function NewVisitForm() {
             <div className="space-y-1.5">
               <Label>Account *</Label>
               {presetAccountId ? (
-                <Input value={accountName} disabled />
+                <Input
+                  value={loadingAccount ? 'Loading account...' : accountName}
+                  disabled
+                  className={loadingAccount ? 'text-muted-foreground italic' : ''}
+                />
               ) : creatingNewAccount ? (
                 <Input
                   value={newAcctName}
