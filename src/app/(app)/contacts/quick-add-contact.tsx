@@ -74,7 +74,7 @@ export function QuickAddContact({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm overflow-visible">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Quick Add Contact</DialogTitle>
         </DialogHeader>
@@ -87,7 +87,6 @@ export function QuickAddContact({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              autoFocus
               placeholder="Full name"
             />
           </div>

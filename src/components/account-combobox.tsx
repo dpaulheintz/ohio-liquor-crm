@@ -1,10 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { searchAccounts } from '@/app/actions/accounts';
-import { Input } from '@/components/ui/input';
-import { Check } from 'lucide-react';
-import { createPortal } from 'react-dom';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+
+interface AccountResult {
+  id: string;
+  display_name: string;
+  city?: string | null;
+  district?: string | null;
+  agency_id?: string | null;
+}
 
 interface AccountComboboxProps {
   accountId: string;
@@ -21,130 +42,114 @@ export function AccountCombobox({
   disabled = false,
   placeholder = 'Search accounts...',
 }: AccountComboboxProps) {
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [results, setResults] = useState<{ id: string; display_name: string; city?: string | null; district?: string | null; agency_id?: string | null }[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [results, setResults] = useState<AccountResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) {
       setResults([]);
       return;
     }
-    const data = await searchAccounts(q);
-    setResults(data);
-    setShowDropdown(true);
+    setSearching(true);
+    try {
+      const data = await searchAccounts(q);
+      setResults(data);
+    } finally {
+      setSearching(false);
+    }
   }, []);
 
+  // Debounced search
   useEffect(() => {
+    if (!open) return;
     const timer = setTimeout(() => {
-      if (search && !accountId) {
+      if (search) {
         doSearch(search);
+      } else {
+        setResults([]);
       }
     }, 200);
     return () => clearTimeout(timer);
-  }, [search, accountId, doSearch]);
+  }, [search, open, doSearch]);
 
-  // Calculate dropdown position relative to viewport (fixed positioning)
-  useLayoutEffect(() => {
-    if (showDropdown && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-      });
-    }
-  }, [showDropdown, search, results]);
-
-  // Close dropdown on outside click/touch
+  // Reset search when popover closes
   useEffect(() => {
-    if (!showDropdown) return;
-
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
-      const target = e.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        // Also check if click is inside the portaled dropdown
-        const dropdown = document.getElementById('account-combobox-dropdown');
-        if (dropdown && dropdown.contains(target)) return;
-        setShowDropdown(false);
-      }
+    if (!open) {
+      setSearch('');
+      setResults([]);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [showDropdown]);
+  }, [open]);
 
-  const dropdown = showDropdown && results.length > 0 && mounted ? createPortal(
-    <div
-      id="account-combobox-dropdown"
-      className="fixed z-[9999] max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
-      style={{
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        width: dropdownPos.width,
-      }}
-    >
-      {results.map((a) => (
-        <button
-          key={a.id}
-          type="button"
-          className="flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted active:bg-muted"
-          onClick={() => {
-            onSelect(a.id, a.display_name);
-            setShowDropdown(false);
-            setSearch('');
-          }}
-        >
-          <span>
-            {a.display_name}
-            {(a.city || a.district || a.agency_id) && (
-              <span className="ml-1 text-muted-foreground">
-                — {[a.agency_id, a.city, a.district].filter(Boolean).join(', ')}
-              </span>
-            )}
-          </span>
-          {a.id === accountId && <Check className="h-4 w-4" />}
-        </button>
-      ))}
-    </div>,
-    document.body
-  ) : null;
+  function formatSubtext(a: AccountResult) {
+    const parts = [a.agency_id, a.city, a.district].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : null;
+  }
 
   return (
-    <div ref={containerRef} className="relative">
-      <Input
-        ref={inputRef}
-        value={accountId ? accountName : search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          if (accountId) {
-            onSelect('', '');
-          }
-        }}
-        onFocus={() => {
-          if (results.length > 0 && !accountId) {
-            setShowDropdown(true);
-          }
-        }}
-        placeholder={placeholder}
-        disabled={disabled}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-      />
-      {dropdown}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between font-normal h-9"
+        >
+          <span className={cn('truncate', !accountId && 'text-muted-foreground')}>
+            {accountId ? accountName : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Type to search..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            {search.length < 2 ? (
+              <CommandEmpty>Type at least 2 characters to search</CommandEmpty>
+            ) : searching ? (
+              <CommandEmpty>Searching...</CommandEmpty>
+            ) : results.length === 0 ? (
+              <CommandEmpty>No accounts found</CommandEmpty>
+            ) : (
+              <CommandGroup>
+                {results.map((a) => {
+                  const subtext = formatSubtext(a);
+                  return (
+                    <CommandItem
+                      key={a.id}
+                      value={a.id}
+                      onSelect={() => {
+                        onSelect(a.id, a.display_name);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          accountId === a.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span>{a.display_name}</span>
+                        {subtext && (
+                          <span className="text-xs text-muted-foreground">{subtext}</span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
