@@ -44,15 +44,19 @@ export function AccountCombobox({
     return () => clearTimeout(timer);
   }, [search, accountId, doSearch]);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click/touch
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   return (
@@ -74,7 +78,7 @@ export function AccountCombobox({
         disabled={disabled}
       />
       {showDropdown && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+        <div className="absolute top-full left-0 right-0 z-[45] mt-1 max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
           {results.map((a) => (
             <button
               key={a.id}
