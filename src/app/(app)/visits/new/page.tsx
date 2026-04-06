@@ -252,16 +252,18 @@ function NewVisitForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Selection */}
-            <div className="space-y-1.5">
-              <Label>Account *</Label>
+            <div className="relative space-y-1.5">
+              <Label htmlFor="visit-account">Account *</Label>
               {presetAccountId ? (
                 <Input
+                  id="visit-account"
                   value={loadingAccount ? 'Loading account...' : accountName}
                   disabled
                   className={loadingAccount ? 'text-muted-foreground italic' : ''}
                 />
               ) : creatingNewAccount ? (
                 <Input
+                  id="visit-account"
                   value={newAcctName}
                   disabled
                   placeholder="Fill in account details below"
@@ -269,6 +271,7 @@ function NewVisitForm() {
                 />
               ) : (
                 <AccountCombobox
+                  inputId="visit-account"
                   accountId={accountId}
                   accountName={accountName}
                   onSelect={(id, name) => {

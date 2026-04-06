@@ -91,12 +91,13 @@ export function QuickAddContact({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Account *</Label>
+          <div className="relative space-y-1.5">
+            <Label htmlFor="contact-account">Account *</Label>
             {defaultAccountId ? (
-              <Input value={accountName} disabled />
+              <Input id="contact-account" value={accountName} disabled />
             ) : (
               <AccountCombobox
+                inputId="contact-account"
                 accountId={accountId}
                 accountName={accountName}
                 onSelect={(id, n) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { searchAccounts } from '@/app/actions/accounts';
 import { Input } from '@/components/ui/input';
 
@@ -18,6 +18,7 @@ interface AccountComboboxProps {
   onSelect: (id: string, name: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  inputId?: string;
 }
 
 export function AccountCombobox({
@@ -26,7 +27,10 @@ export function AccountCombobox({
   onSelect,
   disabled = false,
   placeholder = 'Search accounts...',
+  inputId,
 }: AccountComboboxProps) {
+  const autoId = useId();
+  const id = inputId ?? autoId;
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<AccountResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -50,25 +54,26 @@ export function AccountCombobox({
   // Debounced search
   useEffect(() => {
     if (!search || accountId) {
-      setResults([]);
+      if (results.length > 0) setResults([]);
       return;
     }
     const timer = setTimeout(() => doSearch(search), 250);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, accountId, doSearch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     if (!open) return;
-    function handleClick(e: MouseEvent) {
+    function handlePointerDown(e: PointerEvent) {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-account-combobox]')) {
+      if (!target.closest(`[data-combobox-for="${id}"]`)) {
         setOpen(false);
       }
     }
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [open]);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [open, id]);
 
   function handleSelect(a: AccountResult) {
     onSelect(a.id, a.display_name);
@@ -86,8 +91,8 @@ export function AccountCombobox({
   // If an account is selected, show it with a clear button
   if (accountId) {
     return (
-      <div className="relative" data-account-combobox>
-        <Input value={accountName} disabled readOnly />
+      <>
+        <Input id={id} value={accountName} readOnly tabIndex={0} />
         <button
           type="button"
           onClick={handleClear}
@@ -96,13 +101,14 @@ export function AccountCombobox({
         >
           ✕
         </button>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="relative" data-account-combobox>
+    <>
       <Input
+        id={id}
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -114,16 +120,17 @@ export function AccountCombobox({
         autoComplete="off"
       />
 
-      {/* Search indicator */}
       {searching && (
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
           ...
         </span>
       )}
 
-      {/* Results dropdown */}
       {open && results.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md">
+        <div
+          data-combobox-for={id}
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md"
+        >
           {results.map((a) => {
             const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
             return (
@@ -142,6 +149,6 @@ export function AccountCombobox({
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
