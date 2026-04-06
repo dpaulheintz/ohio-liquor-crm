@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
+import { formatEST } from '@/lib/date-utils';
 import Link from 'next/link';
 
 interface VisitCardProps {
@@ -13,9 +14,9 @@ interface VisitCardProps {
 }
 
 export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
-  const rep = visit.rep as unknown as Profile | undefined;
-  const account = visit.account as unknown as Pick<Account, 'id' | 'display_name' | 'type'> | undefined;
-  const photos = (visit.visit_photos ?? []) as VisitPhoto[];
+  const rep = visit.rep;
+  const account = visit.account;
+  const photos = visit.visit_photos ?? [];
 
   const initials = rep?.full_name
     ? rep.full_name
@@ -58,7 +59,7 @@ export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
                     {visit.kpi}
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground" title={formatEST(visit.visited_at, { dateStyle: 'medium', timeStyle: 'short' }) + ' EST'}>
                   {formatDistanceToNow(new Date(visit.visited_at), {
                     addSuffix: true,
                   })}

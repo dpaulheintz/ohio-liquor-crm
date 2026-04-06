@@ -26,7 +26,7 @@ const navItems = [
 ];
 
 const adminItems = [
-  { href: '/admin', label: 'Dashboard', icon: Shield },
+  { href: '/admin', label: 'Admin Dashboard', icon: Shield },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
@@ -79,7 +79,7 @@ export function Sidebar() {
 
         {isAdmin && (
           <>
-            <div className="my-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Admin
             </div>
             {adminItems.map((item) => {

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 
 export async function getContacts({
   search,
@@ -14,14 +15,50 @@ export async function getContacts({
 } = {}) {
   const supabase = await createClient();
 
+  // Supabase PostgREST doesn't support .or() across joined tables,
+  // so when the search includes terms that don't match contact fields
+  // we need to find matching account IDs first and include them.
+  let accountIds: string[] | null = null;
+
+  if (search) {
+    const sanitized = search.replace(/[,()]/g, '');
+    const terms = sanitized.trim().split(/\s+/).filter(Boolean);
+
+    if (terms.length > 0) {
+      // Search accounts by all searchable fields (name, city, agency_id, etc.)
+      let accountQuery = supabase
+        .from('accounts')
+        .select('id');
+
+      for (const term of terms) {
+        const orClause = [
+          'display_name', 'city', 'agency_id', 'address', 'district', 'legal_name',
+        ].map((f) => `${f}.ilike.%${term}%`).join(',');
+        accountQuery = accountQuery.or(orClause);
+      }
+
+      const { data: matchedAccounts } = await accountQuery;
+      accountIds = matchedAccounts?.map((a) => a.id) ?? [];
+    }
+  }
+
   let query = supabase
     .from('contacts')
-    .select('*, account:accounts!contacts_account_id_fkey(id, display_name, type)', {
+    .select('*, account:accounts!contacts_account_id_fkey(id, display_name, type, city)', {
       count: 'exact',
     });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%`);
+    const sanitized = search.replace(/[,()]/g, '');
+
+    // Build OR: match contact fields OR belong to a matching account
+    let orParts = `name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%,title_role.ilike.%${sanitized}%`;
+
+    if (accountIds && accountIds.length > 0) {
+      orParts += `,account_id.in.(${accountIds.join(',')})`;
+    }
+
+    query = query.or(orParts);
   }
 
   const from = (page - 1) * pageSize;
@@ -61,6 +98,16 @@ export async function getContactsByAccount(accountId: string) {
   return data ?? [];
 }
 
+const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(300),
+  account_id: z.string().uuid('Invalid account ID'),
+  phone: z.string().max(50).optional(),
+  email: z.string().email('Invalid email').max(300).optional().or(z.literal('')),
+  title_role: z.string().max(200).optional(),
+});
+
+const contactUpdateSchema = contactSchema.omit('account_id');
+
 export async function createContact(formData: {
   name: string;
   account_id: string;
@@ -68,16 +115,17 @@ export async function createContact(formData: {
   email?: string;
   title_role?: string;
 }) {
+  const parsed = contactSchema.parse(formData);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('contacts')
     .insert({
-      name: formData.name,
-      account_id: formData.account_id,
-      phone: formData.phone || null,
-      email: formData.email || null,
-      title_role: formData.title_role || null,
+      name: parsed.name,
+      account_id: parsed.account_id,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      title_role: parsed.title_role || null,
     })
     .select()
     .single();
@@ -85,7 +133,7 @@ export async function createContact(formData: {
   if (error) throw error;
 
   revalidatePath('/contacts');
-  revalidatePath(`/accounts/${formData.account_id}`);
+  revalidatePath(`/accounts/${parsed.account_id}`);
   return data;
 }
 
@@ -98,15 +146,16 @@ export async function updateContact(
     title_role?: string;
   }
 ) {
+  const parsed = contactUpdateSchema.parse(formData);
   const supabase = await createClient();
 
   const { error } = await supabase
     .from('contacts')
     .update({
-      name: formData.name,
-      phone: formData.phone || null,
-      email: formData.email || null,
-      title_role: formData.title_role || null,
+      name: parsed.name,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      title_role: parsed.title_role || null,
     })
     .eq('id', id);
 

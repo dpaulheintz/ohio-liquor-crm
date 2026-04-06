@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { searchAccounts } from '@/app/actions/accounts';
 import { Input } from '@/components/ui/input';
-import { Check } from 'lucide-react';
+
+interface AccountResult {
+  id: string;
+  display_name: string;
+  city?: string | null;
+  district?: string | null;
+  agency_id?: string | null;
+}
 
 interface AccountComboboxProps {
   accountId: string;
@@ -21,75 +28,118 @@ export function AccountCombobox({
   placeholder = 'Search accounts...',
 }: AccountComboboxProps) {
   const [search, setSearch] = useState('');
-  const [results, setResults] = useState<{ id: string; display_name: string }[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [results, setResults] = useState<AccountResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.length < 2) {
       setResults([]);
       return;
     }
-    const data = await searchAccounts(q);
-    setResults(data);
-    setShowDropdown(true);
+    setSearching(true);
+    try {
+      const data = await searchAccounts(q);
+      setResults(data);
+      setOpen(true);
+    } finally {
+      setSearching(false);
+    }
   }, []);
 
+  // Debounced search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (search && !accountId) {
-        doSearch(search);
-      }
-    }, 200);
+    if (!search || accountId) {
+      setResults([]);
+      return;
+    }
+    const timer = setTimeout(() => doSearch(search), 250);
     return () => clearTimeout(timer);
   }, [search, accountId, doSearch]);
 
-  // Close dropdown on outside click
+  // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-account-combobox]')) {
+        setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [open]);
+
+  function handleSelect(a: AccountResult) {
+    onSelect(a.id, a.display_name);
+    setSearch('');
+    setOpen(false);
+    setResults([]);
+  }
+
+  function handleClear() {
+    onSelect('', '');
+    setSearch('');
+    setResults([]);
+  }
+
+  // If an account is selected, show it with a clear button
+  if (accountId) {
+    return (
+      <div className="relative" data-account-combobox>
+        <Input value={accountName} disabled readOnly />
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+          aria-label="Clear selection"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative" data-account-combobox>
       <Input
-        value={accountId ? accountName : search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          if (accountId) {
-            onSelect('', '');
-          }
-        }}
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
         onFocus={() => {
-          if (results.length > 0 && !accountId) {
-            setShowDropdown(true);
-          }
+          if (results.length > 0) setOpen(true);
         }}
         placeholder={placeholder}
         disabled={disabled}
+        autoComplete="off"
       />
-      {showDropdown && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
-          {results.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              className="flex w-full items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-muted"
-              onClick={() => {
-                onSelect(a.id, a.display_name);
-                setShowDropdown(false);
-                setSearch('');
-              }}
-            >
-              <span>{a.display_name}</span>
-              {a.id === accountId && <Check className="h-4 w-4" />}
-            </button>
-          ))}
+
+      {/* Search indicator */}
+      {searching && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          ...
+        </span>
+      )}
+
+      {/* Results dropdown */}
+      {open && results.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[200px] overflow-y-auto rounded-md border bg-popover shadow-md">
+          {results.map((a) => {
+            const details = [a.agency_id, a.city, a.district].filter(Boolean).join(', ');
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => handleSelect(a)}
+                className="block w-full border-b border-border/50 px-3 py-2.5 text-left text-sm hover:bg-accent"
+              >
+                <div className="font-medium">{a.display_name}</div>
+                {details && (
+                  <div className="mt-0.5 text-xs text-muted-foreground">{details}</div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

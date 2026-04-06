@@ -26,7 +26,8 @@ export function BottomNav() {
       {/* FAB - Log Visit */}
       <Link
         href="/visits/new"
-        className="fixed bottom-20 right-4 z-50 md:bottom-6"
+        className="fixed bottom-24 right-4 z-40 md:bottom-6"
+        style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <Button size="lg" className="h-14 w-14 rounded-full shadow-lg">
           <Plus className="h-6 w-6" />
@@ -35,7 +36,10 @@ export function BottomNav() {
       </Link>
 
       {/* Bottom Tab Bar (mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background md:hidden">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         <div className="flex items-center justify-around">
           {items.map((item) => {
             const Icon = item.icon;
@@ -48,7 +52,7 @@ export function BottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors',
+                  'flex flex-1 flex-col items-center gap-1 py-3 text-xs transition-colors',
                   isActive
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'

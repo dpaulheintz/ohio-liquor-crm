@@ -62,6 +62,17 @@ export async function validateAgencyCSV(csvText: string) {
 
 export async function processAgencyImport(csvText: string, createContacts: boolean) {
   const supabase = await createClient();
+
+  // Verify admin role
+  const { data: me } = await supabase.auth.getUser();
+  if (!me.user) throw new Error('Not authenticated');
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', me.user.id)
+    .single();
+  if (myProfile?.role !== 'admin') throw new Error('Admin only');
+
   const cleaned = csvText.replace(/^\uFEFF/, '');
   const parsed = Papa.parse<AgencyRow>(cleaned, {
     header: true,

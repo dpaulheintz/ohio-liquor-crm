@@ -184,16 +184,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     .sort((a, b) => b.visitsThisMonth - a.visitsThisMonth);
 
   // --- Recent Activity ---
-  const recentActivity = recentVisits.map((v) => {
-    const rep = v.rep as unknown as {
-      id: string;
-      full_name: string | null;
-      email: string;
-    };
-    const account = v.account as unknown as {
-      id: string;
-      display_name: string;
-    };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recentActivity = recentVisits.map((v: any) => {
+    const rep = v.rep;
+    const account = v.account;
     return {
       id: v.id,
       visitedAt: v.visited_at,

@@ -25,7 +25,13 @@ export async function getProfiles() {
   return data;
 }
 
+const VALID_ROLES = ['admin', 'rep', 'viewer'] as const;
+
 export async function updateProfileRole(userId: string, role: 'admin' | 'rep' | 'viewer') {
+  if (!VALID_ROLES.includes(role)) {
+    throw new Error(`Invalid role: ${role}`);
+  }
+
   const supabase = await createClient();
   const { data: me } = await supabase.auth.getUser();
   if (!me.user) throw new Error('Not authenticated');

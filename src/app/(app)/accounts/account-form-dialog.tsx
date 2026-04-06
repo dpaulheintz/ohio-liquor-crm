@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createAccount, updateAccount } from '@/app/actions/accounts';
-import { Account } from '@/lib/types';
+import { createContact } from '@/app/actions/contacts';
+import { createVisit } from '@/app/actions/visits';
+import { Account, KPI_OPTIONS } from '@/lib/types';
+import { nowESTDatetimeLocal } from '@/lib/date-utils';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -41,6 +46,32 @@ export function AccountFormDialog({
   const [loading, setLoading] = useState(false);
   const isEditing = !!account;
 
+  // Optional contact fields (only for new accounts)
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactTitle, setContactTitle] = useState('');
+
+  // Optional visit fields (only for new accounts)
+  const [includeVisit, setIncludeVisit] = useState(false);
+  const [visitNotes, setVisitNotes] = useState('');
+  const [visitKpi, setVisitKpi] = useState('');
+  const [visitDateTime, setVisitDateTime] = useState(nowESTDatetimeLocal());
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open && !isEditing) {
+      setContactName('');
+      setContactPhone('');
+      setContactEmail('');
+      setContactTitle('');
+      setIncludeVisit(false);
+      setVisitNotes('');
+      setVisitKpi('');
+      setVisitDateTime(nowESTDatetimeLocal());
+    }
+  }, [open, isEditing]);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -54,7 +85,29 @@ export function AccountFormDialog({
         await updateAccount(account.id, formData);
         toast.success('Account updated');
       } else {
-        await createAccount(formData);
+        const newAccount = await createAccount(formData);
+
+        // Create contact if a name was provided
+        if (contactName.trim()) {
+          await createContact({
+            name: contactName.trim(),
+            account_id: newAccount.id,
+            phone: contactPhone || undefined,
+            email: contactEmail || undefined,
+            title_role: contactTitle || undefined,
+          });
+        }
+
+        // Create visit if toggled on
+        if (includeVisit) {
+          await createVisit({
+            accountId: newAccount.id,
+            notes: visitNotes || undefined,
+            kpi: visitKpi || undefined,
+            visitedAt: new Date(visitDateTime).toISOString(),
+          });
+        }
+
         toast.success('Account created');
       }
       onOpenChange(false);
@@ -69,7 +122,7 @@ export function AccountFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Account' : 'New Account'}</DialogTitle>
         </DialogHeader>
@@ -256,6 +309,105 @@ export function AccountFormDialog({
                   />
                 </div>
               </div>
+            </>
+          )}
+
+          {/* Optional contact (new accounts only) */}
+          {!isEditing && (
+            <>
+              <Separator />
+              <p className="text-sm font-medium text-muted-foreground">Add a Contact (optional)</p>
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contact Name</Label>
+                <Input
+                  id="contact_name"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_phone">Phone</Label>
+                  <Input
+                    id="contact_phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    type="tel"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Email</Label>
+                  <Input
+                    id="contact_email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    type="email"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact_title_role">Title / Role</Label>
+                <Input
+                  id="contact_title_role"
+                  value={contactTitle}
+                  onChange={(e) => setContactTitle(e.target.value)}
+                  placeholder="e.g., Store Manager"
+                />
+              </div>
+
+              <Separator />
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="include_visit"
+                  checked={includeVisit}
+                  onChange={(e) => setIncludeVisit(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="include_visit" className="text-sm font-medium text-muted-foreground cursor-pointer">
+                  Log a visit too? (optional)
+                </Label>
+              </div>
+
+              {includeVisit && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="visit_notes">Visit Notes</Label>
+                    <Textarea
+                      id="visit_notes"
+                      value={visitNotes}
+                      onChange={(e) => setVisitNotes(e.target.value)}
+                      placeholder="Visit notes..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>KPI</Label>
+                    <Select value={visitKpi} onValueChange={setVisitKpi}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select KPI (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {KPI_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="visit_datetime">Date & Time (EST)</Label>
+                    <Input
+                      id="visit_datetime"
+                      type="datetime-local"
+                      value={visitDateTime}
+                      onChange={(e) => setVisitDateTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </>
           )}
 
