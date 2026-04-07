@@ -48,7 +48,7 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-background">
       <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="text-lg font-bold">
+        <Link href="/" className="font-serif text-lg font-bold uppercase tracking-widest">
           High Bank CRM
         </Link>
       </div>
