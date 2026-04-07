@@ -211,7 +211,7 @@ export default function AccountsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 pb-20">
           <p className="text-sm text-muted-foreground">
             {total} account{total !== 1 ? 's' : ''}
           </p>

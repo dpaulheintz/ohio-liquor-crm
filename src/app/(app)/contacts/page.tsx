@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Users, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QuickAddContact } from './quick-add-contact';
+import { EditContactDialog } from './edit-contact-dialog';
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -18,6 +19,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const pageSize = 20;
 
@@ -90,7 +92,8 @@ export default function ContactsPage() {
             return (
               <div
                 key={contact.id}
-                className="flex items-center justify-between rounded-lg border p-3"
+                className="flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50"
+                onClick={() => setEditingContact(contact)}
               >
                 <div className="min-w-0">
                   <p className="font-medium">{contact.name}</p>
@@ -100,6 +103,7 @@ export default function ContactsPage() {
                       <Link
                         href={`/accounts/${acct.id}`}
                         className="hover:underline text-primary"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {acct.display_name}
                         {(acct as { city?: string | null }).city && (
@@ -111,12 +115,12 @@ export default function ContactsPage() {
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
                   {contact.phone && (
-                    <a href={`tel:${contact.phone}`} className="hover:underline">
+                    <a href={`tel:${contact.phone}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
                       {contact.phone}
                     </a>
                   )}
                   {contact.email && (
-                    <a href={`mailto:${contact.email}`} className="hover:underline hidden sm:inline">
+                    <a href={`mailto:${contact.email}`} className="hover:underline hidden sm:inline" onClick={(e) => e.stopPropagation()}>
                       {contact.email}
                     </a>
                   )}
@@ -128,7 +132,7 @@ export default function ContactsPage() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 pb-20">
           <p className="text-sm text-muted-foreground">
             {total} contact{total !== 1 ? 's' : ''}
           </p>
@@ -147,6 +151,13 @@ export default function ContactsPage() {
       <QuickAddContact
         open={showAdd}
         onOpenChange={setShowAdd}
+        onSuccess={fetchContacts}
+      />
+
+      <EditContactDialog
+        contact={editingContact}
+        open={!!editingContact}
+        onOpenChange={(open) => { if (!open) setEditingContact(null); }}
         onSuccess={fetchContacts}
       />
     </div>
