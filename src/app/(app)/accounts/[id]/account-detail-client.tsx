@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { AccountFormDialog } from '../account-form-dialog';
 import { QuickAddContact } from '../../contacts/quick-add-contact';
 import { VisitCard } from '../../visits/visit-card';
+import { EditVisitDialog } from '../../visits/edit-visit-dialog';
 
 interface AccountDetailClientProps {
   account: Account;
@@ -40,6 +41,7 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
   const [visits, setVisits] = useState<VisitLog[]>([]);
   const [showEdit, setShowEdit] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
 
   const ownerRep = account.owner_rep as unknown as Profile | null;
   const isOwner = profile?.id === ownerRep?.id;
@@ -129,6 +131,11 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
                 <Badge variant={account.type === 'agency' ? 'default' : 'secondary'}>
                   {account.type === 'agency' ? 'Agency' : 'Wholesale'}
                 </Badge>
+                {account.type === 'wholesale' && (
+                  <Badge variant={account.status === 'prospect' ? 'outline' : 'default'}>
+                    {account.status === 'prospect' ? 'Prospect' : 'Customer'}
+                  </Badge>
+                )}
               </div>
               {account.legal_name && account.legal_name !== account.display_name && (
                 <p className="text-sm text-muted-foreground">{account.legal_name}</p>
@@ -268,7 +275,7 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           ) : (
             <div className="space-y-3">
               {visits.map((visit) => (
-                <VisitCard key={visit.id} visit={visit} showAccount={false} />
+                <VisitCard key={visit.id} visit={visit} showAccount={false} onClick={() => setEditingVisit(visit)} />
               ))}
             </div>
           )}
@@ -289,6 +296,13 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
         onSuccess={fetchContacts}
         defaultAccountId={account.id}
         defaultAccountName={account.display_name}
+      />
+
+      <EditVisitDialog
+        visit={editingVisit}
+        open={!!editingVisit}
+        onOpenChange={(open) => { if (!open) setEditingVisit(null); }}
+        onSuccess={fetchVisits}
       />
     </div>
   );

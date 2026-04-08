@@ -140,6 +140,7 @@ const accountSchema = z.object({
   warehouse: z.string().max(200).optional(),
   linked_agency_name: z.string().max(500).optional(),
   linked_agency_id: z.string().max(100).optional(),
+  status: z.enum(['prospect', 'customer']).optional(),
 });
 
 function parseAccountFormData(formData: FormData) {
@@ -159,6 +160,7 @@ function parseAccountFormData(formData: FormData) {
     warehouse: type === 'agency' ? (formData.get('warehouse') as string) || undefined : undefined,
     linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || undefined : undefined,
     linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || undefined : undefined,
+    status: type === 'wholesale' ? ((formData.get('status') as string) || 'customer') as 'prospect' | 'customer' : undefined,
   };
 
   const parsed = accountSchema.parse(raw);
@@ -178,6 +180,7 @@ function parseAccountFormData(formData: FormData) {
     warehouse: parsed.warehouse || null,
     linked_agency_name: parsed.linked_agency_name || null,
     linked_agency_id: parsed.linked_agency_id || null,
+    status: parsed.status || 'customer',
   };
 }
 

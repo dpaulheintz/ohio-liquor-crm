@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getVisits } from '@/app/actions/visits';
 import { getReps } from '@/app/actions/accounts';
 import { VisitLog, Profile } from '@/lib/types';
+import { EditVisitDialog } from './visits/edit-visit-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [repFilter, setRepFilter] = useState<string>('all');
   const [reps, setReps] = useState<Pick<Profile, 'id' | 'full_name' | 'email'>[]>([]);
   const [page, setPage] = useState(1);
+  const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
   const pageSize = 20;
 
   const fetchVisits = useCallback(async () => {
@@ -98,7 +100,7 @@ export default function HomePage() {
       ) : (
         <div className="space-y-3">
           {visits.map((visit) => (
-            <VisitCard key={visit.id} visit={visit} />
+            <VisitCard key={visit.id} visit={visit} onClick={() => setEditingVisit(visit)} />
           ))}
 
           {hasMore && (
@@ -115,6 +117,13 @@ export default function HomePage() {
           )}
         </div>
       )}
+
+      <EditVisitDialog
+        visit={editingVisit}
+        open={!!editingVisit}
+        onOpenChange={(open) => { if (!open) setEditingVisit(null); }}
+        onSuccess={() => { setPage(1); fetchVisits(); }}
+      />
     </div>
   );
 }

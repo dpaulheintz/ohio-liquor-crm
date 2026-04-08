@@ -124,6 +124,41 @@ export async function createVisit(input: {
   return visit;
 }
 
+const updateVisitSchema = z.object({
+  notes: z.string().max(5000).optional(),
+  kpi: z.enum(KPI_OPTIONS).optional(),
+  visitedAt: z.string().datetime({ offset: true }).optional(),
+});
+
+export async function updateVisit(
+  id: string,
+  input: { notes?: string; kpi?: string; visitedAt?: string }
+) {
+  const parsed = updateVisitSchema.parse(input);
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const updates: Record<string, unknown> = {};
+  if (parsed.notes !== undefined) updates.notes = parsed.notes || null;
+  if (parsed.kpi !== undefined) updates.kpi = parsed.kpi || null;
+  if (parsed.visitedAt !== undefined) updates.visited_at = parsed.visitedAt;
+
+  const { data, error } = await supabase
+    .from('visit_logs')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  revalidatePath('/');
+  revalidatePath(`/accounts/${data.account_id}`);
+  return data;
+}
+
 export async function getRepActivity() {
   const supabase = await createClient();
 

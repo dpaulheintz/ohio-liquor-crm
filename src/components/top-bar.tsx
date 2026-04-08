@@ -29,7 +29,7 @@ export function TopBar() {
       <h1 className="font-serif text-lg font-bold uppercase tracking-widest md:hidden">
         High Bank CRM
         <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-muted-foreground">
-          {process.env.NEXT_PUBLIC_BUILD_SHA}
+          {process.env.NEXT_PUBLIC_APP_VERSION}
         </span>
       </h1>
       <div className="hidden md:block" />

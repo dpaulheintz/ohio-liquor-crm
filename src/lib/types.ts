@@ -2,6 +2,7 @@
 
 export type UserRole = 'pending' | 'rep' | 'admin';
 export type AccountType = 'agency' | 'wholesale';
+export type AccountStatus = 'prospect' | 'customer';
 export type DataSourceType = 'annual_summary' | 'wholesale';
 export type UploadStatus = 'pending' | 'processed' | 'deleted';
 export type MatchStatusType = 'matched' | 'unmatched' | 'pending_approval';
@@ -33,6 +34,7 @@ export interface Account {
   warehouse: string | null;
   linked_agency_name: string | null;
   linked_agency_id: string | null;
+  status: AccountStatus;
   owner_rep_id: string | null;
   needs_review: boolean;
   created_at: string;
