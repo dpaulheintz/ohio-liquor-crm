@@ -11,9 +11,10 @@ import Link from 'next/link';
 interface VisitCardProps {
   visit: VisitLog;
   showAccount?: boolean;
+  onClick?: () => void;
 }
 
-export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
+export function VisitCard({ visit, showAccount = true, onClick }: VisitCardProps) {
   const rep = visit.rep;
   const account = visit.account;
   const photos = visit.visit_photos ?? [];
@@ -27,7 +28,10 @@ export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
     : '?';
 
   return (
-    <Card>
+    <Card
+      className={onClick ? 'cursor-pointer transition-colors hover:bg-muted/50' : ''}
+      onClick={onClick}
+    >
       <CardContent className="p-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-8 w-8 shrink-0">
@@ -47,6 +51,7 @@ export function VisitCard({ visit, showAccount = true }: VisitCardProps) {
                     <Link
                       href={`/accounts/${account.id}`}
                       className="text-sm font-medium text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {account.display_name}
                     </Link>

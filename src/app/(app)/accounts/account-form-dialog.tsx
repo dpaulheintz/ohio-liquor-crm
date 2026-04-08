@@ -42,6 +42,7 @@ export function AccountFormDialog({
   account,
 }: AccountFormDialogProps) {
   const [type, setType] = useState<string>(account?.type || 'agency');
+  const [status, setStatus] = useState<string>(account?.status || 'customer');
   const [deliveryDay, setDeliveryDay] = useState<string>(account?.delivery_day || '');
   const [loading, setLoading] = useState(false);
   const isEditing = !!account;
@@ -79,6 +80,7 @@ export function AccountFormDialog({
     try {
       const formData = new FormData(e.currentTarget);
       formData.set('type', type);
+      formData.set('status', status);
       formData.set('delivery_day', deliveryDay);
 
       if (isEditing) {
@@ -232,6 +234,19 @@ export function AccountFormDialog({
 
           {type === 'wholesale' && (
             <>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="permit_number">Permit Number</Label>
                 <Input
