@@ -558,6 +558,23 @@ export default function AdminDashboard() {
                         {visit.notes}
                       </p>
                     )}
+                    {visit.photoUrls.length > 0 && (
+                      <div className="flex gap-1.5 mt-1.5">
+                        {visit.photoUrls.slice(0, 3).map((url: string, i: number) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt={`Visit photo ${i + 1}`}
+                            className="h-10 w-10 rounded object-cover"
+                          />
+                        ))}
+                        {visit.photoUrls.length > 3 && (
+                          <span className="flex h-10 w-10 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                            +{visit.photoUrls.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <span className="text-[10px] text-muted-foreground shrink-0">
                     {formatDistanceToNow(new Date(visit.visitedAt), {
