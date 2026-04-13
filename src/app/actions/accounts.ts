@@ -180,7 +180,7 @@ function parseAccountFormData(formData: FormData) {
     warehouse: parsed.warehouse || null,
     linked_agency_name: parsed.linked_agency_name || null,
     linked_agency_id: parsed.linked_agency_id || null,
-    status: parsed.status || 'customer',
+    ...(parsed.status ? { status: parsed.status } : {}),
   };
 }
 
