@@ -199,38 +199,47 @@ function NewVisitForm() {
         }
       }
 
-      // Step 3: Upload and compress photos
-      const supabase = createClient();
-      const photoUrls: { url: string; caption?: string; sort_order: number }[] = [];
+      // Step 3: Upload and compress photos (non-blocking — visit saves even if this fails)
+      let photoUrls: { url: string; caption?: string; sort_order: number }[] = [];
 
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
+      if (photos.length > 0) {
+        try {
+          const supabase = createClient();
 
-        const compressed = await imageCompression(photo.file, {
-          maxSizeMB: 0.8,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-        });
+          for (let i = 0; i < photos.length; i++) {
+            const photo = photos[i];
 
-        const fileName = `${Date.now()}-${i}-${compressed.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('visit-photos')
-          .upload(fileName, compressed, {
-            cacheControl: '3600',
-            upsert: false,
-          });
+            const compressed = await imageCompression(photo.file, {
+              maxSizeMB: 0.8,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+            });
 
-        if (uploadError) throw uploadError;
+            const fileName = `${Date.now()}-${i}-${compressed.name}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('visit-photos')
+              .upload(fileName, compressed, {
+                cacheControl: '3600',
+                upsert: false,
+              });
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('visit-photos').getPublicUrl(uploadData.path);
+            if (uploadError) throw uploadError;
 
-        photoUrls.push({
-          url: publicUrl,
-          caption: photo.caption || undefined,
-          sort_order: i,
-        });
+            const {
+              data: { publicUrl },
+            } = supabase.storage.from('visit-photos').getPublicUrl(uploadData.path);
+
+            photoUrls.push({
+              url: publicUrl,
+              caption: photo.caption || undefined,
+              sort_order: i,
+            });
+          }
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr);
+          toast.warning('Photos could not be uploaded — visit will be saved without them');
+          photoUrls = [];
+        }
       }
 
       // Step 4: Create visit

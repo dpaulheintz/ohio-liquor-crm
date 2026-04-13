@@ -44,6 +44,8 @@ export interface DashboardData {
     repEmail: string;
     accountId: string;
     accountName: string;
+    photoCount: number;
+    photoUrls: string[];
   }[];
 }
 
@@ -78,7 +80,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       supabase
         .from('visit_logs')
         .select(
-          'id, visited_at, notes, kpi, rep:profiles!visit_logs_rep_id_fkey(id, full_name, email), account:accounts!visit_logs_account_id_fkey(id, display_name)'
+          'id, visited_at, notes, kpi, rep:profiles!visit_logs_rep_id_fkey(id, full_name, email), account:accounts!visit_logs_account_id_fkey(id, display_name), visit_photos(*)'
         )
         .order('visited_at', { ascending: false })
         .limit(10),
@@ -188,6 +190,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   const recentActivity = recentVisits.map((v: any) => {
     const rep = v.rep;
     const account = v.account;
+    const photos = (v.visit_photos ?? [])
+      .sort((a: any, b: any) => a.sort_order - b.sort_order);
     return {
       id: v.id,
       visitedAt: v.visited_at,
@@ -197,6 +201,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       repEmail: rep?.email ?? '',
       accountId: account?.id ?? '',
       accountName: account?.display_name ?? 'Unknown',
+      photoCount: photos.length,
+      photoUrls: photos.map((p: any) => p.photo_url),
     };
   });
 
