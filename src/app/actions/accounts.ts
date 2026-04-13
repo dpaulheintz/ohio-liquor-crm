@@ -160,7 +160,6 @@ function parseAccountFormData(formData: FormData) {
     warehouse: type === 'agency' ? (formData.get('warehouse') as string) || undefined : undefined,
     linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || undefined : undefined,
     linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || undefined : undefined,
-    status: type === 'wholesale' ? ((formData.get('status') as string) || undefined) : undefined,
   };
 
   const parsed = accountSchema.parse(raw);
@@ -180,7 +179,6 @@ function parseAccountFormData(formData: FormData) {
     warehouse: parsed.warehouse || null,
     linked_agency_name: parsed.linked_agency_name || null,
     linked_agency_id: parsed.linked_agency_id || null,
-    ...(parsed.status ? { status: parsed.status } : {}),
   };
 }
 

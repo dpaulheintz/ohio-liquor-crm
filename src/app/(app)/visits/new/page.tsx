@@ -157,7 +157,6 @@ function NewVisitForm() {
         formData.set('type', newAcctType);
         formData.set('display_name', newAcctName);
         formData.set('delivery_day', newAcctDeliveryDay);
-        if (newAcctType === 'wholesale') formData.set('status', 'customer');
         if (newAcctAgencyId) formData.set('agency_id', newAcctAgencyId);
         if (newAcctPermitNumber) formData.set('permit_number', newAcctPermitNumber);
         if (newAcctWarehouse) formData.set('warehouse', newAcctWarehouse);
