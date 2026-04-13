@@ -157,6 +157,7 @@ function NewVisitForm() {
         formData.set('type', newAcctType);
         formData.set('display_name', newAcctName);
         formData.set('delivery_day', newAcctDeliveryDay);
+        if (newAcctType === 'wholesale') formData.set('status', 'customer');
         if (newAcctAgencyId) formData.set('agency_id', newAcctAgencyId);
         if (newAcctPermitNumber) formData.set('permit_number', newAcctPermitNumber);
         if (newAcctWarehouse) formData.set('warehouse', newAcctWarehouse);
@@ -168,21 +169,35 @@ function NewVisitForm() {
         if (newAcctLinkedName) formData.set('linked_agency_name', newAcctLinkedName);
         if (newAcctLinkedId) formData.set('linked_agency_id', newAcctLinkedId);
 
-        const newAccount = await createAccount(formData);
-        resolvedAccountId = newAccount.id;
-        toast.success('Account created');
+        try {
+          const newAccount = await createAccount(formData);
+          resolvedAccountId = newAccount.id;
+          toast.success('Account created');
+        } catch (err) {
+          console.error('Failed to create account:', err);
+          toast.error('Failed to create account');
+          setLoading(false);
+          return;
+        }
       }
 
       // Step 2: Create contact if needed
       if (creatingNewContact && newContactName.trim()) {
-        await createContact({
-          name: newContactName.trim(),
-          account_id: resolvedAccountId,
-          phone: newContactPhone || undefined,
-          email: newContactEmail || undefined,
-          title_role: newContactTitle || undefined,
-        });
-        toast.success('Contact added');
+        try {
+          await createContact({
+            name: newContactName.trim(),
+            account_id: resolvedAccountId,
+            phone: newContactPhone || undefined,
+            email: newContactEmail || undefined,
+            title_role: newContactTitle || undefined,
+          });
+          toast.success('Contact added');
+        } catch (err) {
+          console.error('Failed to create contact:', err);
+          toast.error('Failed to add contact');
+          setLoading(false);
+          return;
+        }
       }
 
       // Step 3: Upload and compress photos
