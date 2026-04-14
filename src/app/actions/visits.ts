@@ -128,11 +128,29 @@ const updateVisitSchema = z.object({
   notes: z.string().max(5000).optional(),
   kpi: z.enum(KPI_OPTIONS).optional(),
   visitedAt: z.string().datetime({ offset: true }).optional(),
+  repId: z.string().uuid().optional(),
+  addPhotos: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        caption: z.string().max(140).optional(),
+        sort_order: z.number().int().min(0),
+      })
+    )
+    .optional(),
+  removePhotoIds: z.array(z.string().uuid()).optional(),
 });
 
 export async function updateVisit(
   id: string,
-  input: { notes?: string; kpi?: string; visitedAt?: string }
+  input: {
+    notes?: string;
+    kpi?: string;
+    visitedAt?: string;
+    repId?: string;
+    addPhotos?: { url: string; caption?: string; sort_order: number }[];
+    removePhotoIds?: string[];
+  }
 ) {
   const parsed = updateVisitSchema.parse(input);
   const supabase = await createClient();
@@ -140,23 +158,110 @@ export async function updateVisit(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // Permission check: reps can only edit their own visits; admins can edit any
+  const { data: existing, error: existingErr } = await supabase
+    .from('visit_logs')
+    .select('id, rep_id, account_id')
+    .eq('id', id)
+    .single();
+  if (existingErr || !existing) throw new Error('Visit not found');
+
+  const { data: me } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  const isAdmin = me?.role === 'admin';
+  if (!isAdmin && existing.rep_id !== user.id) {
+    throw new Error('You can only edit your own visits');
+  }
+
+  // Only admins can reassign the rep
+  if (parsed.repId !== undefined && !isAdmin) {
+    throw new Error('Only admins can reassign a visit');
+  }
+
   const updates: Record<string, unknown> = {};
   if (parsed.notes !== undefined) updates.notes = parsed.notes || null;
   if (parsed.kpi !== undefined) updates.kpi = parsed.kpi || null;
   if (parsed.visitedAt !== undefined) updates.visited_at = parsed.visitedAt;
+  if (parsed.repId !== undefined) updates.rep_id = parsed.repId;
 
-  const { data, error } = await supabase
-    .from('visit_logs')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase
+      .from('visit_logs')
+      .update(updates)
+      .eq('id', id);
+    if (error) throw error;
+  }
 
-  if (error) throw error;
+  // Remove photos if requested
+  if (parsed.removePhotoIds && parsed.removePhotoIds.length > 0) {
+    const { error: delErr } = await supabase
+      .from('visit_photos')
+      .delete()
+      .in('id', parsed.removePhotoIds);
+    if (delErr) throw delErr;
+  }
+
+  // Add new photos if any
+  if (parsed.addPhotos && parsed.addPhotos.length > 0) {
+    const records = parsed.addPhotos.map((p) => ({
+      visit_id: id,
+      photo_url: p.url,
+      caption: p.caption || null,
+      sort_order: p.sort_order,
+    }));
+    const { error: insErr } = await supabase
+      .from('visit_photos')
+      .insert(records);
+    if (insErr) throw insErr;
+  }
 
   revalidatePath('/');
-  revalidatePath(`/accounts/${data.account_id}`);
-  return data;
+  revalidatePath(`/accounts/${existing.account_id}`);
+  revalidatePath('/admin');
+  return { id, account_id: existing.account_id };
+}
+
+export async function getPhotoAudit({
+  repId,
+  startDate,
+  endDate,
+  page = 1,
+  pageSize = 20,
+}: {
+  repId?: string;
+  startDate?: string; // ISO
+  endDate?: string; // ISO
+  page?: number;
+  pageSize?: number;
+} = {}) {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('visit_logs')
+    .select(
+      `id, visited_at, notes, kpi, rep_id, account_id,
+       rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
+       account:accounts!visit_logs_account_id_fkey(id, display_name),
+       visit_photos!inner(*)`,
+      { count: 'exact' }
+    )
+    .order('visited_at', { ascending: false });
+
+  if (repId) query = query.eq('rep_id', repId);
+  if (startDate) query = query.gte('visited_at', startDate);
+  if (endDate) query = query.lte('visited_at', endDate);
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, count, error } = await query;
+  if (error) throw error;
+
+  return { visits: data ?? [], total: count ?? 0 };
 }
 
 export async function getRepActivity() {

@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { PhotoAudit } from './photo-audit';
 
 // ---------- Chart configs ----------
 
@@ -508,6 +509,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Separator />
+
+      {/* ========== 5.5 Photo Audit ========== */}
+      <PhotoAudit />
 
       <Separator />
 
