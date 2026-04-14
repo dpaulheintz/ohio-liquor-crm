@@ -166,12 +166,14 @@ export async function updateVisit(
     .single();
   if (existingErr || !existing) throw new Error('Visit not found');
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  const isAdmin = me?.role === 'admin';
+  // Use the SECURITY DEFINER is_admin() RPC — bypasses any RLS issues
+  // around reading the profiles table and is the source of truth on role.
+  const { data: isAdminData, error: isAdminErr } = await supabase.rpc('is_admin');
+  if (isAdminErr) {
+    console.error('is_admin RPC failed', isAdminErr);
+  }
+  const isAdmin = isAdminData === true;
+
   if (!isAdmin && existing.rep_id !== user.id) {
     throw new Error('You can only edit your own visits');
   }
