@@ -14,7 +14,7 @@ import { LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export function TopBar() {
-  const { profile, isAdmin } = useUser();
+  const { profile, isAdmin, loading } = useUser();
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -24,12 +24,24 @@ export function TopBar() {
         .toUpperCase()
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
+  const roleLabel = loading
+    ? '…'
+    : isAdmin
+      ? 'admin'
+      : profile?.role ?? 'signed out';
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
       <h1 className="font-serif text-lg font-bold uppercase tracking-widest md:hidden">
         High Bank CRM
         <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-muted-foreground">
           {process.env.NEXT_PUBLIC_APP_VERSION}
+        </span>
+        <span
+          className="ml-2 font-sans text-[10px] font-normal normal-case tracking-normal text-muted-foreground"
+          title="Your role as seen by the client"
+        >
+          ({roleLabel})
         </span>
       </h1>
       <div className="hidden md:block" />
