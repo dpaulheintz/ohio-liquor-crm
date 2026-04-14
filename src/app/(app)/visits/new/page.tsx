@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AccountSearchDialog } from '@/components/account-search-dialog';
+import { DateTimePicker } from '@/components/date-time-picker';
 import { KPI_OPTIONS } from '@/lib/types';
 import { ArrowLeft, Camera, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -582,12 +583,11 @@ function NewVisitForm() {
 
             {/* Date/Time */}
             <div className="space-y-1.5">
-              <Label htmlFor="visited_at">Date & Time (EST)</Label>
-              <Input
-                id="visited_at"
-                type="datetime-local"
+              <Label>Date & Time (EST)</Label>
+              <DateTimePicker
+                idPrefix="new-visit"
                 value={visitedAt}
-                onChange={(e) => setVisitedAt(e.target.value)}
+                onChange={setVisitedAt}
               />
             </div>
 
