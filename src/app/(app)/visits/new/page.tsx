@@ -23,7 +23,7 @@ import {
 import { AccountSearchDialog } from '@/components/account-search-dialog';
 import { DateTimePicker } from '@/components/date-time-picker';
 import { KPI_OPTIONS } from '@/lib/types';
-import { ArrowLeft, Camera, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Camera, ImageIcon, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { nowESTDatetimeLocal } from '@/lib/date-utils';
 
@@ -539,17 +539,28 @@ function NewVisitForm() {
                   </div>
                 ))}
                 {photos.length < 5 && (
-                  <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-md border-2 border-dashed hover:bg-muted/50 transition-colors">
-                    <Camera className="h-6 w-6 text-muted-foreground" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      multiple
-                      onChange={handlePhotoSelect}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+                      <Camera className="h-3.5 w-3.5" /> Camera
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+                      <ImageIcon className="h-3.5 w-3.5" /> Library
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 )}
               </div>
             </div>
