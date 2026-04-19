@@ -38,6 +38,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
 import { formatVisitDate } from '@/lib/date-utils';
 import { PhotoAudit } from './photo-audit';
 
