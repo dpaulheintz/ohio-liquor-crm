@@ -60,6 +60,7 @@ const visitSchema = z.object({
   accountId: z.string().uuid('Invalid account ID'),
   notes: z.string().max(5000).optional(),
   kpi: z.enum(KPI_OPTIONS).optional(),
+  kpiQuantity: z.number().int().min(1).max(99).optional(),
   visitedAt: z.string().datetime({ offset: true }).optional(),
   photoUrls: z
     .array(
@@ -77,6 +78,7 @@ export async function createVisit(input: {
   accountId: string;
   notes?: string;
   kpi?: string;
+  kpiQuantity?: number;
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
@@ -96,6 +98,9 @@ export async function createVisit(input: {
       rep_id: user.id,
       notes: parsed.notes || null,
       kpi: parsed.kpi || null,
+      kpi_quantity: parsed.kpi && parsed.kpiQuantity && parsed.kpiQuantity > 1
+        ? parsed.kpiQuantity
+        : null,
       visited_at: parsed.visitedAt || new Date().toISOString(),
     })
     .select()
@@ -127,6 +132,7 @@ export async function createVisit(input: {
 const updateVisitSchema = z.object({
   notes: z.string().max(5000).optional(),
   kpi: z.enum(KPI_OPTIONS).optional(),
+  kpiQuantity: z.number().int().min(1).max(99).optional(),
   visitedAt: z.string().datetime({ offset: true }).optional(),
   repId: z.string().uuid().optional(),
   addPhotos: z
@@ -146,6 +152,7 @@ export async function updateVisit(
   input: {
     notes?: string;
     kpi?: string;
+    kpiQuantity?: number;
     visitedAt?: string;
     repId?: string;
     addPhotos?: { url: string; caption?: string; sort_order: number }[];
@@ -186,6 +193,11 @@ export async function updateVisit(
   const updates: Record<string, unknown> = {};
   if (parsed.notes !== undefined) updates.notes = parsed.notes || null;
   if (parsed.kpi !== undefined) updates.kpi = parsed.kpi || null;
+  if (parsed.kpi !== undefined || parsed.kpiQuantity !== undefined) {
+    updates.kpi_quantity = parsed.kpi && parsed.kpiQuantity && parsed.kpiQuantity > 1
+      ? parsed.kpiQuantity
+      : null;
+  }
   if (parsed.visitedAt !== undefined) updates.visited_at = parsed.visitedAt;
   if (parsed.repId !== undefined) updates.rep_id = parsed.repId;
 
@@ -244,7 +256,7 @@ export async function getPhotoAudit({
   let query = supabase
     .from('visit_logs')
     .select(
-      `id, visited_at, notes, kpi, rep_id, account_id,
+      `id, visited_at, notes, kpi, kpi_quantity, rep_id, account_id,
        rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
        account:accounts!visit_logs_account_id_fkey(id, display_name),
        visit_photos!inner(*)`,

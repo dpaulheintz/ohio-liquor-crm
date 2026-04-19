@@ -54,12 +54,13 @@ function NewVisitForm() {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [notes, setNotes] = useState('');
   const [kpi, setKpi] = useState('');
+  const [kpiQuantity, setKpiQuantity] = useState<number>(1);
   const [visitedAt, setVisitedAt] = useState(nowESTDatetimeLocal());
   const [loading, setLoading] = useState(false);
 
   // Inline new account state
   const [creatingNewAccount, setCreatingNewAccount] = useState(false);
-  const [newAcctType, setNewAcctType] = useState<string>('agency');
+  const [newAcctType, setNewAcctType] = useState<string>('wholesale');
   const [newAcctName, setNewAcctName] = useState('');
   const [newAcctAgencyId, setNewAcctAgencyId] = useState('');
   const [newAcctPermitNumber, setNewAcctPermitNumber] = useState('');
@@ -248,6 +249,7 @@ function NewVisitForm() {
         accountId: resolvedAccountId,
         notes: notes || undefined,
         kpi: kpi || undefined,
+        kpiQuantity: kpi && kpiQuantity > 1 ? kpiQuantity : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -567,7 +569,7 @@ function NewVisitForm() {
             {/* KPI */}
             <div className="space-y-1.5">
               <Label>KPI</Label>
-              <Select value={kpi} onValueChange={setKpi}>
+              <Select value={kpi} onValueChange={(v) => { setKpi(v); setKpiQuantity(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select KPI (optional)" />
                 </SelectTrigger>
@@ -579,6 +581,21 @@ function NewVisitForm() {
                   ))}
                 </SelectContent>
               </Select>
+              {kpi && (
+                <div className="space-y-1.5 pt-1">
+                  <Label className="text-xs text-muted-foreground">
+                    If more than 1, please denote amount
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={kpiQuantity}
+                    onChange={(e) => setKpiQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-24"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Date/Time */}

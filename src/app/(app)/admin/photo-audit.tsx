@@ -18,8 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Camera, ChevronDown, Filter } from 'lucide-react';
-import { formatEST } from '@/lib/date-utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatVisitDate } from '@/lib/date-utils';
 
 interface AuditRep {
   id: string;
@@ -39,6 +38,7 @@ interface AuditVisit {
   visited_at: string;
   notes: string | null;
   kpi: string | null;
+  kpi_quantity: number | null;
   rep_id: string;
   account_id: string;
   rep: AuditRep | null;
@@ -184,30 +184,25 @@ export function PhotoAudit() {
             {visits.map((v) => (
               <div key={v.id} className="rounded-lg border p-3 space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-sm">
+                  <div className="text-sm flex flex-wrap items-center gap-1.5">
                     <span className="font-medium">
                       {v.rep?.full_name || v.rep?.email || 'Unknown rep'}
                     </span>
-                    <span className="text-muted-foreground"> at </span>
+                    <span className="text-muted-foreground">at</span>
                     <Link
                       href={`/accounts/${v.account?.id ?? v.account_id}`}
                       className="text-primary hover:underline"
                     >
                       {v.account?.display_name || 'Unknown account'}
                     </Link>
+                    {v.kpi && (
+                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium">
+                        {v.kpi}{v.kpi_quantity && v.kpi_quantity > 1 ? ` ×${v.kpi_quantity}` : ''}
+                      </span>
+                    )}
                   </div>
-                  <span
-                    className="text-xs text-muted-foreground"
-                    title={
-                      formatEST(v.visited_at, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      }) + ' EST'
-                    }
-                  >
-                    {formatDistanceToNow(new Date(v.visited_at), {
-                      addSuffix: true,
-                    })}
+                  <span className="text-xs text-muted-foreground">
+                    {formatVisitDate(v.visited_at)}
                   </span>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">

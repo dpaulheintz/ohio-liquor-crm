@@ -41,7 +41,7 @@ export function AccountFormDialog({
   onSuccess,
   account,
 }: AccountFormDialogProps) {
-  const [type, setType] = useState<string>(account?.type || 'agency');
+  const [type, setType] = useState<string>(account?.type || 'wholesale');
   const [status, setStatus] = useState<string>(account?.status || 'customer');
   const [deliveryDay, setDeliveryDay] = useState<string>(account?.delivery_day || '');
   const [loading, setLoading] = useState(false);

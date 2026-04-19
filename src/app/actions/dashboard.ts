@@ -40,6 +40,7 @@ export interface DashboardData {
     visitedAt: string;
     notes: string | null;
     kpi: string | null;
+    kpiQuantity: number | null;
     repName: string | null;
     repEmail: string;
     accountId: string;
@@ -80,7 +81,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       supabase
         .from('visit_logs')
         .select(
-          'id, visited_at, notes, kpi, rep:profiles!visit_logs_rep_id_fkey(id, full_name, email), account:accounts!visit_logs_account_id_fkey(id, display_name), visit_photos(*)'
+          'id, visited_at, notes, kpi, kpi_quantity, rep:profiles!visit_logs_rep_id_fkey(id, full_name, email), account:accounts!visit_logs_account_id_fkey(id, display_name), visit_photos(*)'
         )
         .order('visited_at', { ascending: false })
         .limit(10),
@@ -197,6 +198,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       visitedAt: v.visited_at,
       notes: v.notes,
       kpi: v.kpi,
+      kpiQuantity: v.kpi_quantity ?? null,
       repName: rep?.full_name ?? null,
       repEmail: rep?.email ?? '',
       accountId: account?.id ?? '',

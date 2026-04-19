@@ -38,7 +38,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import { formatVisitDate } from '@/lib/date-utils';
 import { PhotoAudit } from './photo-audit';
 
 // ---------- Chart configs ----------
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
                       </Link>
                       {visit.kpi && (
                         <Badge variant="secondary" className="text-[10px]">
-                          {visit.kpi}
+                          {visit.kpi}{visit.kpiQuantity && visit.kpiQuantity > 1 ? ` ×${visit.kpiQuantity}` : ''}
                         </Badge>
                       )}
                     </div>
@@ -581,12 +581,10 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     )}
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {formatVisitDate(visit.visitedAt)}
+                    </p>
                   </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {formatDistanceToNow(new Date(visit.visitedAt), {
-                      addSuffix: true,
-                    })}
-                  </span>
                 </div>
               ))}
             </div>

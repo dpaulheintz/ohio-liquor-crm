@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
 
   const [notes, setNotes] = useState('');
   const [kpi, setKpi] = useState('');
+  const [kpiQuantity, setKpiQuantity] = useState<number>(1);
   const [visitedAt, setVisitedAt] = useState('');
   const [repId, setRepId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +78,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
     if (visit && open) {
       setNotes(visit.notes || '');
       setKpi(visit.kpi || '');
+      setKpiQuantity(visit.kpi_quantity || 1);
       setVisitedAt(toDatetimeLocal(visit.visited_at));
       setRepId(visit.rep_id);
       setExistingPhotos(
@@ -169,6 +172,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
       await updateVisit(visit.id, {
         notes: notes || undefined,
         kpi: kpi && kpi !== 'none' ? kpi : undefined,
+        kpiQuantity: kpi && kpi !== 'none' ? kpiQuantity : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         repId: isAdmin && repId !== visit.rep_id ? repId : undefined,
         addPhotos,
@@ -211,7 +215,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
 
             <div className="space-y-2">
               <Label>KPI</Label>
-              <Select value={kpi} onValueChange={setKpi}>
+              <Select value={kpi} onValueChange={(v) => { setKpi(v); setKpiQuantity(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select KPI (optional)" />
                 </SelectTrigger>
@@ -224,6 +228,21 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
                   ))}
                 </SelectContent>
               </Select>
+              {kpi && kpi !== 'none' && (
+                <div className="pt-1 space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    If more than 1, please denote amount
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={kpiQuantity}
+                    onChange={(e) => setKpiQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-24"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
