@@ -69,6 +69,7 @@ export interface VisitLog {
   visited_at: string;
   notes: string | null;
   kpi: string | null;
+  kpi_quantity: number | null;
   created_at: string;
   // Joined
   account?: Account;

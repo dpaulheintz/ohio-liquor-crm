@@ -4,8 +4,7 @@ import { VisitLog, Profile, Account, VisitPhoto } from '@/lib/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatDistanceToNow } from 'date-fns';
-import { formatEST } from '@/lib/date-utils';
+import { formatVisitDate } from '@/lib/date-utils';
 import Link from 'next/link';
 
 interface VisitCardProps {
@@ -58,16 +57,14 @@ export function VisitCard({ visit, showAccount = true, onClick }: VisitCardProps
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0 ml-2">
+              <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
                 {visit.kpi && (
                   <Badge variant="outline" className="text-xs">
-                    {visit.kpi}
+                    {visit.kpi}{visit.kpi_quantity && visit.kpi_quantity > 1 ? ` ×${visit.kpi_quantity}` : ''}
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground" title={formatEST(visit.visited_at, { dateStyle: 'medium', timeStyle: 'short' }) + ' EST'}>
-                  {formatDistanceToNow(new Date(visit.visited_at), {
-                    addSuffix: true,
-                  })}
+                <span className="text-[11px] text-muted-foreground text-right">
+                  {formatVisitDate(visit.visited_at)}
                 </span>
               </div>
             </div>
