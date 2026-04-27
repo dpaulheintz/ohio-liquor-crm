@@ -3,9 +3,6 @@
 export type UserRole = 'pending' | 'rep' | 'admin';
 export type AccountType = 'agency' | 'wholesale';
 export type AccountStatus = 'prospect' | 'customer';
-export type DataSourceType = 'annual_summary' | 'wholesale';
-export type UploadStatus = 'pending' | 'processed' | 'deleted';
-export type MatchStatusType = 'matched' | 'unmatched' | 'pending_approval';
 
 export interface Profile {
   id: string;
@@ -86,45 +83,3 @@ export interface VisitPhoto {
   created_at: string;
 }
 
-export interface UploadBatch {
-  id: string;
-  uploaded_by: string;
-  data_source: DataSourceType;
-  upload_period: string;
-  file_name: string | null;
-  row_count: number;
-  matched_count: number;
-  unmatched_count: number;
-  status: UploadStatus;
-  created_at: string;
-  // Joined
-  uploader?: Profile;
-}
-
-export interface SalesData {
-  id: string;
-  upload_batch_id: string;
-  data_source: DataSourceType;
-  district: string | null;
-  agency_id: string | null;
-  agency_name: string | null;
-  permit_number: string | null;
-  wholesaler: string | null;
-  doing_business_as: string | null;
-  vendor: string | null;
-  brand: string | null;
-  product_name: string | null;
-  category: string | null;
-  retail_bottles_sold: number | null;
-  retail_amount: number | null;
-  retail_tax: number | null;
-  wholesale_bottles_sold: number | null;
-  wholesale_amount: number | null;
-  wholesale_tax: number | null;
-  upload_period: string | null;
-  matched_account_id: string | null;
-  match_status: MatchStatusType;
-  created_at: string;
-  // Joined
-  matched_account?: Account;
-}

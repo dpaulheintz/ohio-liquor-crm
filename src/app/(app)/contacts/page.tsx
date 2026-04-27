@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { getContacts } from '@/app/actions/contacts';
-import { Contact, Account } from '@/lib/types';
+import { Contact } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -106,8 +106,8 @@ export default function ContactsPage() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         {acct.display_name}
-                        {(acct as { city?: string | null }).city && (
-                          <span className="text-muted-foreground"> — {(acct as { city?: string | null }).city}</span>
+                        {acct.city && (
+                          <span className="text-muted-foreground"> — {acct.city}</span>
                         )}
                       </Link>
                     )}

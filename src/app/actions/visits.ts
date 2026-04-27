@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { KPI_OPTIONS } from '@/lib/types';
 
-const MAX_PHOTOS = 5;
+export const MAX_PHOTOS = 5;
 
 export async function getVisits({
   repId,
@@ -176,9 +176,7 @@ export async function updateVisit(
   // Use the SECURITY DEFINER is_admin() RPC — bypasses any RLS issues
   // around reading the profiles table and is the source of truth on role.
   const { data: isAdminData, error: isAdminErr } = await supabase.rpc('is_admin');
-  if (isAdminErr) {
-    console.error('is_admin RPC failed', isAdminErr);
-  }
+  if (isAdminErr) throw new Error('Permission check failed');
   const isAdmin = isAdminData === true;
 
   if (!isAdmin && existing.rep_id !== user.id) {

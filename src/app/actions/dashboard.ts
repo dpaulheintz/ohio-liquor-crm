@@ -187,24 +187,32 @@ export async function getDashboardData(): Promise<DashboardData> {
     .sort((a, b) => b.visitsThisMonth - a.visitsThisMonth);
 
   // --- Recent Activity ---
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recentActivity = recentVisits.map((v: any) => {
-    const rep = v.rep;
-    const account = v.account;
+  interface RecentVisitRow {
+    id: string;
+    visited_at: string;
+    notes: string | null;
+    kpi: string | null;
+    kpi_quantity: number | null;
+    rep: { id: string; full_name: string | null; email: string } | null;
+    account: { id: string; display_name: string } | null;
+    visit_photos: { photo_url: string; sort_order: number }[] | null;
+  }
+  const recentActivity = (recentVisits as RecentVisitRow[]).map((v) => {
     const photos = (v.visit_photos ?? [])
-      .sort((a: any, b: any) => a.sort_order - b.sort_order);
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order);
     return {
       id: v.id,
       visitedAt: v.visited_at,
       notes: v.notes,
       kpi: v.kpi,
       kpiQuantity: v.kpi_quantity ?? null,
-      repName: rep?.full_name ?? null,
-      repEmail: rep?.email ?? '',
-      accountId: account?.id ?? '',
-      accountName: account?.display_name ?? 'Unknown',
+      repName: v.rep?.full_name ?? null,
+      repEmail: v.rep?.email ?? '',
+      accountId: v.account?.id ?? '',
+      accountName: v.account?.display_name ?? 'Unknown',
       photoCount: photos.length,
-      photoUrls: photos.map((p: any) => p.photo_url),
+      photoUrls: photos.map((p) => p.photo_url),
     };
   });
 

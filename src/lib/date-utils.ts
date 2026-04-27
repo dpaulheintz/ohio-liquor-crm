@@ -59,29 +59,6 @@ export function getVisitGroup(date: string | Date): string {
 }
 
 /**
- * Convert a UTC date string to an EST/EDT-aware Date for display.
- * Uses the Intl API (no extra dependencies).
- */
-export function toZonedTime(date: string | Date): Date {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  // Get the offset between UTC and America/New_York
-  const utc = d.getTime();
-  const eastern = new Date(utc).toLocaleString('en-US', { timeZone: 'America/New_York' });
-  return new Date(eastern);
-}
-
-/**
- * Format a UTC date string to a readable EST string.
- */
-export function formatEST(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    ...options,
-  });
-}
-
-/**
  * Get current date/time as a datetime-local string in EST.
  */
 export function nowESTDatetimeLocal(): string {
