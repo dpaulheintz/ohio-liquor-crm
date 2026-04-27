@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { startOfMonth } from 'date-fns';
 import { getAccounts, getDistricts, getReps } from '@/app/actions/accounts';
 import { Account, Profile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
@@ -15,10 +17,36 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Building2, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Search, Building2, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { AccountFormDialog } from './account-form-dialog';
 
 export default function AccountsPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-4 md:p-6 space-y-4">
+        <div className="h-8 w-32 rounded bg-muted animate-pulse" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    }>
+      <AccountList />
+    </Suspense>
+  );
+}
+
+function AccountList() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // `touched=month` → show only accounts visited this month
+  const touchedParam = searchParams.get('touched');
+  const visitedSince = touchedParam === 'month'
+    ? startOfMonth(new Date()).toISOString()
+    : undefined;
+
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -44,6 +72,7 @@ export default function AccountsPage() {
         district: district !== 'all' ? district : undefined,
         repId: repId !== 'all' ? repId : undefined,
         neverVisited,
+        visitedSince,
         needsReview,
         page,
         pageSize,
@@ -55,7 +84,7 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, type, district, repId, neverVisited, needsReview, page]);
+  }, [search, type, district, repId, neverVisited, visitedSince, needsReview, page]);
 
   useEffect(() => {
     fetchAccounts();
@@ -81,7 +110,20 @@ export default function AccountsPage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Accounts</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Accounts</h1>
+          {visitedSince && (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              Touched This Month
+              <button
+                onClick={() => router.replace('/accounts')}
+                className="hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
         <Button onClick={() => setShowCreate(true)} size="sm">
           <Plus className="mr-1 h-4 w-4" />
           Add Account
@@ -168,7 +210,19 @@ export default function AccountsPage() {
       ) : accounts.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           <Building2 className="mx-auto mb-3 h-10 w-10" />
-          <p>No accounts found</p>
+          {visitedSince ? (
+            <>
+              <p>No accounts visited this month yet</p>
+              <button
+                onClick={() => router.replace('/accounts')}
+                className="text-sm mt-2 underline hover:text-foreground"
+              >
+                Clear filter
+              </button>
+            </>
+          ) : (
+            <p>No accounts found</p>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

@@ -25,6 +25,7 @@ export async function getAccounts({
   district,
   repId,
   neverVisited,
+  visitedSince,
   needsReview,
   page = 1,
   pageSize = 20,
@@ -36,6 +37,7 @@ export async function getAccounts({
   district?: string;
   repId?: string;
   neverVisited?: boolean;
+  visitedSince?: string; // ISO date — filter to accounts visited on/after this date
   needsReview?: boolean;
   page?: number;
   pageSize?: number;
@@ -44,14 +46,24 @@ export async function getAccounts({
 } = {}) {
   const supabase = await createClient();
 
-  // If neverVisited filter is on, get visited account IDs first so the DB
-  // handles filtering and pagination stays correct.
+  // Pre-fetch visited account IDs for neverVisited / visitedSince filters
   let visitedAccountIds: string[] | null = null;
   if (neverVisited) {
     const { data: visitedData } = await supabase
       .from('visit_logs')
       .select('account_id');
     visitedAccountIds = [
+      ...new Set(visitedData?.map((v) => v.account_id) ?? []),
+    ];
+  }
+
+  let visitedSinceIds: string[] | null = null;
+  if (visitedSince) {
+    const { data: visitedData } = await supabase
+      .from('visit_logs')
+      .select('account_id')
+      .gte('visited_at', visitedSince);
+    visitedSinceIds = [
       ...new Set(visitedData?.map((v) => v.account_id) ?? []),
     ];
   }
@@ -93,9 +105,19 @@ export async function getAccounts({
     query = query.eq('needs_review', true);
   }
 
-  // Exclude accounts that have been visited (server-side)
+  // Exclude accounts that have been visited (neverVisited filter)
   if (visitedAccountIds && visitedAccountIds.length > 0) {
     query = query.not('id', 'in', `(${visitedAccountIds.join(',')})`);
+  }
+
+  // Include only accounts visited since a given date (visitedSince filter)
+  if (visitedSinceIds !== null) {
+    if (visitedSinceIds.length > 0) {
+      query = query.in('id', visitedSinceIds);
+    } else {
+      // No accounts visited since this date — return nothing
+      return { accounts: [], total: 0 };
+    }
   }
 
   const from = (page - 1) * pageSize;

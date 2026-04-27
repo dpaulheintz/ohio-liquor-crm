@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { startOfWeek, startOfMonth } from 'date-fns';
 import { getVisits } from '@/app/actions/visits';
 import { getReps } from '@/app/actions/accounts';
 import { VisitLog, Profile } from '@/lib/types';
 import { EditVisitDialog } from './visits/edit-visit-dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardList, ChevronDown } from 'lucide-react';
+import { ClipboardList, ChevronDown, X } from 'lucide-react';
 import { VisitCard } from './visits/visit-card';
 import { getVisitGroup } from '@/lib/date-utils';
 
@@ -28,7 +31,45 @@ function groupVisits(visits: VisitLog[]): { label: string; visits: VisitLog[] }[
   return Array.from(groups.entries()).map(([label, visits]) => ({ label, visits }));
 }
 
+function periodDates(period: string | null): { startDate?: string; endDate?: string } {
+  if (!period) return {};
+  const now = new Date();
+  if (period === 'week') {
+    return { startDate: startOfWeek(now, { weekStartsOn: 0 }).toISOString() };
+  }
+  if (period === 'month') {
+    return { startDate: startOfMonth(now).toISOString() };
+  }
+  return {};
+}
+
 export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-36 rounded bg-muted animate-pulse" />
+          <div className="h-9 w-36 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    }>
+      <ActivityFeed />
+    </Suspense>
+  );
+}
+
+function ActivityFeed() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const period = searchParams.get('period'); // 'week' | 'month' | null
+  const kpiOnly = searchParams.get('kpi') === 'true';
+
   const [visits, setVisits] = useState<VisitLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -38,11 +79,16 @@ export default function HomePage() {
   const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
   const pageSize = 20;
 
+  const { startDate, endDate } = periodDates(period);
+
   const fetchVisits = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getVisits({
         repId: repFilter !== 'all' ? repFilter : undefined,
+        startDate,
+        endDate,
+        kpiOnly: kpiOnly || undefined,
         page,
         pageSize,
       });
@@ -57,7 +103,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [repFilter, page]);
+  }, [repFilter, startDate, endDate, kpiOnly, page]);
 
   useEffect(() => {
     fetchVisits();
@@ -67,13 +113,40 @@ export default function HomePage() {
     getReps().then(setReps);
   }, []);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+    setVisits([]);
+  }, [period, kpiOnly, repFilter]);
+
+  function clearFilter() {
+    router.replace('/');
+  }
+
   const hasMore = visits.length < total;
   const grouped = groupVisits(visits);
 
+  const filterLabel = period === 'week'
+    ? kpiOnly ? 'KPIs · This Week' : 'This Week'
+    : period === 'month'
+    ? kpiOnly ? 'KPIs · This Month' : 'This Month'
+    : kpiOnly ? 'KPIs Only'
+    : null;
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Activity Feed</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Activity Feed</h1>
+          {filterLabel && (
+            <Badge variant="secondary" className="gap-1 text-xs">
+              {filterLabel}
+              <button onClick={clearFilter} className="hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
         <Select
           value={repFilter}
           onValueChange={(v) => {
@@ -104,10 +177,19 @@ export default function HomePage() {
       ) : visits.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           <ClipboardList className="mx-auto mb-3 h-10 w-10" />
-          <p>No visits logged yet</p>
-          <p className="text-sm mt-1">
-            Tap the + button to log your first visit
-          </p>
+          {filterLabel ? (
+            <>
+              <p>No visits found for &quot;{filterLabel}&quot;</p>
+              <button onClick={clearFilter} className="text-sm mt-2 underline hover:text-foreground">
+                Clear filter
+              </button>
+            </>
+          ) : (
+            <>
+              <p>No visits logged yet</p>
+              <p className="text-sm mt-1">Tap the + button to log your first visit</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
