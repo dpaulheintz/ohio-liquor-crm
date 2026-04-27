@@ -219,82 +219,87 @@ export default function AdminDashboard() {
 
       {/* ========== 1. Hero KPI Cards ========== */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Activity className="h-3 w-3" /> Visits This Week
-            </p>
-            <p className="text-3xl font-bold mt-1">{kpiCards.visitsThisWeek}</p>
-            <TrendBadge
-              current={kpiCards.visitsThisWeek}
-              previous={kpiCards.visitsLastWeek}
-            />
-          </CardContent>
-        </Card>
+        <Link href="/?period=week">
+          <Card className="hover:border-amber-400/60 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Activity className="h-3 w-3" /> Visits This Week
+              </p>
+              <p className="text-3xl font-bold mt-1">{kpiCards.visitsThisWeek}</p>
+              <TrendBadge
+                current={kpiCards.visitsThisWeek}
+                previous={kpiCards.visitsLastWeek}
+              />
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <CalendarDays className="h-3 w-3" /> Visits This Month
-            </p>
-            <p className="text-3xl font-bold mt-1">
-              {kpiCards.visitsThisMonth}
-            </p>
-            <TrendBadge
-              current={kpiCards.visitsThisMonth}
-              previous={kpiCards.visitsLastMonth}
-            />
-          </CardContent>
-        </Card>
+        <Link href="/?period=month">
+          <Card className="hover:border-amber-400/60 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" /> Visits This Month
+              </p>
+              <p className="text-3xl font-bold mt-1">
+                {kpiCards.visitsThisMonth}
+              </p>
+              <TrendBadge
+                current={kpiCards.visitsThisMonth}
+                previous={kpiCards.visitsLastMonth}
+              />
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> Accounts Touched
-            </p>
-            <p className="text-3xl font-bold mt-1">
-              {kpiCards.uniqueAccountsThisMonth}
-            </p>
-            <TrendBadge
-              current={kpiCards.uniqueAccountsThisMonth}
-              previous={kpiCards.uniqueAccountsLastMonth}
-            />
-          </CardContent>
-        </Card>
+        <Link href="/accounts?touched=month">
+          <Card className="hover:border-amber-400/60 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Accounts Touched
+              </p>
+              <p className="text-3xl font-bold mt-1">
+                {kpiCards.uniqueAccountsThisMonth}
+              </p>
+              <TrendBadge
+                current={kpiCards.uniqueAccountsThisMonth}
+                previous={kpiCards.uniqueAccountsLastMonth}
+              />
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Target className="h-3 w-3" /> KPIs Logged
-            </p>
-            <p className="text-3xl font-bold mt-1">{kpiCards.kpisThisMonth}</p>
-            <TrendBadge
-              current={kpiCards.kpisThisMonth}
-              previous={kpiCards.kpisLastMonth}
-            />
-          </CardContent>
-        </Card>
+        <Link href="/?period=month&kpi=true">
+          <Card className="hover:border-amber-400/60 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Target className="h-3 w-3" /> KPIs Logged
+              </p>
+              <p className="text-3xl font-bold mt-1">{kpiCards.kpisThisMonth}</p>
+              <TrendBadge
+                current={kpiCards.kpisThisMonth}
+                previous={kpiCards.kpisLastMonth}
+              />
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className={kpiCards.accountsNeedingReview > 0 ? 'border-amber-400/50' : ''}>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Eye className="h-3 w-3" /> Needs Review
-            </p>
-            <p className="text-3xl font-bold mt-1">
-              {kpiCards.accountsNeedingReview}
-            </p>
-            {kpiCards.accountsNeedingReview > 0 ? (
-              <Link
-                href="/admin/approvals"
-                className="text-xs text-amber-600 hover:underline"
-              >
-                View queue
-              </Link>
-            ) : (
-              <span className="text-xs text-emerald-600">All clear</span>
-            )}
-          </CardContent>
-        </Card>
+        <Link href="/admin/approvals">
+          <Card className={`hover:border-amber-400/60 transition-colors cursor-pointer ${kpiCards.accountsNeedingReview > 0 ? 'border-amber-400/50' : ''}`}>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Eye className="h-3 w-3" /> Needs Review
+              </p>
+              <p className="text-3xl font-bold mt-1">
+                {kpiCards.accountsNeedingReview}
+              </p>
+              {kpiCards.accountsNeedingReview > 0 ? (
+                <span className="text-xs text-amber-600">View queue →</span>
+              ) : (
+                <span className="text-xs text-emerald-600">All clear</span>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* ========== 2 & 3. Charts Row ========== */}

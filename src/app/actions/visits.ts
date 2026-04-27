@@ -9,10 +9,16 @@ export const MAX_PHOTOS = 5;
 
 export async function getVisits({
   repId,
+  startDate,
+  endDate,
+  kpiOnly,
   page = 1,
   pageSize = 20,
 }: {
   repId?: string;
+  startDate?: string; // ISO date string
+  endDate?: string;   // ISO date string
+  kpiOnly?: boolean;
   page?: number;
   pageSize?: number;
 } = {}) {
@@ -26,9 +32,10 @@ export async function getVisits({
     )
     .order('visited_at', { ascending: false });
 
-  if (repId) {
-    query = query.eq('rep_id', repId);
-  }
+  if (repId) query = query.eq('rep_id', repId);
+  if (startDate) query = query.gte('visited_at', startDate);
+  if (endDate) query = query.lte('visited_at', endDate);
+  if (kpiOnly) query = query.not('kpi', 'is', null);
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
