@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { KPI_OPTIONS } from '@/lib/types';
+import { autoCompleteAssignmentsForVisit } from './assignments';
 
 export const MAX_PHOTOS = 5;
 
@@ -132,7 +133,6 @@ export async function createVisit(input: {
   }
 
   // Auto-complete any pending assignment for this account/rep (non-fatal)
-  const { autoCompleteAssignmentsForVisit } = await import('./assignments');
   await autoCompleteAssignmentsForVisit(parsed.accountId);
 
   revalidatePath('/');
