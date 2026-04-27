@@ -39,7 +39,7 @@ export default function UsersPage() {
 
   async function handleRoleChange(userId: string, role: string) {
     try {
-      await updateProfileRole(userId, role as 'admin' | 'rep' | 'viewer');
+      await updateProfileRole(userId, role as 'admin' | 'rep');
       toast.success('Role updated');
       fetch();
     } catch {
@@ -119,7 +119,6 @@ export default function UsersPage() {
                     <SelectContent>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="rep">Rep</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -50,6 +50,17 @@ export interface DashboardData {
   }[];
 }
 
+interface RecentVisitRow {
+  id: string;
+  visited_at: string;
+  notes: string | null;
+  kpi: string | null;
+  kpi_quantity: number | null;
+  rep: { id: string; full_name: string | null; email: string } | null;
+  account: { id: string; display_name: string } | null;
+  visit_photos: { photo_url: string; sort_order: number }[] | null;
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
   const now = new Date();
@@ -187,16 +198,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     .sort((a, b) => b.visitsThisMonth - a.visitsThisMonth);
 
   // --- Recent Activity ---
-  interface RecentVisitRow {
-    id: string;
-    visited_at: string;
-    notes: string | null;
-    kpi: string | null;
-    kpi_quantity: number | null;
-    rep: { id: string; full_name: string | null; email: string } | null;
-    account: { id: string; display_name: string } | null;
-    visit_photos: { photo_url: string; sort_order: number }[] | null;
-  }
   const recentActivity = (recentVisits as RecentVisitRow[]).map((v) => {
     const photos = (v.visit_photos ?? [])
       .slice()

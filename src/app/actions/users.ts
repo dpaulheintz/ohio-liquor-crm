@@ -1,9 +1,10 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
-async function assertAdmin(supabase: SupabaseClient) {
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function assertAdmin(supabase: SupabaseServerClient) {
   const { data: me } = await supabase.auth.getUser();
   if (!me.user) throw new Error('Not authenticated');
 
@@ -29,9 +30,10 @@ export async function getProfiles() {
   return data;
 }
 
-const VALID_ROLES = ['admin', 'rep', 'viewer'] as const;
+const VALID_ROLES = ['admin', 'rep'] as const;
+type ValidRole = (typeof VALID_ROLES)[number];
 
-export async function updateProfileRole(userId: string, role: 'admin' | 'rep' | 'viewer') {
+export async function updateProfileRole(userId: string, role: ValidRole) {
   if (!VALID_ROLES.includes(role)) {
     throw new Error(`Invalid role: ${role}`);
   }
