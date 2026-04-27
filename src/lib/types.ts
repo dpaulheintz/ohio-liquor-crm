@@ -74,6 +74,23 @@ export interface VisitLog {
   visit_photos?: VisitPhoto[];
 }
 
+export type AssignmentStatus = 'pending' | 'completed';
+
+export interface Assignment {
+  id: string;
+  account_id: string;
+  assigned_to: string;
+  assigned_by: string;
+  notes: string | null;
+  status: AssignmentStatus;
+  created_at: string;
+  completed_at: string | null;
+  // Joined
+  account?: Pick<Account, 'id' | 'display_name' | 'city' | 'type'>;
+  rep?: Pick<Profile, 'id' | 'full_name' | 'email'>;
+  assigner?: Pick<Profile, 'id' | 'full_name' | 'email'>;
+}
+
 export interface VisitPhoto {
   id: string;
   visit_id: string;

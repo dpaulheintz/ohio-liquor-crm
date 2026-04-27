@@ -34,7 +34,9 @@
       "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow stash list)",
       "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow status)",
       "Bash(git stash *)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow add -A)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow status --short)"
     ]
   }
 }

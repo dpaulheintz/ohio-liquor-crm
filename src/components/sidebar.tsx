@@ -11,6 +11,7 @@ import {
   FileUp,
   BarChart3,
   ClipboardCheck,
+  ClipboardList,
   UserCog,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
@@ -23,10 +24,12 @@ const navItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/accounts', label: 'Accounts', icon: Building2 },
   { href: '/contacts', label: 'Contacts', icon: Users },
+  { href: '/assignments', label: 'My Assignments', icon: ClipboardList },
 ];
 
 const adminItems = [
   { href: '/admin', label: 'Admin Dashboard', icon: Shield },
+  { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
