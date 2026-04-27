@@ -124,7 +124,12 @@ export async function createVisit(input: {
     if (photoError) throw photoError;
   }
 
+  // Auto-complete any pending assignment for this account/rep (non-fatal)
+  const { autoCompleteAssignmentsForVisit } = await import('./assignments');
+  await autoCompleteAssignmentsForVisit(parsed.accountId);
+
   revalidatePath('/');
+  revalidatePath('/assignments');
   revalidatePath(`/accounts/${parsed.accountId}`);
   return visit;
 }

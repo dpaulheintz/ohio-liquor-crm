@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Building2, Users, Shield, Plus } from 'lucide-react';
+import { Home, Building2, Users, Shield, ClipboardList, Plus } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/accounts', label: 'Accounts', icon: Building2 },
-  { href: '/contacts', label: 'Contacts', icon: Users },
+  { href: '/assignments', label: 'Assignments', icon: ClipboardList },
 ];
 
 const adminItem = { href: '/admin', label: 'Admin', icon: Shield };
