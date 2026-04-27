@@ -7,7 +7,7 @@ import { Account } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Trash2, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 

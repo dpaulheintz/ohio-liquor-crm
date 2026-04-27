@@ -1,13 +1,12 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export async function getProfiles() {
-  const supabase = await createClient();
+async function assertAdmin(supabase: SupabaseClient) {
   const { data: me } = await supabase.auth.getUser();
   if (!me.user) throw new Error('Not authenticated');
 
-  // Check admin
   const { data: myProfile } = await supabase
     .from('profiles')
     .select('role')
@@ -15,6 +14,11 @@ export async function getProfiles() {
     .single();
 
   if (myProfile?.role !== 'admin') throw new Error('Admin only');
+}
+
+export async function getProfiles() {
+  const supabase = await createClient();
+  await assertAdmin(supabase);
 
   const { data, error } = await supabase
     .from('profiles')
@@ -33,16 +37,7 @@ export async function updateProfileRole(userId: string, role: 'admin' | 'rep' | 
   }
 
   const supabase = await createClient();
-  const { data: me } = await supabase.auth.getUser();
-  if (!me.user) throw new Error('Not authenticated');
-
-  const { data: myProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', me.user.id)
-    .single();
-
-  if (myProfile?.role !== 'admin') throw new Error('Admin only');
+  await assertAdmin(supabase);
 
   const { error } = await supabase
     .from('profiles')
@@ -54,16 +49,7 @@ export async function updateProfileRole(userId: string, role: 'admin' | 'rep' | 
 
 export async function approveUser(userId: string) {
   const supabase = await createClient();
-  const { data: me } = await supabase.auth.getUser();
-  if (!me.user) throw new Error('Not authenticated');
-
-  const { data: myProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', me.user.id)
-    .single();
-
-  if (myProfile?.role !== 'admin') throw new Error('Admin only');
+  await assertAdmin(supabase);
 
   const { error } = await supabase
     .from('profiles')

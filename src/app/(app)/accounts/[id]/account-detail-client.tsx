@@ -43,7 +43,7 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
   const [showAddContact, setShowAddContact] = useState(false);
   const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
 
-  const ownerRep = account.owner_rep as unknown as Profile | null;
+  const ownerRep = account.owner_rep ?? null;
   const isOwner = profile?.id === ownerRep?.id;
   const isUnowned = !account.owner_rep_id;
 

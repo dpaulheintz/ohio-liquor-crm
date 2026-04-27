@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createVisit } from '@/app/actions/visits';
+import { createVisit, MAX_PHOTOS } from '@/app/actions/visits';
 import { createAccount } from '@/app/actions/accounts';
 import { createContact } from '@/app/actions/contacts';
 import { createClient } from '@/lib/supabase/client';
@@ -99,7 +99,7 @@ function NewVisitForm() {
     const files = e.target.files;
     if (!files) return;
 
-    const remaining = 5 - photos.length;
+    const remaining = MAX_PHOTOS - photos.length;
     const newFiles = Array.from(files).slice(0, remaining);
 
     const newPhotos = newFiles.map((file) => ({
@@ -538,7 +538,7 @@ function NewVisitForm() {
                     />
                   </div>
                 ))}
-                {photos.length < 5 && (
+                {photos.length < MAX_PHOTOS && (
                   <div className="flex flex-col gap-1.5">
                     <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
                       <Camera className="h-3.5 w-3.5" /> Camera

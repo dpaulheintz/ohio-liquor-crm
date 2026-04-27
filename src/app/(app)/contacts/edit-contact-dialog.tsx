@@ -86,7 +86,7 @@ export function EditContactDialog({
             <div className="space-y-1.5">
               <Label>Account</Label>
               <Input
-                value={(contact.account as { display_name: string }).display_name}
+                value={contact.account?.display_name ?? ''}
                 disabled
               />
             </div>

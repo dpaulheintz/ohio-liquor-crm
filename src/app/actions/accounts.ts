@@ -204,11 +204,12 @@ export async function updateAccount(id: string, formData: FormData) {
   const supabase = await createClient();
 
   // Fetch existing account to ensure type isn't changed
-  const { data: existing } = await supabase
+  const { data: existing, error: fetchErr } = await supabase
     .from('accounts')
     .select('type')
     .eq('id', id)
     .single();
+  if (fetchErr) throw fetchErr;
 
   const updates = parseAccountFormData(formData);
 
@@ -272,24 +273,26 @@ export async function approveAccount(accountId: string) {
 
 export async function getDistricts() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('accounts')
     .select('district')
     .not('district', 'is', null)
     .order('district');
 
+  if (error) throw error;
   const unique = [...new Set(data?.map((d) => d.district).filter(Boolean))];
   return unique as string[];
 }
 
 export async function getReps() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email')
     .in('role', ['rep', 'admin'])
     .order('full_name');
 
+  if (error) throw error;
   return data ?? [];
 }
 
@@ -299,21 +302,22 @@ export async function searchAccounts(query: string) {
   const terms = query.trim().split(/\s+/).filter(Boolean);
   if (terms.length === 0) return [];
 
+  const sanitized = terms.map(sanitizeFilterValue).filter(Boolean);
+  if (sanitized.length === 0) return [];
+
   let q = supabase
     .from('accounts')
     .select('id, display_name, type, district, city, agency_id');
 
-  for (const rawTerm of terms) {
-    const term = sanitizeFilterValue(rawTerm);
-    if (!term) continue;
+  for (const term of sanitized) {
     const orClause = SEARCHABLE_FIELDS.map(
       (field) => `${field}.ilike.%${term}%`
     ).join(',');
     q = q.or(orClause);
   }
 
-  const { data } = await q.limit(10);
-
+  const { data, error } = await q.limit(10);
+  if (error) throw error;
   return data ?? [];
 }
 

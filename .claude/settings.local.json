@@ -9,7 +9,32 @@
       "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/visits/visit-card.tsx\")",
       "Bash(cat \"/c/Users/The Beast/Documents/GitHub/ohio-liquor-crm/src/app/\\(app\\)/admin/unmatched/page.tsx\")",
       "Bash(rm -rf .next)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "mcp__supabase__execute_sql",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "mcp__supabase__apply_migration",
+      "Bash(git pull:*)",
+      "Bash(cat)",
+      "Bash(git commit:*)",
+      "Bash(node -e \"require\\('child_process'\\).execSync\\('npm run build 2>&1', {cwd: '/Users/Paul/ohio-liquor-crm', stdio: 'inherit'}\\)\")",
+      "Read(//Users/Paul/**)",
+      "Read(//opt/homebrew/opt/**)",
+      "Read(//usr/local/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm show HEAD --stat)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm log --oneline -10)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow log --oneline -10)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow branch)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow show ce35eb7 --stat)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow stash list)",
+      "Bash(git -C /Users/Paul/ohio-liquor-crm/.claude/worktrees/condescending-yalow status)",
+      "Bash(git stash *)",
+      "Bash(git rebase *)"
     ]
   }
 }
