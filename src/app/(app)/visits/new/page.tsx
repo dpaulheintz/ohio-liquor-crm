@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createVisit, MAX_PHOTOS } from '@/app/actions/visits';
+import { createVisit } from '@/app/actions/visits';
+import { MAX_PHOTOS } from '@/lib/types';
 import { createAccount } from '@/app/actions/accounts';
 import { createContact } from '@/app/actions/contacts';
 import { createClient } from '@/lib/supabase/client';

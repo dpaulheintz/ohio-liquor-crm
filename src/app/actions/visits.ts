@@ -3,10 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { KPI_OPTIONS } from '@/lib/types';
+import { KPI_OPTIONS, MAX_PHOTOS } from '@/lib/types';
 import { autoCompleteAssignmentsForVisit } from './assignments';
-
-export const MAX_PHOTOS = 5;
 
 export async function getVisits({
   repId,

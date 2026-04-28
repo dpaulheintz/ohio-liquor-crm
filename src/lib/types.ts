@@ -1,5 +1,7 @@
 // Database types matching the Supabase schema
 
+export const MAX_PHOTOS = 5;
+
 export type UserRole = 'pending' | 'rep' | 'admin';
 export type AccountType = 'agency' | 'wholesale';
 export type AccountStatus = 'prospect' | 'customer';
