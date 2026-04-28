@@ -198,7 +198,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     .sort((a, b) => b.visitsThisMonth - a.visitsThisMonth);
 
   // --- Recent Activity ---
-  const recentActivity = (recentVisits as RecentVisitRow[]).map((v) => {
+  const recentActivity = (recentVisits as unknown as RecentVisitRow[]).map((v) => {
     const photos = (v.visit_photos ?? [])
       .slice()
       .sort((a, b) => a.sort_order - b.sort_order);
