@@ -3,7 +3,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { TopBar } from '@/components/top-bar';
 import { UserProvider } from '@/components/user-context';
 import { createClient } from '@/lib/supabase/server';
-import { Profile } from '@/lib/types';
+import { Profile, Organization } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,21 +12,21 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch the user profile + admin status on the server on every request.
-  // This avoids relying on the client-side Supabase session (which can be
-  // stale on desktop when the JWT is cached before the admin role was set).
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   let profile: Profile | null = null;
+  let org: Organization | null = null;
   let isAdmin = false;
+  let isSuperAdmin = false;
 
   if (user) {
-    const [profileRes, adminRes] = await Promise.all([
+    const [profileRes, adminRes, superAdminRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
       supabase.rpc('is_admin'),
+      supabase.rpc('is_super_admin'),
     ]);
 
     if (profileRes.error) {
@@ -38,12 +38,23 @@ export default async function AppLayout({
       console.error('[AppLayout] is_admin rpc failed', adminRes.error);
     }
     isAdmin = adminRes.data === true || profile?.role === 'admin';
+    isSuperAdmin = superAdminRes.data === true || profile?.is_super_admin === true;
+
+    // Fetch org if the user has one
+    if (profile?.organization_id) {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', profile.organization_id)
+        .maybeSingle();
+      org = (orgData as Organization | null) ?? null;
+    }
   }
 
   const isApproved = isAdmin || profile?.role === 'rep';
 
   return (
-    <UserProvider value={{ profile, isAdmin, isApproved }}>
+    <UserProvider value={{ profile, org, isAdmin, isApproved, isSuperAdmin }}>
       <div className="flex h-screen">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">

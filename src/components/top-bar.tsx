@@ -14,7 +14,9 @@ import { LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export function TopBar() {
-  const { profile, isAdmin, loading } = useUser();
+  const { profile, org, isAdmin, loading } = useUser();
+
+  const appName = org?.name ?? 'CRM';
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -32,8 +34,8 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
-      <h1 className="font-serif text-lg font-bold uppercase tracking-widest md:hidden">
-        High Bank CRM
+      <h1 className="font-serif text-lg font-bold uppercase tracking-widest md:hidden truncate max-w-[55vw]">
+        {appName}
         <span className="ml-2 font-sans text-xs font-normal normal-case tracking-normal text-muted-foreground">
           {process.env.NEXT_PUBLIC_APP_VERSION}
         </span>

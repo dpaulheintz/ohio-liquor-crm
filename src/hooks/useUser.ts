@@ -3,7 +3,7 @@
 import { useUserContext } from '@/components/user-context';
 
 /**
- * Returns the authenticated user's profile + admin/approved flags.
+ * Returns the authenticated user's profile + org + role flags.
  *
  * The underlying data is server-rendered by the (app) layout on every request
  * (see src/app/(app)/layout.tsx), so this hook never depends on the client-side
@@ -12,12 +12,14 @@ import { useUserContext } from '@/components/user-context';
  * drift, and no client-side fetch that can transiently fail.
  */
 export function useUser() {
-  const { profile, isAdmin, isApproved } = useUserContext();
+  const { profile, org, isAdmin, isApproved, isSuperAdmin } = useUserContext();
 
   return {
     profile,
+    org,
     loading: false,
     isAdmin,
     isApproved,
+    isSuperAdmin,
   };
 }
