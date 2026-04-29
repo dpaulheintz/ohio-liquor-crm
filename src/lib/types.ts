@@ -12,6 +12,7 @@ export interface Profile {
   full_name: string | null;
   role: UserRole;
   is_approved: boolean;
+  is_super_admin: boolean;
   created_at: string;
   updated_at: string;
 }

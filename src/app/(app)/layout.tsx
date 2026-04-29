@@ -12,9 +12,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch the user profile + admin status on the server on every request.
-  // This avoids relying on the client-side Supabase session (which can be
-  // stale on desktop when the JWT is cached before the admin role was set).
+  // Fetch the user profile + admin/super-admin status server-side on every
+  // request — avoids stale client-side JWT issues and ensures role changes
+  // are reflected immediately on next page load.
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,6 +22,7 @@ export default async function AppLayout({
 
   let profile: Profile | null = null;
   let isAdmin = false;
+  let isSuperAdmin = false;
 
   if (user) {
     const [profileRes, adminRes] = await Promise.all([
@@ -38,12 +39,16 @@ export default async function AppLayout({
       console.error('[AppLayout] is_admin rpc failed', adminRes.error);
     }
     isAdmin = adminRes.data === true || profile?.role === 'admin';
+
+    // is_super_admin is a plain boolean column — read directly from the profile
+    // rather than adding another RPC round-trip.
+    isSuperAdmin = profile?.is_super_admin === true;
   }
 
   const isApproved = isAdmin || profile?.role === 'rep';
 
   return (
-    <UserProvider value={{ profile, isAdmin, isApproved }}>
+    <UserProvider value={{ profile, isAdmin, isApproved, isSuperAdmin }}>
       <div className="flex h-screen">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">

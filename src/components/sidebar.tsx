@@ -13,6 +13,8 @@ import {
   ClipboardCheck,
   ClipboardList,
   UserCog,
+  Globe,
+  Layers,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -36,9 +38,15 @@ const adminItems = [
   { href: '/admin/users', label: 'Users', icon: UserCog },
 ];
 
+const superAdminItems = [
+  { href: '/super-admin/organizations', label: 'Organizations', icon: Building2 },
+  { href: '/super-admin/seed-agencies', label: 'Seed Agencies', icon: Layers },
+  { href: '/super-admin/users', label: 'All Users', icon: Users },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
-  const { profile, isAdmin } = useUser();
+  const { profile, isAdmin, isSuperAdmin } = useUser();
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -48,6 +56,28 @@ export function Sidebar() {
         .toUpperCase()
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
+  function navLink(item: { href: string; label: string; icon: React.ElementType }, exact = false) {
+    const Icon = item.icon;
+    const isActive = exact
+      ? pathname === item.href
+      : pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {item.label}
+      </Link>
+    );
+  }
+
   return (
     <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-background">
       <div className="flex h-14 items-center border-b px-4">
@@ -56,54 +86,24 @@ export function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-1 px-2 py-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
+        {navItems.map((item) => navLink(item, item.href === '/'))}
 
         {isAdmin && (
           <>
             <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Admin
             </div>
-            {adminItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {adminItems.map((item) => navLink(item))}
+          </>
+        )}
+
+        {isSuperAdmin && (
+          <>
+            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              Super Admin
+            </div>
+            {superAdminItems.map((item) => navLink(item))}
           </>
         )}
       </nav>
@@ -118,7 +118,7 @@ export function Sidebar() {
               {profile?.full_name || profile?.email}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {profile?.role}
+              {isSuperAdmin ? 'super admin' : profile?.role}
             </p>
           </div>
           <form action={signOut}>
