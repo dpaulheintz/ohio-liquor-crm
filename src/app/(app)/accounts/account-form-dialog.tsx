@@ -152,6 +152,7 @@ export function AccountFormDialog({
               name="display_name"
               required
               defaultValue={account?.display_name}
+              style={{ textTransform: 'capitalize' }}
             />
           </div>
 
@@ -339,6 +340,7 @@ export function AccountFormDialog({
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
                   placeholder="Full name"
+                  style={{ textTransform: 'capitalize' }}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">

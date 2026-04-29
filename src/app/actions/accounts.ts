@@ -165,11 +165,16 @@ const accountSchema = z.object({
   status: z.enum(['prospect', 'customer']).optional(),
 });
 
+/** Capitalize the first letter of each word (proper-name casing). */
+function toTitleCase(s: string): string {
+  return s.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function parseAccountFormData(formData: FormData) {
   const type = formData.get('type') as string;
   const raw = {
     type,
-    display_name: (formData.get('display_name') as string) || '',
+    display_name: toTitleCase((formData.get('display_name') as string) || ''),
     legal_name: (formData.get('legal_name') as string) || undefined,
     agency_id: type === 'agency' ? (formData.get('agency_id') as string) || undefined : undefined,
     permit_number: type === 'wholesale' ? (formData.get('permit_number') as string) || undefined : undefined,
@@ -210,9 +215,16 @@ export async function createAccount(formData: FormData) {
   const supabase = await createClient();
   const account = parseAccountFormData(formData);
 
+  // Auto-assign the creating user as owner for Bar/Restaurant (wholesale) accounts
+  let owner_rep_id: string | null = null;
+  if (account.type === 'wholesale') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) owner_rep_id = user.id;
+  }
+
   const { data, error } = await supabase
     .from('accounts')
-    .insert(account)
+    .insert({ ...account, ...(owner_rep_id ? { owner_rep_id } : {}) })
     .select()
     .single();
 

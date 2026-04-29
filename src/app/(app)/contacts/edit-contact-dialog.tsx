@@ -79,6 +79,7 @@ export function EditContactDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              style={{ textTransform: 'capitalize' }}
             />
           </div>
 

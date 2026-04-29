@@ -108,6 +108,11 @@ const contactSchema = z.object({
 
 const contactUpdateSchema = contactSchema.omit('account_id');
 
+/** Capitalize the first letter of each word (proper-name casing). */
+function toTitleCase(s: string): string {
+  return s.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export async function createContact(formData: {
   name: string;
   account_id: string;
@@ -115,7 +120,7 @@ export async function createContact(formData: {
   email?: string;
   title_role?: string;
 }) {
-  const parsed = contactSchema.parse(formData);
+  const parsed = contactSchema.parse({ ...formData, name: toTitleCase(formData.name) });
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -146,7 +151,7 @@ export async function updateContact(
     title_role?: string;
   }
 ) {
-  const parsed = contactUpdateSchema.parse(formData);
+  const parsed = contactUpdateSchema.parse({ ...formData, name: toTitleCase(formData.name) });
   const supabase = await createClient();
 
   const { error } = await supabase

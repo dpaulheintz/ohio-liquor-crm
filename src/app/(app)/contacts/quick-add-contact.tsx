@@ -88,6 +88,7 @@ export function QuickAddContact({
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="Full name"
+              style={{ textTransform: 'capitalize' }}
             />
           </div>
 

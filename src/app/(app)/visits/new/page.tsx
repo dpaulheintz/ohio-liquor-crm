@@ -346,6 +346,7 @@ function NewVisitForm() {
                     value={newAcctName}
                     onChange={(e) => setNewAcctName(e.target.value)}
                     required
+                    style={{ textTransform: 'capitalize' }}
                   />
                 </div>
 
@@ -479,6 +480,7 @@ function NewVisitForm() {
                     value={newContactName}
                     onChange={(e) => setNewContactName(e.target.value)}
                     placeholder="Full name"
+                    style={{ textTransform: 'capitalize' }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
