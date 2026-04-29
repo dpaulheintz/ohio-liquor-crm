@@ -13,7 +13,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   UserCog,
-  Globe,
+  Layers,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -38,7 +38,9 @@ const adminItems = [
 ];
 
 const superAdminItems = [
-  { href: '/super-admin', label: 'All Organizations', icon: Globe },
+  { href: '/super-admin/organizations', label: 'Organizations', icon: Building2 },
+  { href: '/super-admin/seed-agencies', label: 'Seed Agencies', icon: Layers },
+  { href: '/super-admin/users', label: 'All Users', icon: Users },
 ];
 
 export function Sidebar() {
