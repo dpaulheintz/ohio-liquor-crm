@@ -1,9 +1,11 @@
 import { Sidebar } from '@/components/sidebar';
 import { BottomNav } from '@/components/bottom-nav';
 import { TopBar } from '@/components/top-bar';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { UserProvider } from '@/components/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { Profile, Organization } from '@/lib/types';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,8 +42,22 @@ export default async function AppLayout({
     isAdmin = adminRes.data === true || profile?.role === 'admin';
     isSuperAdmin = superAdminRes.data === true || profile?.is_super_admin === true;
 
-    // Fetch org if the user has one
-    if (profile?.organization_id) {
+    // Check for super-admin impersonation cookie
+    const cookieStore = await cookies();
+    const impersonateOrgId = cookieStore.get('sa_impersonate_org_id')?.value;
+    const impersonateOrgName = cookieStore.get('sa_impersonate_org_name')?.value;
+
+    if (isSuperAdmin && impersonateOrgId) {
+      // Show the impersonated org as the active org in the UI
+      org = {
+        id: impersonateOrgId,
+        name: impersonateOrgName ?? 'Unknown Org',
+        slug: '',
+        logo_url: null,
+        created_at: '',
+        is_active: true,
+      };
+    } else if (profile?.organization_id) {
       const { data: orgData } = await supabase
         .from('organizations')
         .select('*')
@@ -52,10 +68,12 @@ export default async function AppLayout({
   }
 
   const isApproved = isAdmin || profile?.role === 'rep';
+  const isImpersonating = isSuperAdmin && org !== null && org.slug === '';
 
   return (
     <UserProvider value={{ profile, org, isAdmin, isApproved, isSuperAdmin }}>
-      <div className="flex h-screen">
+      {isImpersonating && <ImpersonationBanner orgName={org!.name} />}
+      <div className={`flex h-screen ${isImpersonating ? 'pt-10' : ''}`}>
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar />
