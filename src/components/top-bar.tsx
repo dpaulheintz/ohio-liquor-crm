@@ -14,9 +14,9 @@ import { LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export function TopBar() {
-  const { profile, org, isAdmin, loading } = useUser();
+  const { profile, isAdmin, loading } = useUser();
 
-  const appName = org?.name ?? 'CRM';
+  const appName = 'High Bank CRM';
 
   const initials = profile?.full_name
     ? profile.full_name

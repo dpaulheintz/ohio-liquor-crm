@@ -1,22 +1,18 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { Profile, Organization } from '@/lib/types';
+import { Profile } from '@/lib/types';
 
 export interface UserContextValue {
   profile: Profile | null;
-  org: Organization | null;
   isAdmin: boolean;
   isApproved: boolean;
-  isSuperAdmin: boolean;
 }
 
 const UserContext = createContext<UserContextValue>({
   profile: null,
-  org: null,
   isAdmin: false,
   isApproved: false,
-  isSuperAdmin: false,
 });
 
 export function UserProvider({

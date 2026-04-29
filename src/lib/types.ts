@@ -6,36 +6,12 @@ export type UserRole = 'pending' | 'rep' | 'admin';
 export type AccountType = 'agency' | 'wholesale';
 export type AccountStatus = 'prospect' | 'customer';
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url: string | null;
-  created_at: string;
-  is_active: boolean;
-}
-
-export type OrgMemberRole = 'admin' | 'rep';
-
-export interface OrganizationMember {
-  id: string;
-  organization_id: string;
-  user_id: string;
-  role: OrgMemberRole;
-  created_at: string;
-  // Joined
-  organization?: Organization;
-  profile?: Profile;
-}
-
 export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
   role: UserRole;
   is_approved: boolean;
-  organization_id: string | null;
-  is_super_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -60,7 +36,6 @@ export interface Account {
   status: AccountStatus;
   owner_rep_id: string | null;
   needs_review: boolean;
-  organization_id: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -77,7 +52,6 @@ export interface Contact {
   phone: string | null;
   email: string | null;
   title_role: string | null;
-  organization_id: string | null;
   created_at: string;
   updated_at: string;
   // Joined
@@ -95,7 +69,6 @@ export interface VisitLog {
   notes: string | null;
   kpi: string | null;
   kpi_quantity: number | null;
-  organization_id: string | null;
   created_at: string;
   // Joined
   account?: Account;
@@ -112,7 +85,6 @@ export interface Assignment {
   assigned_by: string;
   notes: string | null;
   status: AssignmentStatus;
-  organization_id: string | null;
   created_at: string;
   completed_at: string | null;
   // Joined
@@ -129,4 +101,3 @@ export interface VisitPhoto {
   sort_order: number;
   created_at: string;
 }
-

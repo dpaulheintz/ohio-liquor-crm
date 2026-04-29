@@ -3,23 +3,18 @@
 import { useUserContext } from '@/components/user-context';
 
 /**
- * Returns the authenticated user's profile + org + role flags.
+ * Returns the authenticated user's profile + role flags.
  *
- * The underlying data is server-rendered by the (app) layout on every request
- * (see src/app/(app)/layout.tsx), so this hook never depends on the client-side
- * Supabase session or client-side RLS. That means the role resolution is
- * identical across mobile and desktop — there's no cached JWT, no localStorage
- * drift, and no client-side fetch that can transiently fail.
+ * The underlying data is server-rendered by the (app) layout on every request,
+ * so this hook never depends on the client-side Supabase session or JWT.
  */
 export function useUser() {
-  const { profile, org, isAdmin, isApproved, isSuperAdmin } = useUserContext();
+  const { profile, isAdmin, isApproved } = useUserContext();
 
   return {
     profile,
-    org,
     loading: false,
     isAdmin,
     isApproved,
-    isSuperAdmin,
   };
 }
