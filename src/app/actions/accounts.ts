@@ -211,15 +211,25 @@ function parseAccountFormData(formData: FormData) {
   };
 }
 
-export async function createAccount(formData: FormData) {
+/**
+ * Create a new account.
+ * @param ownerRepId Optional — if provided, wholesale accounts are claimed under
+ *   this user ID instead of the calling user (used by the assignment flow so the
+ *   account lands under the assigned rep, not the admin creating the assignment).
+ */
+export async function createAccount(formData: FormData, ownerRepId?: string) {
   const supabase = await createClient();
   const account = parseAccountFormData(formData);
 
-  // Auto-assign the creating user as owner for Bar/Restaurant (wholesale) accounts
+  // Auto-assign owner for Bar/Restaurant (wholesale) accounts
   let owner_rep_id: string | null = null;
   if (account.type === 'wholesale') {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) owner_rep_id = user.id;
+    if (ownerRepId) {
+      owner_rep_id = ownerRepId; // explicit override (e.g. assignment flow)
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) owner_rep_id = user.id;
+    }
   }
 
   const { data, error } = await supabase
