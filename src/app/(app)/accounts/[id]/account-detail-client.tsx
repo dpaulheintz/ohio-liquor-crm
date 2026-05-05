@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Account, Contact, VisitLog, Profile } from '@/lib/types';
+import { Account, Contact, VisitLog, Tasting, Profile } from '@/lib/types';
 import { claimAccount, releaseAccount, approveAccount, getAccount } from '@/app/actions/accounts';
 import { getContactsByAccount } from '@/app/actions/contacts';
 import { getVisitsByAccount } from '@/app/actions/visits';
+import { getTastingsByAgency } from '@/app/actions/tastings';
 import { useUser } from '@/hooks/useUser';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,9 @@ import {
   CheckCircle,
   Plus,
   Camera,
+  GlassWater,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -28,6 +32,10 @@ import { AccountFormDialog } from '../account-form-dialog';
 import { QuickAddContact } from '../../contacts/quick-add-contact';
 import { VisitCard } from '../../visits/visit-card';
 import { EditVisitDialog } from '../../visits/edit-visit-dialog';
+import { TastingFormDialog } from '../../admin/tastings/tasting-form-dialog';
+import { statusConfig, formatTime } from '../../admin/tastings/tasting-utils';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 
 interface AccountDetailClientProps {
   account: Account;
@@ -39,8 +47,10 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
   const [account, setAccount] = useState(initialAccount);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [visits, setVisits] = useState<VisitLog[]>([]);
+  const [tastings, setTastings] = useState<Tasting[]>([]);
   const [showEdit, setShowEdit] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddTasting, setShowAddTasting] = useState(false);
   const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
 
   const ownerRep = account.owner_rep ?? null;
@@ -62,10 +72,17 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
     setVisits(data);
   }, [account.id]);
 
+  const fetchTastings = useCallback(async () => {
+    if (account.type !== 'agency') return;
+    const data = await getTastingsByAgency(account.id);
+    setTastings(data as Tasting[]);
+  }, [account.id, account.type]);
+
   useEffect(() => {
     fetchContacts();
     fetchVisits();
-  }, [fetchContacts, fetchVisits]);
+    fetchTastings();
+  }, [fetchContacts, fetchVisits, fetchTastings]);
 
   async function handleClaim() {
     try {
@@ -224,6 +241,11 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           <TabsTrigger value="visits" className="flex-1">
             Visits ({visits.length})
           </TabsTrigger>
+          {account.type === 'agency' && (
+            <TabsTrigger value="tastings" className="flex-1">
+              Tastings ({tastings.length})
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="contacts" className="mt-4 space-y-3">
@@ -281,6 +303,77 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           )}
         </TabsContent>
 
+        {account.type === 'agency' && (
+          <TabsContent value="tastings" className="mt-4 space-y-3">
+            <Button size="sm" onClick={() => setShowAddTasting(true)}>
+              <GlassWater className="mr-1 h-4 w-4" /> Schedule Tasting
+            </Button>
+
+            {tastings.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No tastings scheduled
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {tastings.map((tasting) => {
+                  const sc = statusConfig(tasting.status);
+                  const isPast =
+                    tasting.status === 'completed' || tasting.status === 'cancelled';
+                  return (
+                    <div
+                      key={tasting.id}
+                      className="rounded-lg border p-3 space-y-1"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium">
+                            {format(parseISO(tasting.date), 'EEE, MMM d, yyyy')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTime(tasting.start_time)} –{' '}
+                            {formatTime(tasting.end_time)}
+                          </p>
+                          {tasting.staff_category && (
+                            <p className="text-xs text-muted-foreground">
+                              {tasting.staff_category}
+                              {tasting.staff_person
+                                ? ` — ${tasting.staff_person}`
+                                : ''}
+                            </p>
+                          )}
+                          {tasting.notes && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {tasting.notes}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            'shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                            sc.className
+                          )}
+                        >
+                          {sc.label}
+                        </span>
+                      </div>
+                      {isPast && tasting.report_url && (
+                        <a
+                          href={tasting.report_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <FileText className="h-3 w-3" /> View Report{' '}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       <AccountFormDialog
@@ -304,6 +397,17 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
         onOpenChange={(open) => { if (!open) setEditingVisit(null); }}
         onSuccess={fetchVisits}
       />
+
+      {account.type === 'agency' && (
+        <TastingFormDialog
+          open={showAddTasting}
+          onOpenChange={setShowAddTasting}
+          onSuccess={fetchTastings}
+          defaultAgencyId={account.id}
+          defaultAgencyName={account.display_name}
+          defaultCity={account.city ?? undefined}
+        />
+      )}
     </div>
   );
 }

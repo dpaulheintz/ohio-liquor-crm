@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   UserCog,
+  GlassWater,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -30,6 +31,7 @@ const navItems = [
 const adminItems = [
   { href: '/admin', label: 'Admin Dashboard', icon: Shield },
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
+  { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },

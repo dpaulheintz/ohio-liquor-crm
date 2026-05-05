@@ -101,3 +101,34 @@ export interface VisitPhoto {
   sort_order: number;
   created_at: string;
 }
+
+export type TastingStatus = 'needs_staff' | 'scheduled' | 'staffed' | 'completed' | 'cancelled';
+export type StaffCategory = 'DBC' | 'HB Internal Staff' | 'HB Sales Team';
+
+export interface Tasting {
+  id: string;
+  agency_id: string;
+  date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM or HH:MM:SS
+  end_time: string;
+  city: string | null;
+  status: TastingStatus;
+  staff_category: StaffCategory | null;
+  staff_person: string | null;
+  notes: string | null;
+  report_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  agency?: {
+    id: string;
+    display_name: string;
+    city: string | null;
+    address: string | null;
+    agency_id: string | null;
+    state: string | null;
+    zip: string | null;
+  };
+  creator?: { id: string; full_name: string | null; email: string } | null;
+}
