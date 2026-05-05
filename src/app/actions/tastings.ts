@@ -24,7 +24,7 @@ const tastingSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-export function computeStatus(staffCategory?: string, staffPerson?: string): TastingStatus {
+function computeStatus(staffCategory?: string, staffPerson?: string): TastingStatus {
   if (staffPerson?.trim()) return 'staffed';
   if (staffCategory) return 'scheduled';
   return 'needs_staff';
