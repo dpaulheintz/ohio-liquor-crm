@@ -75,7 +75,7 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
   const fetchTastings = useCallback(async () => {
     if (account.type !== 'agency') return;
     const data = await getTastingsByAgency(account.id);
-    setTastings(data as Tasting[]);
+    setTastings(data as unknown as Tasting[]);
   }, [account.id, account.type]);
 
   useEffect(() => {
