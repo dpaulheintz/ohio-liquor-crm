@@ -93,7 +93,7 @@ export interface MapTasting extends Tasting {
 export function TastingMapView({ tastings }: TastingMapViewProps) {
   const [geoCache, setGeoCache] = useState<GeoCache>({});
   const [geocoding, setGeocoding] = useState(false);
-  const [selected, setSelected] = useState<Tasting | null>(null);
+  const [selected, setSelected] = useState<MapTasting | null>(null);
 
   // Upcoming/active tastings only
   const upcomingTastings = useMemo(() => {
