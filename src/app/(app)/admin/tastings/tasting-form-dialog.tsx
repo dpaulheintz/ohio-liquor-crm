@@ -220,13 +220,14 @@ export function TastingFormDialog({
 
     setSaving(true);
     try {
+      const resolvedCategory = staffCategory && staffCategory !== 'none' ? staffCategory : undefined;
       const payload = {
         agencyId: selectedAgency.id,
         date,
         startTime,
         endTime,
         city: city || selectedAgency.city || undefined,
-        staffCategory: staffCategory || undefined,
+        staffCategory: resolvedCategory,
         staffPerson: staffPerson || undefined,
         notes: notes || undefined,
       };
@@ -265,7 +266,7 @@ export function TastingFormDialog({
             startTime: r.startTime,
             endTime: r.endTime,
             city: r.selectedAgency!.city ?? undefined,
-            staffCategory: bulkStaffCategory || undefined,
+            staffCategory: (bulkStaffCategory && bulkStaffCategory !== 'none') ? bulkStaffCategory : undefined,
             staffPerson: bulkStaffPerson || undefined,
             notes: bulkNotes || undefined,
           })
@@ -281,7 +282,7 @@ export function TastingFormDialog({
     }
   }
 
-  const derivedStatus = deriveStatus(staffCategory, staffPerson);
+  const derivedStatus = deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson);
 
   // ---- Agency picker sub-component (shared between single and bulk) ----
   function AgencyPicker({
@@ -471,7 +472,7 @@ export function TastingFormDialog({
                     <SelectValue placeholder="None assigned" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="DBC">DBC</SelectItem>
                     <SelectItem value="HB Internal Staff">HB Internal Staff</SelectItem>
                     <SelectItem value="HB Sales Team">HB Sales Team</SelectItem>
@@ -528,7 +529,7 @@ export function TastingFormDialog({
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="DBC">DBC</SelectItem>
                     <SelectItem value="HB Internal Staff">HB Internal Staff</SelectItem>
                     <SelectItem value="HB Sales Team">HB Sales Team</SelectItem>
