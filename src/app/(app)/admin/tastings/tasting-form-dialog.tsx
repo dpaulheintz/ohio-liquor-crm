@@ -21,7 +21,7 @@ import {
 import { toast } from 'sonner';
 import { createTasting, updateTasting } from '@/app/actions/tastings';
 import { searchAccounts } from '@/app/actions/accounts';
-import type { Tasting } from '@/lib/types';
+import type { Tasting, TastingStatus } from '@/lib/types';
 import { addHours, deriveStatus, statusConfig } from './tasting-utils';
 import { cn } from '@/lib/utils';
 import { Plus, Trash2 } from 'lucide-react';
@@ -91,6 +91,7 @@ export function TastingFormDialog({
   const [city, setCity] = useState('');
   const [staffCategory, setStaffCategory] = useState('');
   const [staffPerson, setStaffPerson] = useState('');
+  const [status, setStatus] = useState<TastingStatus>('needs_staff');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -120,6 +121,7 @@ export function TastingFormDialog({
       setCity(tasting.city ?? '');
       setStaffCategory(tasting.staff_category ?? '');
       setStaffPerson(tasting.staff_person ?? '');
+      setStatus(tasting.status);
       setNotes(tasting.notes ?? '');
     } else {
       // Reset for create
@@ -138,6 +140,7 @@ export function TastingFormDialog({
       setCity(defaultCity ?? '');
       setStaffCategory('');
       setStaffPerson('');
+      setStatus('needs_staff');
       setNotes('');
       setBulkRows([emptyRow()]);
       setBulkStaffCategory('');
@@ -230,6 +233,7 @@ export function TastingFormDialog({
         staffCategory: resolvedCategory,
         staffPerson: staffPerson || undefined,
         notes: notes || undefined,
+        status,
       };
       if (isEdit && tasting) {
         await updateTasting(tasting.id, payload);
@@ -282,7 +286,13 @@ export function TastingFormDialog({
     }
   }
 
-  const derivedStatus = deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson);
+  // Auto-sync status from staff fields on CREATE only.
+  // On edit the user's existing status is preserved; they can still change it manually.
+  useEffect(() => {
+    if (!isEdit) {
+      setStatus(deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson));
+    }
+  }, [staffCategory, staffPerson, isEdit]);
 
   // ---- Agency picker sub-component (shared between single and bulk) ----
   function AgencyPicker({
@@ -489,16 +499,27 @@ export function TastingFormDialog({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Auto-status:</span>
-              <span
-                className={cn(
-                  'inline-flex items-center rounded-full px-2 py-0.5 font-medium',
-                  statusConfig(derivedStatus).className
+            <div className="space-y-1">
+              <Label>
+                Status
+                {!isEdit && (
+                  <span className="ml-1.5 text-muted-foreground text-xs font-normal">
+                    (auto-set from staff — override if needed)
+                  </span>
                 )}
-              >
-                {statusConfig(derivedStatus).label}
-              </span>
+              </Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as TastingStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="needs_staff">Needs Staff</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="staffed">Staffed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
