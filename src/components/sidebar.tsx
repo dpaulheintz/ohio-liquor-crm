@@ -15,6 +15,7 @@ import {
   UserCog,
   GlassWater,
   BarChart2,
+  Layers,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -34,6 +35,7 @@ const adminItems = [
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
   { href: '/admin/sales-upload', label: 'Sales Upload', icon: BarChart2 },
+  { href: '/admin/account-groups', label: 'Account Groups', icon: Layers },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
