@@ -26,7 +26,9 @@ const { resolveBrand, resolveAgency, parseAmount, parseBottles } = require('./br
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const HISTORICAL_DIR = path.join(process.cwd(), 'data', 'historical');
+const HISTORICAL_DIR = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.join(process.cwd(), 'data', 'historical');
 const CHUNK_SIZE = 500;
 
 const SALES_RE = /^(\d{4}-\d{2})_High_Bank_Sales\.csv$/i;
@@ -105,6 +107,14 @@ function buildWholesaleRows(rawRows, month) {
       amount: parseAmount(r['Wholesale_Amount']),
     };
   });
+}
+
+function deduplicateRows(rows, keyFn) {
+  const seen = new Map();
+  for (const row of rows) {
+    seen.set(keyFn(row), row); // last row wins on duplicate key
+  }
+  return Array.from(seen.values());
 }
 
 async function upsertChunked(table, rows, onConflict) {
@@ -192,18 +202,25 @@ async function main() {
       }
     }
 
+    // Deduplicate (some CSVs have duplicate rows for the same unique key)
+    const dedupedSales = deduplicateRows(salesRows, r => `${r.month}|${r.agency_id}|${r.brand_code}`);
+    const dedupedWholesale = deduplicateRows(wholesaleRows, r => `${r.month}|${r.agency_id}|${r.brand_code}|${r.permit_number}`);
+
     // Upsert
-    if (salesRows.length > 0) {
-      await upsertChunked('sales_monthly', salesRows, 'month,agency_id,brand_code');
+    if (dedupedSales.length > 0) {
+      await upsertChunked('sales_monthly', dedupedSales, 'month,agency_id,brand_code');
     }
-    if (wholesaleRows.length > 0) {
-      await upsertChunked('wholesale_detail', wholesaleRows, 'month,agency_id,brand_code,permit_number');
+    if (dedupedWholesale.length > 0) {
+      await upsertChunked('wholesale_detail', dedupedWholesale, 'month,agency_id,brand_code,permit_number');
     }
 
-    totalSalesRows += salesRows.length;
-    totalWholesaleRows += wholesaleRows.length;
+    totalSalesRows += dedupedSales.length;
+    totalWholesaleRows += dedupedWholesale.length;
 
-    console.log(` ${salesRows.length} sales rows, ${wholesaleRows.length} wholesale rows. Done.`);
+    const dupS = salesRows.length - dedupedSales.length;
+    const dupW = wholesaleRows.length - dedupedWholesale.length;
+    const dupNote = (dupS + dupW) > 0 ? ` (${dupS + dupW} dupes removed)` : '';
+    console.log(` ${dedupedSales.length} sales rows, ${dedupedWholesale.length} wholesale rows. Done.${dupNote}`);
   }
 
   // Final summary
