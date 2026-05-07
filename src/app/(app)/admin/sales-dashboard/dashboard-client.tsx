@@ -6,6 +6,7 @@ import { RevenueOverview } from './revenue-overview';
 import { RevenueChart, type RevenueChartPoint } from './revenue-chart';
 import { TrendChart, type TrendSeries } from './trend-chart';
 import { HotAccounts, type HotAccount } from './hot-accounts';
+import { SkuLeaderboard } from './sku-leaderboard';
 
 // ─── Brand families + colors ──────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ function Section({ children }: { children: React.ReactNode }) {
 // ─── Main client ──────────────────────────────────────────────────────────────
 
 export function DashboardClient({ data }: { data: SalesDashboardData }) {
-  const { monthly, products, wholesaleRecent, lastUpdated } = data;
+  const { monthly, products, skuMonthly, wholesaleRecent, lastUpdated } = data;
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
@@ -430,6 +431,21 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
             bestMonth={ytdStats.bestMonth}
             lastUpdated={lastUpdated}
           />
+        </section>
+
+        {/* Section 1b — SKU Leaderboard */}
+        <section>
+          <SectionLabel>SKU Leaderboard</SectionLabel>
+          <Section>
+            <SkuLeaderboard
+              skuMonthly={skuMonthly}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              selectedFamilies={selectedFamilies}
+              channel={channel}
+              maxMonth={maxMonth}
+            />
+          </Section>
         </section>
 
         {/* Section 2 */}

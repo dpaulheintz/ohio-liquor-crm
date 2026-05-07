@@ -21,6 +21,18 @@ export interface ProductRow {
   revenue: number;
 }
 
+export interface SkuMonthlyRow {
+  month: string;
+  brand_code: string;
+  product_name: string;
+  brand_family: string;
+  size: string;
+  retail_bottles: number;
+  retail_amount: number;
+  wholesale_bottles: number;
+  wholesale_amount: number;
+}
+
 export interface WholesaleRecentRow {
   month: string;
   agency_id: string;
@@ -36,6 +48,8 @@ export interface SalesDashboardData {
   monthly: MonthlyRow[];
   // Aggregated by month + product_name + brand_family (full history)
   products: ProductRow[];
+  // Aggregated by month + brand_code (full history, for SKU leaderboard)
+  skuMonthly: SkuMonthlyRow[];
   // Last 6 months of wholesale_detail (for hot accounts)
   wholesaleRecent: WholesaleRecentRow[];
   // Most recent month loaded in DB
@@ -51,7 +65,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   const { data: rawSales, error: salesErr } = await supabase
     .from('sales_monthly')
     .select(
-      'month, brand_family, product_name, retail_bottles, retail_amount, wholesale_bottles, wholesale_amount'
+      'month, brand_code, brand_family, product_name, size, retail_bottles, retail_amount, wholesale_bottles, wholesale_amount'
     )
     .order('month', { ascending: true });
   if (salesErr) throw salesErr;
@@ -107,6 +121,34 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     a.month.localeCompare(b.month)
   );
 
+  // ── Aggregate by month + brand_code (SKU leaderboard) ────────────────────
+  const skuMap = new Map<string, SkuMonthlyRow>();
+  for (const r of rows) {
+    const key = `${r.month}|${r.brand_code}`;
+    const existing = skuMap.get(key);
+    if (existing) {
+      existing.retail_bottles += r.retail_bottles ?? 0;
+      existing.retail_amount += r.retail_amount ?? 0;
+      existing.wholesale_bottles += r.wholesale_bottles ?? 0;
+      existing.wholesale_amount += r.wholesale_amount ?? 0;
+    } else {
+      skuMap.set(key, {
+        month: r.month,
+        brand_code: r.brand_code ?? '',
+        product_name: r.product_name ?? '',
+        brand_family: r.brand_family ?? 'Unknown',
+        size: r.size ?? '',
+        retail_bottles: r.retail_bottles ?? 0,
+        retail_amount: r.retail_amount ?? 0,
+        wholesale_bottles: r.wholesale_bottles ?? 0,
+        wholesale_amount: r.wholesale_amount ?? 0,
+      });
+    }
+  }
+  const skuMonthly = Array.from(skuMap.values()).sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
   // ── Last updated ──────────────────────────────────────────────────────────
   const lastUpdated =
     monthly.length > 0 ? monthly[monthly.length - 1].month : null;
@@ -132,5 +174,5 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     }));
   }
 
-  return { monthly, products, wholesaleRecent, lastUpdated };
+  return { monthly, products, skuMonthly, wholesaleRecent, lastUpdated };
 }
