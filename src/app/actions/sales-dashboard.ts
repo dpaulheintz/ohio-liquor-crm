@@ -43,6 +43,30 @@ export interface WholesaleRecentRow {
   amount: number;
 }
 
+// Full wholesale row — includes wholesaler identity fields for account leaderboard
+export interface WholesaleFullRow {
+  month: string;
+  agency_id: string;
+  agency_name: string | null;
+  brand_code: string;
+  brand_family: string;
+  product_name: string;
+  size: string;
+  wholesaler_name: string | null;
+  dba: string | null;
+  bottles_sold: number;
+  amount: number;
+}
+
+// Account group record — mirrors account_groups table
+export interface AccountGroupData {
+  id: string;
+  group_name: string;
+  match_terms: string[];
+  match_columns: 'wholesaler' | 'dba' | 'both';
+  color: string;
+}
+
 export interface SalesDashboardData {
   // Aggregated by month + brand_family (full history)
   monthly: MonthlyRow[];
@@ -52,6 +76,10 @@ export interface SalesDashboardData {
   skuMonthly: SkuMonthlyRow[];
   // Last 6 months of wholesale_detail (for hot accounts)
   wholesaleRecent: WholesaleRecentRow[];
+  // Full wholesale_detail history (for account leaderboard)
+  wholesaleFull: WholesaleFullRow[];
+  // Account group definitions (for grouping wholesale accounts)
+  accountGroups: AccountGroupData[];
   // Most recent month loaded in DB
   lastUpdated: string | null;
 }
@@ -153,26 +181,69 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   const lastUpdated =
     monthly.length > 0 ? monthly[monthly.length - 1].month : null;
 
-  // ── Last 6 months wholesale (for hot accounts) ────────────────────────────
-  let wholesaleRecent: WholesaleRecentRow[] = [];
-  if (lastUpdated) {
-    // Compute 6 months before lastUpdated
-    const d = new Date(lastUpdated + '-01');
-    d.setMonth(d.getMonth() - 5);
-    const sixMonthsAgo = d.toISOString().slice(0, 7);
+  // ── Fetch ALL wholesale_detail (used for both hot accounts and leaderboard) ─
+  const { data: wData } = await supabase
+    .from('wholesale_detail')
+    .select(
+      'month, agency_id, agency_name, brand_code, brand_family, product_name, size, wholesaler_name, dba, bottles_sold, amount'
+    )
+    .order('month', { ascending: true });
 
-    const { data: wData } = await supabase
-      .from('wholesale_detail')
-      .select('month, agency_id, agency_name, brand_family, product_name, bottles_sold, amount')
-      .gte('month', sixMonthsAgo)
-      .lte('month', lastUpdated);
+  const wholesaleFull: WholesaleFullRow[] = (wData ?? []).map((r) => ({
+    month: r.month,
+    agency_id: r.agency_id,
+    agency_name: r.agency_name ?? null,
+    brand_code: r.brand_code ?? '',
+    brand_family: r.brand_family ?? 'Unknown',
+    product_name: r.product_name ?? '',
+    size: r.size ?? '',
+    wholesaler_name: r.wholesaler_name ?? null,
+    dba: r.dba ?? null,
+    bottles_sold: r.bottles_sold ?? 0,
+    amount: r.amount ?? 0,
+  }));
 
-    wholesaleRecent = ((wData ?? []) as WholesaleRecentRow[]).map((r) => ({
-      ...r,
-      bottles_sold: r.bottles_sold ?? 0,
-      amount: r.amount ?? 0,
+  // Derive wholesaleRecent (last 6 months) for the hot accounts section
+  const sixMonthsAgo = lastUpdated
+    ? (() => {
+        const d = new Date(lastUpdated + '-01');
+        d.setMonth(d.getMonth() - 5);
+        return d.toISOString().slice(0, 7);
+      })()
+    : '';
+  const wholesaleRecent: WholesaleRecentRow[] = wholesaleFull
+    .filter((r) => r.month >= sixMonthsAgo && r.month <= (lastUpdated ?? ''))
+    .map((r) => ({
+      month: r.month,
+      agency_id: r.agency_id,
+      agency_name: r.agency_name,
+      brand_family: r.brand_family,
+      product_name: r.product_name,
+      bottles_sold: r.bottles_sold,
+      amount: r.amount,
     }));
-  }
 
-  return { monthly, products, skuMonthly, wholesaleRecent, lastUpdated };
+  // ── Fetch account groups ──────────────────────────────────────────────────
+  const { data: groupsData } = await supabase
+    .from('account_groups')
+    .select('id, group_name, match_terms, match_columns, color')
+    .order('group_name');
+
+  const accountGroups: AccountGroupData[] = (groupsData ?? []).map((g) => ({
+    id: g.id,
+    group_name: g.group_name,
+    match_terms: (g.match_terms as string[]) ?? [],
+    match_columns: g.match_columns as 'wholesaler' | 'dba' | 'both',
+    color: g.color,
+  }));
+
+  return {
+    monthly,
+    products,
+    skuMonthly,
+    wholesaleRecent,
+    wholesaleFull,
+    accountGroups,
+    lastUpdated,
+  };
 }

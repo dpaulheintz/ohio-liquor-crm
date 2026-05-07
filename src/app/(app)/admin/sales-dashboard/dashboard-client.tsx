@@ -7,6 +7,7 @@ import { RevenueChart, type RevenueChartPoint } from './revenue-chart';
 import { TrendChart, type TrendSeries } from './trend-chart';
 import { HotAccounts, type HotAccount } from './hot-accounts';
 import { SkuLeaderboard } from './sku-leaderboard';
+import { WholesaleLeaderboard } from './wholesale-leaderboard';
 
 // ─── Brand families + colors ──────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ function Section({ children }: { children: React.ReactNode }) {
 // ─── Main client ──────────────────────────────────────────────────────────────
 
 export function DashboardClient({ data }: { data: SalesDashboardData }) {
-  const { monthly, products, skuMonthly, wholesaleRecent, lastUpdated } = data;
+  const { monthly, products, skuMonthly, wholesaleRecent, wholesaleFull, accountGroups, lastUpdated } = data;
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
@@ -443,6 +444,21 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
               dateTo={dateTo}
               selectedFamilies={selectedFamilies}
               channel={channel}
+              maxMonth={maxMonth}
+            />
+          </Section>
+        </section>
+
+        {/* Section 1c — Wholesale Account Leaderboard */}
+        <section>
+          <SectionLabel>Wholesale Account Leaderboard</SectionLabel>
+          <Section>
+            <WholesaleLeaderboard
+              wholesaleFull={wholesaleFull}
+              accountGroups={accountGroups}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              selectedFamilies={selectedFamilies}
               maxMonth={maxMonth}
             />
           </Section>
