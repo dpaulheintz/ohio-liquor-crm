@@ -58,6 +58,19 @@ export interface WholesaleFullRow {
   amount: number;
 }
 
+// Per-month row keyed by family + product + HB status — for channel split charts
+export interface SplitRow {
+  month: string;
+  brand_family: string;
+  product_name: string;
+  is_hb_agency: boolean;
+  hb_location: string | null; // 'Grandview' | 'Gahanna' | 'Westerville' | null
+  retail_bottles: number;
+  retail_amount: number;
+  wholesale_bottles: number;
+  wholesale_amount: number;
+}
+
 // Account group record — mirrors account_groups table
 export interface AccountGroupData {
   id: string;
@@ -74,6 +87,8 @@ export interface SalesDashboardData {
   products: ProductRow[];
   // Aggregated by month + brand_code (full history, for SKU leaderboard)
   skuMonthly: SkuMonthlyRow[];
+  // Full monthly detail keyed by family+product+hb status (for channel split)
+  splitRows: SplitRow[];
   // Last 6 months of wholesale_detail (for hot accounts)
   wholesaleRecent: WholesaleRecentRow[];
   // Full wholesale_detail history (for account leaderboard)
@@ -93,7 +108,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   const { data: rawSales, error: salesErr } = await supabase
     .from('sales_monthly')
     .select(
-      'month, brand_code, brand_family, product_name, size, retail_bottles, retail_amount, wholesale_bottles, wholesale_amount'
+      'month, brand_code, brand_family, product_name, size, is_hb_agency, hb_location, retail_bottles, retail_amount, wholesale_bottles, wholesale_amount'
     )
     .order('month', { ascending: true });
   if (salesErr) throw salesErr;
@@ -177,6 +192,37 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     a.month.localeCompare(b.month)
   );
 
+  // ── Aggregate by month + brand_family + product_name + hb status ──────────
+  // Used for the Retail vs Wholesale Split charts (channel split section)
+  const splitMap = new Map<string, SplitRow>();
+  for (const r of rows) {
+    const hb = r.is_hb_agency ? '1' : '0';
+    const loc = r.hb_location ?? '';
+    const key = `${r.month}|${r.brand_family}|${r.product_name}|${hb}|${loc}`;
+    const existing = splitMap.get(key);
+    if (existing) {
+      existing.retail_bottles += r.retail_bottles ?? 0;
+      existing.retail_amount += r.retail_amount ?? 0;
+      existing.wholesale_bottles += r.wholesale_bottles ?? 0;
+      existing.wholesale_amount += r.wholesale_amount ?? 0;
+    } else {
+      splitMap.set(key, {
+        month: r.month,
+        brand_family: r.brand_family ?? 'Unknown',
+        product_name: r.product_name ?? '',
+        is_hb_agency: r.is_hb_agency ?? false,
+        hb_location: r.hb_location ?? null,
+        retail_bottles: r.retail_bottles ?? 0,
+        retail_amount: r.retail_amount ?? 0,
+        wholesale_bottles: r.wholesale_bottles ?? 0,
+        wholesale_amount: r.wholesale_amount ?? 0,
+      });
+    }
+  }
+  const splitRows = Array.from(splitMap.values()).sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+
   // ── Last updated ──────────────────────────────────────────────────────────
   const lastUpdated =
     monthly.length > 0 ? monthly[monthly.length - 1].month : null;
@@ -241,6 +287,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     monthly,
     products,
     skuMonthly,
+    splitRows,
     wholesaleRecent,
     wholesaleFull,
     accountGroups,
