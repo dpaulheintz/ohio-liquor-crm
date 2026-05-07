@@ -16,6 +16,7 @@ import {
   GlassWater,
   BarChart2,
   Layers,
+  TrendingUp,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -34,6 +35,7 @@ const adminItems = [
   { href: '/admin', label: 'Admin Dashboard', icon: Shield },
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
+  { href: '/admin/sales-dashboard', label: 'Sales Dashboard', icon: TrendingUp },
   { href: '/admin/sales-upload', label: 'Sales Upload', icon: BarChart2 },
   { href: '/admin/account-groups', label: 'Account Groups', icon: Layers },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
