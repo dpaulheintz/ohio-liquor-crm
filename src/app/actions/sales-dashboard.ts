@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,9 @@ export interface SalesDashboardData {
 // ─── Server action ────────────────────────────────────────────────────────────
 
 export async function getSalesDashboardData(): Promise<SalesDashboardData> {
-  const supabase = await createClient();
+  // Use the service-role admin client so we get ALL rows regardless of the
+  // PostgREST default 1,000-row cap and without RLS restrictions.
+  const supabase = createAdminClient();
 
   // Fetch all sales_monthly rows (columns we need for aggregation)
   const { data: rawSales, error: salesErr } = await supabase
