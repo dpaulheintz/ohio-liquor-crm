@@ -382,7 +382,7 @@ export function WholesaleLeaderboard({
   // ── Search + sort ──────────────────────────────────────────────────────────
   const displayRows = useMemo<AccountRow[]>(() => {
     const base = activeTab === 'overall' ? overallRows : bySkuRows;
-    let rows = search.trim()
+    const rows = search.trim()
       ? base.filter((r) => r.displayName.toLowerCase().includes(search.toLowerCase()))
       : [...base];
 

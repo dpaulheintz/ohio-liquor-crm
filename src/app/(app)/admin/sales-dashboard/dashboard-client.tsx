@@ -1,27 +1,33 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { MonthlyRow, ProductRow, WholesaleRecentRow, SalesDashboardData } from '@/app/actions/sales-dashboard';
-import { RevenueOverview } from './revenue-overview';
-import { RevenueChart, type RevenueChartPoint } from './revenue-chart';
-import { TrendChart, type TrendSeries } from './trend-chart';
-import { HotAccounts, type HotAccount } from './hot-accounts';
+import type { SalesDashboardData } from '@/app/actions/sales-dashboard';
+import { SectionRevenue } from './section-revenue';
+import { SectionWholesale } from './section-wholesale';
+import { SectionRetail } from './section-retail';
+import { SectionHbLocations } from './section-hb-locations';
+import { SectionHbWholesale } from './section-hb-wholesale';
 import { SkuLeaderboard } from './sku-leaderboard';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
+import { HotAccounts, type HotAccount } from './hot-accounts';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Channel = 'all' | 'retail' | 'wholesale';
 
 // ─── Brand families + colors ──────────────────────────────────────────────────
 
 const FAMILY_COLORS: Record<string, string> = {
-  'Vodka': '#3b82f6',
+  Vodka: '#3b82f6',
   '(614) Vodka': '#06b6d4',
-  'Gin': '#22c55e',
+  Gin: '#22c55e',
   'Whiskey War': '#C5A572',
-  'Midnight': '#8b5cf6',
+  Midnight: '#8b5cf6',
   'Midnight (Discontinued)': '#7c3aed',
-  'Bourbon': '#f97316',
-  'RTD': '#ec4899',
-  'Unknown': '#6b7280',
+  Bourbon: '#f97316',
+  RTD: '#ec4899',
+  Unknown: '#6b7280',
 };
 const FAMILY_COLOR_DEFAULT = '#94a3b8';
 
@@ -29,42 +35,45 @@ const ALL_FAMILIES = [
   'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD',
 ];
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-type Channel = 'all' | 'retail' | 'wholesale';
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function rev(r: MonthlyRow, ch: Channel): number {
-  if (ch === 'retail') return r.retail_amount;
-  if (ch === 'wholesale') return r.wholesale_amount;
-  return r.retail_amount + r.wholesale_amount;
-}
-
-function bot(r: MonthlyRow, ch: Channel): number {
-  if (ch === 'retail') return r.retail_bottles;
-  if (ch === 'wholesale') return r.wholesale_bottles;
-  return r.retail_bottles + r.wholesale_bottles;
-}
-
-function inFamilies(r: { brand_family: string }, families: string[]) {
-  return families.length === 0 || families.includes(r.brand_family);
-}
 
 function fmtPeriod(months: string[]): string {
   if (months.length === 0) return '';
   const [first, last] = [months[0], months[months.length - 1]];
-  const fmt = (m: string) => new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  if (first === last) return fmt(first);
-  return `${fmt(first)} – ${fmt(last)}`;
+  const fmt = (m: string) =>
+    new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return first === last ? fmt(first) : `${fmt(first)} – ${fmt(last)}`;
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
+function inFamilies(bf: string, families: string[]) {
+  return families.length === 0 || families.includes(bf);
+}
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// ─── Section header ───────────────────────────────────────────────────────────
+
+interface SectionHeaderProps {
+  number?: number;
+  title: string;
+  subtitle?: string;
+}
+
+function SectionHeader({ number, title, subtitle }: SectionHeaderProps) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <h2 className="text-lg font-serif font-semibold text-white tracking-wide">{children}</h2>
-      <div className="flex-1 h-px bg-gradient-to-r from-[#C5A572]/30 to-transparent" />
+    <div className="flex items-end gap-4 mb-5">
+      {number !== undefined && (
+        <span className="text-4xl font-serif font-bold text-zinc-800 leading-none select-none">
+          {String(number).padStart(2, '0')}
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <h2 className="text-xl font-serif font-semibold text-white tracking-wide leading-none">
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>
+        )}
+      </div>
+      <div className="h-px flex-1 bg-gradient-to-r from-[#C5A572]/40 to-transparent max-w-[200px] mb-1" />
     </div>
   );
 }
@@ -83,11 +92,14 @@ interface FilterBarProps {
   maxMonth: string;
 }
 
-function FilterBar({ dateFrom, dateTo, onDateFrom, onDateTo, selectedFamilies, onFamilyToggle, channel, onChannel, maxMonth }: FilterBarProps) {
+function FilterBar({
+  dateFrom, dateTo, onDateFrom, onDateTo,
+  selectedFamilies, onFamilyToggle, channel, onChannel, maxMonth,
+}: FilterBarProps) {
   return (
     <div className="sticky top-0 z-30 border-b border-[#C5A572]/15 bg-[#0a0a0a]/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
       {/* Date range */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 text-xs shrink-0">
         <span className="text-zinc-500 uppercase tracking-wider">Range</span>
         <input
           type="month"
@@ -107,12 +119,16 @@ function FilterBar({ dateFrom, dateTo, onDateFrom, onDateTo, selectedFamilies, o
         />
       </div>
 
-      {/* Brand family */}
+      {/* Brand family toggles */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-xs text-zinc-500 uppercase tracking-wider">Family</span>
         <button
           onClick={() => ALL_FAMILIES.forEach(f => selectedFamilies.includes(f) && onFamilyToggle(f))}
-          className={`rounded px-2 py-0.5 text-xs transition-colors ${selectedFamilies.length === 0 ? 'bg-[#C5A572] text-black font-semibold' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+          className={`rounded px-2 py-0.5 text-xs transition-colors ${
+            selectedFamilies.length === 0
+              ? 'bg-[#C5A572] text-black font-semibold'
+              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+          }`}
         >
           All
         </button>
@@ -122,10 +138,16 @@ function FilterBar({ dateFrom, dateTo, onDateFrom, onDateTo, selectedFamilies, o
             onClick={() => onFamilyToggle(f)}
             className="rounded px-2 py-0.5 text-xs transition-all"
             style={{
-              backgroundColor: selectedFamilies.includes(f) ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT) + '33' : 'rgb(39,39,42)',
-              color: selectedFamilies.includes(f) ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT) : '#a1a1aa',
+              backgroundColor: selectedFamilies.includes(f)
+                ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT) + '33'
+                : 'rgb(39,39,42)',
+              color: selectedFamilies.includes(f)
+                ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT)
+                : '#a1a1aa',
               borderWidth: 1,
-              borderColor: selectedFamilies.includes(f) ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT) + '80' : 'transparent',
+              borderColor: selectedFamilies.includes(f)
+                ? (FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT) + '80'
+                : 'transparent',
             }}
           >
             {f}
@@ -133,13 +155,17 @@ function FilterBar({ dateFrom, dateTo, onDateFrom, onDateTo, selectedFamilies, o
         ))}
       </div>
 
-      {/* Channel */}
+      {/* Channel toggle */}
       <div className="flex items-center gap-1 rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
         {(['all', 'retail', 'wholesale'] as Channel[]).map((c) => (
           <button
             key={c}
             onClick={() => onChannel(c)}
-            className={`rounded px-3 py-1 text-xs capitalize transition-colors ${channel === c ? 'bg-[#C5A572] text-black font-semibold' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`rounded px-3 py-1 text-xs capitalize transition-colors ${
+              channel === c
+                ? 'bg-[#C5A572] text-black font-semibold'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
           >
             {c}
           </button>
@@ -149,22 +175,16 @@ function FilterBar({ dateFrom, dateTo, onDateFrom, onDateTo, selectedFamilies, o
   );
 }
 
-// ─── Section card wrapper ─────────────────────────────────────────────────────
-
-function Section({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
-      {children}
-    </div>
-  );
-}
-
-// ─── Main client ──────────────────────────────────────────────────────────────
+// ─── Main client component ────────────────────────────────────────────────────
 
 export function DashboardClient({ data }: { data: SalesDashboardData }) {
-  const { monthly, products, skuMonthly, splitRows, wholesaleRecent, wholesaleFull, accountGroups, lastUpdated } = data;
+  const {
+    monthly, products: _products, skuMonthly, splitRows,
+    wholesaleRecent, wholesaleFull, accountGroups, lastUpdated,
+  } = data;
+  void _products; // available but we pass to child sections as needed
 
-  // ── Filter state ────────────────────────────────────────────────────────────
+  // ── Filter state ─────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
   const defaultDateTo = maxMonth;
   const defaultDateFrom = (() => {
@@ -177,166 +197,43 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const [dateTo, setDateTo] = useState(defaultDateTo);
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
   const [channel, setChannel] = useState<Channel>('all');
-  const [trendLevel, setTrendLevel] = useState<'family' | 'product'>('family');
-  const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({});
 
   function handleFamilyToggle(f: string) {
     setSelectedFamilies((prev) =>
-      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
     );
   }
 
-  // ── Computed: current year ──────────────────────────────────────────────────
+  // ── Derived: current year + max YTD month ────────────────────────────────
   const currentYear = useMemo(
     () => (lastUpdated ? parseInt(lastUpdated.slice(0, 4)) : new Date().getFullYear()),
-    [lastUpdated]
+    [lastUpdated],
   );
-  // YTD cuts at the most-recent month in the DB for the current year
   const maxCurrentYearMonth = useMemo(
-    () => monthly.filter((r) => r.month.startsWith(String(currentYear))).map((r) => r.month.slice(5, 7)).sort().pop() ?? '01',
-    [monthly, currentYear]
-  );
-
-  // ── Filtered monthly (for sections 1, 2, 3) ────────────────────────────────
-  const filteredMonthly = useMemo(
     () =>
-      monthly.filter(
-        (r) =>
-          r.month >= dateFrom &&
-          r.month <= dateTo &&
-          inFamilies(r, selectedFamilies)
-      ),
-    [monthly, dateFrom, dateTo, selectedFamilies]
+      monthly
+        .filter(r => r.month.startsWith(String(currentYear)))
+        .map(r => r.month.slice(5, 7))
+        .sort()
+        .pop() ?? '01',
+    [monthly, currentYear],
   );
 
-  // ── Section 1: YTD stats ───────────────────────────────────────────────────
-  const ytdStats = useMemo(() => {
-    // YTD always uses FULL monthly data filtered by family (not date range)
-    const ytdBase = monthly.filter((r) => inFamilies(r, selectedFamilies));
-    const accum = (year: number) =>
-      ytdBase
-        .filter((r) => {
-          const y = parseInt(r.month.slice(0, 4));
-          const m = r.month.slice(5, 7);
-          return y === year && m <= maxCurrentYearMonth;
-        })
-        .reduce((acc, r) => ({ rev: acc.rev + rev(r, channel), bot: acc.bot + bot(r, channel) }), { rev: 0, bot: 0 });
-
-    const cur = accum(currentYear);
-    const ly = accum(currentYear - 1);
-    const twoLY = accum(currentYear - 2);
-
-    const bestMonth = filteredMonthly.length > 0
-      ? filteredMonthly.reduce<{ month: string; value: number } | null>((best, r) => {
-          // Aggregate by month first
-          return best; // placeholder — computed below
-        }, null)
-      : null;
-
-    // Best month: group filtered monthly by month, sum, find max
-    const byMonth = new Map<string, number>();
-    for (const r of filteredMonthly) {
-      byMonth.set(r.month, (byMonth.get(r.month) ?? 0) + rev(r, channel));
-    }
-    let best: { month: string; value: number } | null = null;
-    for (const [m, v] of byMonth) {
-      if (!best || v > best.value) best = { month: m, value: v };
-    }
-    void bestMonth;
-
-    return {
-      revenue: { current: cur.rev, ly: ly.rev, twoLY: twoLY.rev },
-      bottles: { current: cur.bot, ly: ly.bot, twoLY: twoLY.bot },
-      bestMonth: best,
-    };
-  }, [monthly, filteredMonthly, selectedFamilies, channel, currentYear, maxCurrentYearMonth]);
-
-  // ── Section 2: Monthly revenue chart ──────────────────────────────────────
-  const chartData = useMemo<RevenueChartPoint[]>(() => {
-    // Group ALL monthly data (no date range) by MM + year for overlay
-    const base = monthly.filter((r) => inFamilies(r, selectedFamilies));
-    const byMMYear = new Map<string, number>();
-    for (const r of base) {
-      const key = `${r.month.slice(5, 7)}|${r.month.slice(0, 4)}`;
-      byMMYear.set(key, (byMMYear.get(key) ?? 0) + rev(r, channel));
-    }
-    return MONTH_LABELS.map((label, i) => {
-      const mm = String(i + 1).padStart(2, '0');
-      const cur = byMMYear.get(`${mm}|${currentYear}`);
-      const ly = byMMYear.get(`${mm}|${currentYear - 1}`);
-      const twoLY = byMMYear.get(`${mm}|${currentYear - 2}`);
-      return { month: label, current: cur, ly, twoLY };
-    });
-  }, [monthly, selectedFamilies, channel, currentYear]);
-
-  // ── Section 3: Trend lines ─────────────────────────────────────────────────
-  const { trendSeries, trendMonths } = useMemo(() => {
-    const filteredProducts: ProductRow[] = products.filter(
-      (r) => r.month >= dateFrom && r.month <= dateTo && inFamilies(r, selectedFamilies)
-    );
-    const months = [...new Set(filteredProducts.map((r) => r.month))].sort();
-
-    const groupKey = (r: ProductRow) =>
-      trendLevel === 'family' ? r.brand_family : `${r.brand_family}||${r.product_name}`;
-
-    // Aggregate
-    const byKey = new Map<string, { byMonth: Map<string, { bottles: number; revenue: number }>; family: string; name: string }>();
-    for (const r of filteredProducts) {
-      const k = groupKey(r);
-      if (!byKey.has(k)) {
-        byKey.set(k, {
-          byMonth: new Map(),
-          family: r.brand_family,
-          name: trendLevel === 'family' ? r.brand_family : r.product_name,
-        });
-      }
-      const entry = byKey.get(k)!;
-      const existing = entry.byMonth.get(r.month) ?? { bottles: 0, revenue: 0 };
-      entry.byMonth.set(r.month, { bottles: existing.bottles + r.bottles, revenue: existing.revenue + r.revenue });
-    }
-
-    const series: TrendSeries[] = Array.from(byKey.entries()).map(([key, { byMonth, family, name }]) => {
-      const total = Array.from(byMonth.values()).reduce((s, v) => s + v.bottles, 0);
-      const sparkData = months.map((m) => byMonth.get(m)?.bottles ?? 0);
-      const defaultVisible = trendLevel === 'family' || total > 100;
-      return {
-        key,
-        name,
-        family,
-        color: FAMILY_COLORS[family] ?? FAMILY_COLOR_DEFAULT,
-        sparkData,
-        data: months.map((m) => ({
-          month: m,
-          bottles: byMonth.get(m)?.bottles ?? null,
-          revenue: byMonth.get(m)?.revenue ?? null,
-        })),
-        totalBottles: total,
-        visible: visibleSeries[key] ?? defaultVisible,
-      };
-    });
-
-    series.sort((a, b) => b.totalBottles - a.totalBottles);
-    return { trendSeries: series, trendMonths: months };
-  }, [products, dateFrom, dateTo, selectedFamilies, trendLevel, visibleSeries]);
-
-  function handleTrendToggle(key: string) {
-    setVisibleSeries((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
-  }
-
-  // ── Section 4: Hot accounts ────────────────────────────────────────────────
+  // ── Hot accounts (last 6 months vs prior 6 months) ───────────────────────
   const { growing, declining, recentPeriod, priorPeriod } = useMemo(() => {
     if (!lastUpdated) return { growing: [], declining: [], recentPeriod: '', priorPeriod: '' };
 
-    // Determine recent 3 months and prior 3 months
-    const allMonths = [...new Set(wholesaleRecent.map((r) => r.month))].sort();
-    const uniqueInDB = allMonths;
-    const recentMonths = uniqueInDB.slice(-3);
-    const priorMonths = uniqueInDB.slice(-6, -3);
+    const allMonths = [...new Set(wholesaleRecent.map(r => r.month))].sort();
+    const recentMonths = allMonths.slice(-3);
+    const priorMonths = allMonths.slice(-6, -3);
 
-    const filtered = wholesaleRecent.filter((r) => inFamilies(r, selectedFamilies));
+    const filtered = wholesaleRecent.filter(r => inFamilies(r.brand_family, selectedFamilies));
 
     const sumByAgency = (months: string[]) => {
-      const map = new Map<string, { bottles: number; revenue: number; name: string | null; products: Map<string, number> }>();
+      const map = new Map<
+        string,
+        { bottles: number; revenue: number; name: string | null; products: Map<string, number> }
+      >();
       for (const r of filtered) {
         if (!months.includes(r.month)) continue;
         if (!map.has(r.agency_id)) {
@@ -357,9 +254,10 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
       const p = priorMap.get(id);
       const change = r.bottles - (p?.bottles ?? 0);
       const pct = p && p.bottles > 0 ? (change / p.bottles) * 100 : null;
-      const topProduct = r.products.size > 0
-        ? [...r.products.entries()].sort((a, b) => b[1] - a[1])[0][0]
-        : null;
+      const topProduct =
+        r.products.size > 0
+          ? [...r.products.entries()].sort((a, b) => b[1] - a[1])[0][0]
+          : null;
       return {
         agency_id: id,
         agency_name: r.name,
@@ -372,7 +270,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
       };
     });
 
-    // Add agencies that existed in prior but not recent (declining to 0)
+    // Add agencies that were in prior but disappeared from recent
     for (const [id, p] of priorMap.entries()) {
       if (!recentMap.has(id)) {
         accounts.push({
@@ -389,12 +287,11 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
     }
 
     const growing = accounts
-      .filter((a) => a.bottle_change > 0)
+      .filter(a => a.bottle_change > 0)
       .sort((a, b) => b.bottle_change - a.bottle_change)
       .slice(0, 10);
-
     const declining = accounts
-      .filter((a) => a.bottle_change < 0)
+      .filter(a => a.bottle_change < 0)
       .sort((a, b) => a.bottle_change - b.bottle_change)
       .slice(0, 10);
 
@@ -406,11 +303,10 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
     };
   }, [wholesaleRecent, selectedFamilies, lastUpdated]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="bg-[#0a0a0a] min-h-full text-white">
-      {/* Filter bar */}
       <FilterBar
         dateFrom={dateFrom}
         dateTo={dateTo}
@@ -423,22 +319,94 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
         maxMonth={maxMonth}
       />
 
-      <div className="px-6 py-6 space-y-8 max-w-[1400px] mx-auto">
-        {/* Section 1 */}
+      <div className="px-6 py-8 space-y-12 max-w-[1400px] mx-auto">
+
+        {/* ── Section 1: Revenue Overview ─────────────────────────────────── */}
         <section>
-          <SectionLabel>Revenue Overview</SectionLabel>
-          <RevenueOverview
-            revenue={ytdStats.revenue}
-            bottles={ytdStats.bottles}
-            bestMonth={ytdStats.bestMonth}
+          <SectionHeader
+            number={1}
+            title="Revenue Overview"
+            subtitle="YTD performance, year-over-year comparison, and brand family breakdown"
+          />
+          <SectionRevenue
+            monthly={monthly}
+            selectedFamilies={selectedFamilies}
+            channel={channel}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            currentYear={currentYear}
+            maxCurrentYearMonth={maxCurrentYearMonth}
             lastUpdated={lastUpdated}
           />
         </section>
 
-        {/* Section 1b — SKU Leaderboard */}
+        {/* ── Section 2: Wholesale ────────────────────────────────────────── */}
         <section>
-          <SectionLabel>SKU Leaderboard</SectionLabel>
-          <Section>
+          <SectionHeader
+            number={2}
+            title="Wholesale Bottles Sold"
+            subtitle="Distribution channel — top accounts, SKU performance, and volume by family"
+          />
+          <SectionWholesale
+            monthly={monthly}
+            skuMonthly={skuMonthly}
+            wholesaleFull={wholesaleFull}
+            selectedFamilies={selectedFamilies}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+        </section>
+
+        {/* ── Section 3: Retail ───────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            number={3}
+            title="Retail Sales"
+            subtitle="Direct consumer sales — revenue trend, brand mix, and top-moving products"
+          />
+          <SectionRetail
+            monthly={monthly}
+            skuMonthly={skuMonthly}
+            selectedFamilies={selectedFamilies}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+        </section>
+
+        {/* ── Section 4: High Bank Locations ──────────────────────────────── */}
+        <section>
+          <SectionHeader
+            number={4}
+            title="High Bank Locations"
+            subtitle="Revenue and volume breakdown across Grandview, Gahanna, and Westerville"
+          />
+          <SectionHbLocations
+            splitRows={splitRows}
+            selectedFamilies={selectedFamilies}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+        </section>
+
+        {/* ── Section 5: HB Bar Sales ─────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            number={5}
+            title="HB Bar Sales"
+            subtitle="Wholesale orders placed by High Bank's own bar locations"
+          />
+          <SectionHbWholesale
+            splitRows={splitRows}
+            selectedFamilies={selectedFamilies}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+        </section>
+
+        {/* ── SKU Leaderboard ─────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader title="SKU Leaderboard" subtitle="All individual SKUs ranked by volume or revenue, with sparklines and export" />
+          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
             <SkuLeaderboard
               skuMonthly={skuMonthly}
               dateFrom={dateFrom}
@@ -447,27 +415,12 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
               channel={channel}
               maxMonth={maxMonth}
             />
-          </Section>
+          </div>
         </section>
 
-        {/* Section 1c — Wholesale Account Leaderboard */}
+        {/* ── Retail vs Wholesale Split ────────────────────────────────────── */}
         <section>
-          <SectionLabel>Wholesale Account Leaderboard</SectionLabel>
-          <Section>
-            <WholesaleLeaderboard
-              wholesaleFull={wholesaleFull}
-              accountGroups={accountGroups}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              selectedFamilies={selectedFamilies}
-              maxMonth={maxMonth}
-            />
-          </Section>
-        </section>
-
-        {/* Section 1d — Retail vs Wholesale Split */}
-        <section>
-          <SectionLabel>Retail vs Wholesale Split</SectionLabel>
+          <SectionHeader title="Retail vs Wholesale Split" subtitle="Channel breakdown by brand family with HB agency drill-down" />
           <ChannelSplit
             splitRows={splitRows}
             dateFrom={dateFrom}
@@ -476,35 +429,24 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           />
         </section>
 
-        {/* Section 2 */}
+        {/* ── Wholesale Account Leaderboard ────────────────────────────────── */}
         <section>
-          <SectionLabel>Monthly Revenue — Year over Year</SectionLabel>
-          <Section>
-            <RevenueChart data={chartData} currentYear={currentYear} />
-          </Section>
+          <SectionHeader title="Wholesale Account Leaderboard" subtitle="Ranked accounts with group rollup, HB badge, and per-SKU view" />
+          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
+            <WholesaleLeaderboard
+              wholesaleFull={wholesaleFull}
+              accountGroups={accountGroups}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              selectedFamilies={selectedFamilies}
+              maxMonth={maxMonth}
+            />
+          </div>
         </section>
 
-        {/* Section 3 */}
+        {/* ── Account Movement ─────────────────────────────────────────────── */}
         <section>
-          <SectionLabel>Monthly Trends by Product</SectionLabel>
-          <Section>
-            {trendMonths.length > 0 ? (
-              <TrendChart
-                series={trendSeries}
-                months={trendMonths}
-                level={trendLevel}
-                onLevelChange={(l) => { setTrendLevel(l); setVisibleSeries({}); }}
-                onToggle={handleTrendToggle}
-              />
-            ) : (
-              <p className="py-8 text-center text-zinc-600 text-sm">No data for selected range.</p>
-            )}
-          </Section>
-        </section>
-
-        {/* Section 4 */}
-        <section>
-          <SectionLabel>Account Movement</SectionLabel>
+          <SectionHeader title="Account Movement" subtitle="Fastest growing and declining wholesale accounts over the last 6 months" />
           <HotAccounts
             growing={growing}
             declining={declining}
