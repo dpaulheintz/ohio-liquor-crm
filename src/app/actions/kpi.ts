@@ -1,51 +1,70 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
-export async function getKpiSummary({
-  startDate,
-  endDate,
-  repId,
-}: {
-  startDate?: string;
-  endDate?: string;
-  repId?: string;
-} = {}) {
-  const supabase = await createClient();
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-  let query = supabase
-    .from('visit_logs')
-    .select(
-      `*, account:accounts!visit_logs_account_id_fkey(id, display_name), rep:profiles!visit_logs_rep_id_fkey(id, full_name, email)`
-    )
-    .not('kpi', 'is', null);
+export interface KpiVisitRow {
+  id: string;
+  visited_at: string;
+  kpi: string;
+  kpi_quantity: number | null;
+  notes: string | null;
+  rep_id: string;
+  rep_name: string | null;
+  rep_email: string;
+  account_id: string;
+  account_name: string;
+  photo_count: number;
+}
 
-  if (startDate) {
-    query = query.gte('visited_at', startDate);
-  }
-  if (endDate) {
-    // If only a date was provided (no time component), include the full day
-    const endValue = endDate.length === 10 ? `${endDate}T23:59:59.999Z` : endDate;
-    query = query.lte('visited_at', endValue);
-  }
-  if (repId) {
-    query = query.eq('rep_id', repId);
-  }
+export interface KpiDashboardData {
+  kpiVisits: KpiVisitRow[];
+  totalVisitCount: number;
+}
 
-  query = query.order('visited_at', { ascending: false }).limit(200);
+// ─── Server action ────────────────────────────────────────────────────────────
 
-  const { data, error } = await query;
-  if (error) throw error;
+export async function getKpiDashboardData(): Promise<KpiDashboardData> {
+  const supabase = createAdminClient();
 
-  const visits = data ?? [];
+  const [visitResult, countResult] = await Promise.all([
+    supabase
+      .from('visit_logs')
+      .select(`
+        id, visited_at, kpi, kpi_quantity, notes, rep_id, account_id,
+        account:accounts!visit_logs_account_id_fkey(id, display_name),
+        rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
+        visit_photos(id)
+      `)
+      .not('kpi', 'is', null)
+      .order('visited_at', { ascending: false })
+      .limit(5000),
+    supabase
+      .from('visit_logs')
+      .select('*', { count: 'exact', head: true }),
+  ]);
 
-  // Aggregate counts by KPI type
-  const counts: Record<string, number> = {};
-  for (const visit of visits) {
-    if (visit.kpi) {
-      counts[visit.kpi] = (counts[visit.kpi] || 0) + 1;
-    }
-  }
+  if (visitResult.error) throw new Error(`KPI fetch failed: ${visitResult.error.message}`);
+  if (countResult.error) throw new Error(`Count failed: ${countResult.error.message}`);
 
-  return { counts, visits };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const kpiVisits: KpiVisitRow[] = (visitResult.data ?? []).map((r: any) => ({
+    id: String(r.id),
+    visited_at: String(r.visited_at),
+    kpi: String(r.kpi),
+    kpi_quantity: r.kpi_quantity != null ? Number(r.kpi_quantity) : null,
+    notes: r.notes ? String(r.notes) : null,
+    rep_id: String(r.rep_id),
+    rep_name: r.rep?.full_name ? String(r.rep.full_name) : null,
+    rep_email: String(r.rep?.email ?? ''),
+    account_id: String(r.account_id),
+    account_name: String(r.account?.display_name ?? 'Unknown'),
+    photo_count: Array.isArray(r.visit_photos) ? r.visit_photos.length : 0,
+  }));
+
+  return {
+    kpiVisits,
+    totalVisitCount: countResult.count ?? 0,
+  };
 }
