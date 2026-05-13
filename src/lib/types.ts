@@ -61,19 +61,33 @@ export interface Contact {
 export const KPI_OPTIONS = ['Display', 'Menu', 'Feature', 'Event'] as const;
 export type KpiType = typeof KPI_OPTIONS[number];
 
+export type VisitType = 'in_person' | 'phone_call';
+
+export interface VisitKpi {
+  id: string;
+  visit_id: string;
+  kpi_type: string;
+  kpi_quantity: number;
+  created_at: string;
+}
+
 export interface VisitLog {
   id: string;
   account_id: string;
   rep_id: string;
   visited_at: string;
   notes: string | null;
+  /** @deprecated use visit_kpis instead */
   kpi: string | null;
+  /** @deprecated use visit_kpis instead */
   kpi_quantity: number | null;
+  visit_type: VisitType;
   created_at: string;
   // Joined
   account?: Account;
   rep?: Profile;
   visit_photos?: VisitPhoto[];
+  visit_kpis?: VisitKpi[];
 }
 
 export type AssignmentStatus = 'pending' | 'completed';

@@ -104,8 +104,9 @@ export function AccountFormDialog({
         if (includeVisit) {
           await createVisit({
             accountId: newAccount.id,
+            visitType: 'in_person',
             notes: visitNotes || undefined,
-            kpi: visitKpi || undefined,
+            kpis: visitKpi ? [{ type: visitKpi, quantity: 1 }] : undefined,
             visitedAt: new Date(visitDateTime).toISOString(),
           });
         }

@@ -21,6 +21,8 @@ import { ClipboardList, ChevronDown, X } from 'lucide-react';
 import { VisitCard } from './visits/visit-card';
 import { getVisitGroup } from '@/lib/date-utils';
 
+type VisitTypeFilter = 'all' | 'in_person' | 'phone_call';
+
 function groupVisits(visits: VisitLog[]): { label: string; visits: VisitLog[] }[] {
   const groups: Map<string, VisitLog[]> = new Map();
   for (const v of visits) {
@@ -34,12 +36,8 @@ function groupVisits(visits: VisitLog[]): { label: string; visits: VisitLog[] }[
 function periodDates(period: string | null): { startDate?: string; endDate?: string } {
   if (!period) return {};
   const now = new Date();
-  if (period === 'week') {
-    return { startDate: startOfWeek(now, { weekStartsOn: 0 }).toISOString() };
-  }
-  if (period === 'month') {
-    return { startDate: startOfMonth(now).toISOString() };
-  }
+  if (period === 'week')  return { startDate: startOfWeek(now, { weekStartsOn: 0 }).toISOString() };
+  if (period === 'month') return { startDate: startOfMonth(now).toISOString() };
   return {};
 }
 
@@ -65,17 +63,18 @@ export default function HomePage() {
 
 function ActivityFeed() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router       = useRouter();
 
-  const period = searchParams.get('period'); // 'week' | 'month' | null
+  const period  = searchParams.get('period');
   const kpiOnly = searchParams.get('kpi') === 'true';
 
-  const [visits, setVisits] = useState<VisitLog[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [repFilter, setRepFilter] = useState<string>('all');
-  const [reps, setReps] = useState<Pick<Profile, 'id' | 'full_name' | 'email'>[]>([]);
-  const [page, setPage] = useState(1);
+  const [visits, setVisits]             = useState<VisitLog[]>([]);
+  const [total, setTotal]               = useState(0);
+  const [loading, setLoading]           = useState(true);
+  const [repFilter, setRepFilter]       = useState<string>('all');
+  const [visitTypeFilter, setVisitTypeFilter] = useState<VisitTypeFilter>('all');
+  const [reps, setReps]                 = useState<Pick<Profile, 'id' | 'full_name' | 'email'>[]>([]);
+  const [page, setPage]                 = useState(1);
   const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
   const pageSize = 20;
 
@@ -85,10 +84,11 @@ function ActivityFeed() {
     setLoading(true);
     try {
       const result = await getVisits({
-        repId: repFilter !== 'all' ? repFilter : undefined,
+        repId:     repFilter !== 'all' ? repFilter : undefined,
         startDate,
         endDate,
-        kpiOnly: kpiOnly || undefined,
+        kpiOnly:   kpiOnly || undefined,
+        visitType: visitTypeFilter !== 'all' ? visitTypeFilter : undefined,
         page,
         pageSize,
       });
@@ -103,25 +103,18 @@ function ActivityFeed() {
     } finally {
       setLoading(false);
     }
-  }, [repFilter, startDate, endDate, kpiOnly, page]);
+  }, [repFilter, visitTypeFilter, startDate, endDate, kpiOnly, page]);
 
-  useEffect(() => {
-    fetchVisits();
-  }, [fetchVisits]);
-
-  useEffect(() => {
-    getReps().then(setReps);
-  }, []);
+  useEffect(() => { fetchVisits(); }, [fetchVisits]);
+  useEffect(() => { getReps().then(setReps); }, []);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
     setVisits([]);
-  }, [period, kpiOnly, repFilter]);
+  }, [period, kpiOnly, repFilter, visitTypeFilter]);
 
-  function clearFilter() {
-    router.replace('/');
-  }
+  function clearFilter() { router.replace('/'); }
 
   const hasMore = visits.length < total;
   const grouped = groupVisits(visits);
@@ -135,6 +128,7 @@ function ActivityFeed() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto">
+      {/* ── Header row ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">Activity Feed</h1>
@@ -147,27 +141,41 @@ function ActivityFeed() {
             </Badge>
           )}
         </div>
-        <Select
-          value={repFilter}
-          onValueChange={(v) => {
-            setRepFilter(v);
-            setPage(1);
-          }}
-        >
+        <Select value={repFilter} onValueChange={(v) => { setRepFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All Reps" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Reps</SelectItem>
             {reps.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.full_name || r.email}
-              </SelectItem>
+              <SelectItem key={r.id} value={r.id}>{r.full_name || r.email}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* ── Visit type filter pills ─────────────────────────────────────── */}
+      <div className="flex gap-1.5">
+        {([
+          { value: 'all',         label: 'All' },
+          { value: 'in_person',   label: 'In Person' },
+          { value: 'phone_call',  label: 'Phone Calls' },
+        ] as { value: VisitTypeFilter; label: string }[]).map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => { setVisitTypeFilter(value); setPage(1); }}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              visitTypeFilter === value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Visit list ──────────────────────────────────────────────────── */}
       {loading && page === 1 ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -210,11 +218,7 @@ function ActivityFeed() {
 
           {hasMore && (
             <div className="text-center pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage(page + 1)}
-                disabled={loading}
-              >
+              <Button variant="outline" onClick={() => setPage(page + 1)} disabled={loading}>
                 <ChevronDown className="mr-1 h-4 w-4" />
                 {loading ? 'Loading...' : 'Load More'}
               </Button>

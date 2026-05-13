@@ -24,9 +24,21 @@ import {
 import { AccountSearchDialog } from '@/components/account-search-dialog';
 import { DateTimePicker } from '@/components/date-time-picker';
 import { KPI_OPTIONS } from '@/lib/types';
-import { ArrowLeft, Camera, ImageIcon, X, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  Camera,
+  ImageIcon,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Phone,
+  MapPin,
+  Plus,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { nowESTDatetimeLocal } from '@/lib/date-utils';
+
+type VisitType = 'in_person' | 'phone_call';
 
 const DELIVERY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -34,6 +46,11 @@ interface PhotoItem {
   file: File;
   preview: string;
   caption: string;
+}
+
+interface KpiEntry {
+  type: string;
+  quantity: number;
 }
 
 export default function NewVisitPage() {
@@ -49,42 +66,41 @@ function NewVisitForm() {
   const searchParams = useSearchParams();
   const presetAccountId = searchParams.get('account');
 
-  const [accountId, setAccountId] = useState(presetAccountId ?? '');
+  const [visitType, setVisitType]   = useState<VisitType>('in_person');
+  const [accountId, setAccountId]   = useState(presetAccountId ?? '');
   const [accountName, setAccountName] = useState('');
-
-  const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [notes, setNotes] = useState('');
-  const [kpi, setKpi] = useState('');
-  const [kpiQuantity, setKpiQuantity] = useState<number>(1);
-  const [visitedAt, setVisitedAt] = useState(nowESTDatetimeLocal());
-  const [loading, setLoading] = useState(false);
+  const [photos, setPhotos]         = useState<PhotoItem[]>([]);
+  const [notes, setNotes]           = useState('');
+  const [kpis, setKpis]             = useState<KpiEntry[]>([]);
+  const [visitedAt, setVisitedAt]   = useState(nowESTDatetimeLocal());
+  const [loading, setLoading]       = useState(false);
 
   // Inline new account state
   const [creatingNewAccount, setCreatingNewAccount] = useState(false);
-  const [newAcctType, setNewAcctType] = useState<string>('wholesale');
-  const [newAcctName, setNewAcctName] = useState('');
-  const [newAcctAgencyId, setNewAcctAgencyId] = useState('');
+  const [newAcctType, setNewAcctType]               = useState<string>('wholesale');
+  const [newAcctName, setNewAcctName]               = useState('');
+  const [newAcctAgencyId, setNewAcctAgencyId]       = useState('');
   const [newAcctPermitNumber, setNewAcctPermitNumber] = useState('');
   const [newAcctDeliveryDay, setNewAcctDeliveryDay] = useState('');
-  const [newAcctWarehouse, setNewAcctWarehouse] = useState('');
-  const [newAcctAddress, setNewAcctAddress] = useState('');
-  const [newAcctCity, setNewAcctCity] = useState('');
-  const [newAcctZip, setNewAcctZip] = useState('');
-  const [newAcctPhone, setNewAcctPhone] = useState('');
-  const [newAcctDistrict, setNewAcctDistrict] = useState('');
-  const [newAcctLinkedName, setNewAcctLinkedName] = useState('');
-  const [newAcctLinkedId, setNewAcctLinkedId] = useState('');
+  const [newAcctWarehouse, setNewAcctWarehouse]     = useState('');
+  const [newAcctAddress, setNewAcctAddress]         = useState('');
+  const [newAcctCity, setNewAcctCity]               = useState('');
+  const [newAcctZip, setNewAcctZip]                 = useState('');
+  const [newAcctPhone, setNewAcctPhone]             = useState('');
+  const [newAcctDistrict, setNewAcctDistrict]       = useState('');
+  const [newAcctLinkedName, setNewAcctLinkedName]   = useState('');
+  const [newAcctLinkedId, setNewAcctLinkedId]       = useState('');
 
   // Inline new contact state
   const [creatingNewContact, setCreatingNewContact] = useState(false);
-  const [newContactName, setNewContactName] = useState('');
-  const [newContactPhone, setNewContactPhone] = useState('');
-  const [newContactEmail, setNewContactEmail] = useState('');
-  const [newContactTitle, setNewContactTitle] = useState('');
+  const [newContactName, setNewContactName]         = useState('');
+  const [newContactPhone, setNewContactPhone]       = useState('');
+  const [newContactEmail, setNewContactEmail]       = useState('');
+  const [newContactTitle, setNewContactTitle]       = useState('');
 
   const [loadingAccount, setLoadingAccount] = useState(!!presetAccountId);
 
-  // Load preset account name via server action (avoids RLS issues)
+  // Load preset account name
   useEffect(() => {
     if (presetAccountId) {
       setLoadingAccount(true);
@@ -96,20 +112,15 @@ function NewVisitForm() {
     }
   }, [presetAccountId]);
 
+  // ── Photo handlers ──────────────────────────────────────────────────────────
   function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files) return;
-
     const remaining = MAX_PHOTOS - photos.length;
-    const newFiles = Array.from(files).slice(0, remaining);
-
-    const newPhotos = newFiles.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      caption: '',
-    }));
-
-    setPhotos([...photos, ...newPhotos]);
+    const newFiles  = Array.from(files).slice(0, remaining);
+    setPhotos([...photos, ...newFiles.map((file) => ({
+      file, preview: URL.createObjectURL(file), caption: '',
+    }))]);
     e.target.value = '';
   }
 
@@ -126,30 +137,54 @@ function NewVisitForm() {
     setPhotos(updated);
   }
 
+  // ── KPI handlers ────────────────────────────────────────────────────────────
+  function addKpi() {
+    setKpis([...kpis, { type: '', quantity: 1 }]);
+  }
+
+  function removeKpi(index: number) {
+    setKpis(kpis.filter((_, i) => i !== index));
+  }
+
+  function updateKpiType(index: number, type: string) {
+    const updated = [...kpis];
+    updated[index] = { ...updated[index], type };
+    setKpis(updated);
+  }
+
+  function updateKpiQty(index: number, quantity: number) {
+    const updated = [...kpis];
+    updated[index] = { ...updated[index], quantity: Math.max(1, Math.min(99, quantity || 1)) };
+    setKpis(updated);
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     let resolvedAccountId = accountId;
 
-    // Validate: need either a selected account or a new account being created
     if (creatingNewAccount) {
-      if (!newAcctName.trim()) {
-        toast.error('Please enter a name for the new account');
-        return;
-      }
+      if (!newAcctName.trim()) { toast.error('Please enter a name for the new account'); return; }
       if (newAcctType === 'agency' && !newAcctAgencyId.trim()) {
-        toast.error('Agency ID is required for agency accounts');
-        return;
+        toast.error('Agency ID is required for agency accounts'); return;
       }
     } else if (!resolvedAccountId) {
-      toast.error('Please select an account');
-      return;
+      toast.error('Please select an account'); return;
     }
 
-    // Validate new contact if toggled
+    if (visitType === 'phone_call' && !notes.trim()) {
+      toast.error('Notes are required for phone calls'); return;
+    }
+
     if (creatingNewContact && !newContactName.trim()) {
-      toast.error('Please enter a name for the new contact');
-      return;
+      toast.error('Please enter a name for the new contact'); return;
+    }
+
+    // Validate KPIs: all entries must have a type selected
+    const validKpis = kpis.filter(k => k.type);
+    if (kpis.length > 0 && validKpis.length < kpis.length) {
+      toast.error('Please select a KPI type for each entry'); return;
     }
 
     setLoading(true);
@@ -160,26 +195,22 @@ function NewVisitForm() {
         formData.set('type', newAcctType);
         formData.set('display_name', newAcctName);
         formData.set('delivery_day', newAcctDeliveryDay);
-        if (newAcctAgencyId) formData.set('agency_id', newAcctAgencyId);
+        if (newAcctAgencyId)     formData.set('agency_id', newAcctAgencyId);
         if (newAcctPermitNumber) formData.set('permit_number', newAcctPermitNumber);
-        if (newAcctWarehouse) formData.set('warehouse', newAcctWarehouse);
-        if (newAcctAddress) formData.set('address', newAcctAddress);
-        if (newAcctCity) formData.set('city', newAcctCity);
-        if (newAcctZip) formData.set('zip', newAcctZip);
-        if (newAcctPhone) formData.set('phone', newAcctPhone);
-        if (newAcctDistrict) formData.set('district', newAcctDistrict);
-        if (newAcctLinkedName) formData.set('linked_agency_name', newAcctLinkedName);
-        if (newAcctLinkedId) formData.set('linked_agency_id', newAcctLinkedId);
-
+        if (newAcctWarehouse)    formData.set('warehouse', newAcctWarehouse);
+        if (newAcctAddress)      formData.set('address', newAcctAddress);
+        if (newAcctCity)         formData.set('city', newAcctCity);
+        if (newAcctZip)          formData.set('zip', newAcctZip);
+        if (newAcctPhone)        formData.set('phone', newAcctPhone);
+        if (newAcctDistrict)     formData.set('district', newAcctDistrict);
+        if (newAcctLinkedName)   formData.set('linked_agency_name', newAcctLinkedName);
+        if (newAcctLinkedId)     formData.set('linked_agency_id', newAcctLinkedId);
         try {
           const newAccount = await createAccount(formData);
           resolvedAccountId = newAccount.id;
           toast.success('Account created');
-        } catch (err) {
-          console.error('Failed to create account:', err);
-          toast.error('Failed to create account');
-          setLoading(false);
-          return;
+        } catch {
+          toast.error('Failed to create account'); setLoading(false); return;
         }
       }
 
@@ -194,52 +225,31 @@ function NewVisitForm() {
             title_role: newContactTitle || undefined,
           });
           toast.success('Contact added');
-        } catch (err) {
-          console.error('Failed to create contact:', err);
-          toast.error('Failed to add contact');
-          setLoading(false);
-          return;
+        } catch {
+          toast.error('Failed to add contact'); setLoading(false); return;
         }
       }
 
-      // Step 3: Upload and compress photos (non-blocking — visit saves even if this fails)
+      // Step 3: Upload photos (in-person only, non-blocking)
       let photoUrls: { url: string; caption?: string; sort_order: number }[] = [];
-
-      if (photos.length > 0) {
+      if (visitType === 'in_person' && photos.length > 0) {
         try {
           const supabase = createClient();
-
           for (let i = 0; i < photos.length; i++) {
             const photo = photos[i];
-
             const compressed = await imageCompression(photo.file, {
-              maxSizeMB: 0.8,
-              maxWidthOrHeight: 1920,
-              useWebWorker: true,
+              maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true,
             });
-
             const fileName = `${Date.now()}-${i}-${compressed.name}`;
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('visit-photos')
-              .upload(fileName, compressed, {
-                cacheControl: '3600',
-                upsert: false,
-              });
-
+              .upload(fileName, compressed, { cacheControl: '3600', upsert: false });
             if (uploadError) throw uploadError;
-
-            const {
-              data: { publicUrl },
-            } = supabase.storage.from('visit-photos').getPublicUrl(uploadData.path);
-
-            photoUrls.push({
-              url: publicUrl,
-              caption: photo.caption || undefined,
-              sort_order: i,
-            });
+            const { data: { publicUrl } } = supabase.storage
+              .from('visit-photos').getPublicUrl(uploadData.path);
+            photoUrls.push({ url: publicUrl, caption: photo.caption || undefined, sort_order: i });
           }
-        } catch (photoErr) {
-          console.error('Photo upload failed:', photoErr);
+        } catch {
           toast.warning('Photos could not be uploaded — visit will be saved without them');
           photoUrls = [];
         }
@@ -248,14 +258,14 @@ function NewVisitForm() {
       // Step 4: Create visit
       await createVisit({
         accountId: resolvedAccountId,
+        visitType,
         notes: notes || undefined,
-        kpi: kpi || undefined,
-        kpiQuantity: kpi && kpiQuantity > 1 ? kpiQuantity : undefined,
+        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
-        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+        photoUrls: visitType === 'in_person' && photoUrls.length > 0 ? photoUrls : undefined,
       });
 
-      toast.success('Visit logged');
+      toast.success(visitType === 'phone_call' ? 'Phone call logged' : 'Visit logged');
       router.push(presetAccountId ? `/accounts/${presetAccountId}` : `/accounts/${resolvedAccountId}`);
     } catch (err) {
       console.error('Failed to log visit:', err);
@@ -278,7 +288,36 @@ function NewVisitForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Account Selection */}
+
+            {/* ── Visit Type Toggle ────────────────────────────────────── */}
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setVisitType('in_person')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${
+                  visitType === 'in_person'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MapPin className="h-4 w-4" />
+                In Person
+              </button>
+              <button
+                type="button"
+                onClick={() => { setVisitType('phone_call'); setKpis([]); setPhotos([]); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors border-l border-border ${
+                  visitType === 'phone_call'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Phone className="h-4 w-4" />
+                Phone Call
+              </button>
+            </div>
+
+            {/* ── Account Selection ────────────────────────────────────── */}
             <div className="space-y-1.5">
               <Label>Account *</Label>
               {presetAccountId ? (
@@ -298,10 +337,7 @@ function NewVisitForm() {
                 <AccountSearchDialog
                   accountId={accountId}
                   accountName={accountName}
-                  onSelect={(id, name) => {
-                    setAccountId(id);
-                    setAccountName(name);
-                  }}
+                  onSelect={(id, name) => { setAccountId(id); setAccountName(name); }}
                 />
               )}
             </div>
@@ -310,13 +346,7 @@ function NewVisitForm() {
             {!presetAccountId && (
               <button
                 type="button"
-                onClick={() => {
-                  setCreatingNewAccount(!creatingNewAccount);
-                  if (!creatingNewAccount) {
-                    setAccountId('');
-                    setAccountName('');
-                  }
-                }}
+                onClick={() => { setCreatingNewAccount(!creatingNewAccount); if (!creatingNewAccount) { setAccountId(''); setAccountName(''); } }}
                 className="text-sm text-primary flex items-center gap-1 hover:underline"
               >
                 {creatingNewAccount ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -330,132 +360,70 @@ function NewVisitForm() {
                 <div className="space-y-1.5">
                   <Label>Account Type</Label>
                   <Select value={newAcctType} onValueChange={setNewAcctType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="agency">Agency (Liquor Store)</SelectItem>
                       <SelectItem value="wholesale">Wholesale (Bar/Restaurant)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-1.5">
                   <Label>{newAcctType === 'wholesale' ? 'Name *' : 'Display Name *'}</Label>
-                  <Input
-                    value={newAcctName}
-                    onChange={(e) => setNewAcctName(e.target.value)}
-                    required
-                    style={{ textTransform: 'capitalize' }}
-                  />
+                  <Input value={newAcctName} onChange={(e) => setNewAcctName(e.target.value)} required style={{ textTransform: 'capitalize' }} />
                 </div>
-
                 {newAcctType === 'agency' && (
                   <>
                     <div className="space-y-1.5">
                       <Label>Agency ID *</Label>
-                      <Input
-                        value={newAcctAgencyId}
-                        onChange={(e) => setNewAcctAgencyId(e.target.value)}
-                        placeholder="State-assigned ID"
-                      />
+                      <Input value={newAcctAgencyId} onChange={(e) => setNewAcctAgencyId(e.target.value)} placeholder="State-assigned ID" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label>Delivery Day</Label>
                         <Select value={newAcctDeliveryDay} onValueChange={setNewAcctDeliveryDay}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select day" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
                           <SelectContent>
-                            {DELIVERY_DAYS.map((day) => (
-                              <SelectItem key={day} value={day}>{day}</SelectItem>
-                            ))}
+                            {DELIVERY_DAYS.map((day) => (<SelectItem key={day} value={day}>{day}</SelectItem>))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5">
                         <Label>Warehouse</Label>
-                        <Input
-                          value={newAcctWarehouse}
-                          onChange={(e) => setNewAcctWarehouse(e.target.value)}
-                          placeholder="e.g., GPT"
-                        />
+                        <Input value={newAcctWarehouse} onChange={(e) => setNewAcctWarehouse(e.target.value)} placeholder="e.g., GPT" />
                       </div>
                     </div>
                   </>
                 )}
-
                 {newAcctType === 'wholesale' && (
                   <>
                     <div className="space-y-1.5">
                       <Label>Permit Number</Label>
-                      <Input
-                        value={newAcctPermitNumber}
-                        onChange={(e) => setNewAcctPermitNumber(e.target.value)}
-                        placeholder="State-assigned permit"
-                      />
+                      <Input value={newAcctPermitNumber} onChange={(e) => setNewAcctPermitNumber(e.target.value)} placeholder="State-assigned permit" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label>Agency Name</Label>
-                        <Input
-                          value={newAcctLinkedName}
-                          onChange={(e) => setNewAcctLinkedName(e.target.value)}
-                          placeholder="Parent agency"
-                        />
+                        <Input value={newAcctLinkedName} onChange={(e) => setNewAcctLinkedName(e.target.value)} placeholder="Parent agency" />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Agency ID</Label>
-                        <Input
-                          value={newAcctLinkedId}
-                          onChange={(e) => setNewAcctLinkedId(e.target.value)}
-                        />
+                        <Input value={newAcctLinkedId} onChange={(e) => setNewAcctLinkedId(e.target.value)} />
                       </div>
                     </div>
                   </>
                 )}
-
                 <div className="space-y-1.5">
                   <Label>Address</Label>
-                  <Input
-                    value={newAcctAddress}
-                    onChange={(e) => setNewAcctAddress(e.target.value)}
-                  />
+                  <Input value={newAcctAddress} onChange={(e) => setNewAcctAddress(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>City</Label>
-                    <Input
-                      value={newAcctCity}
-                      onChange={(e) => setNewAcctCity(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>ZIP</Label>
-                    <Input
-                      value={newAcctZip}
-                      onChange={(e) => setNewAcctZip(e.target.value)}
-                    />
-                  </div>
+                  <div className="space-y-1.5"><Label>City</Label><Input value={newAcctCity} onChange={(e) => setNewAcctCity(e.target.value)} /></div>
+                  <div className="space-y-1.5"><Label>ZIP</Label><Input value={newAcctZip} onChange={(e) => setNewAcctZip(e.target.value)} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Phone</Label>
-                    <Input
-                      value={newAcctPhone}
-                      onChange={(e) => setNewAcctPhone(e.target.value)}
-                      type="tel"
-                    />
-                  </div>
+                  <div className="space-y-1.5"><Label>Phone</Label><Input value={newAcctPhone} onChange={(e) => setNewAcctPhone(e.target.value)} type="tel" /></div>
                   {newAcctType === 'wholesale' && (
-                    <div className="space-y-1.5">
-                      <Label>District</Label>
-                      <Input
-                        value={newAcctDistrict}
-                        onChange={(e) => setNewAcctDistrict(e.target.value)}
-                      />
-                    </div>
+                    <div className="space-y-1.5"><Label>District</Label><Input value={newAcctDistrict} onChange={(e) => setNewAcctDistrict(e.target.value)} /></div>
                   )}
                 </div>
               </div>
@@ -476,154 +444,123 @@ function NewVisitForm() {
               <div className="space-y-3 pl-3 border-l-2 border-primary/20">
                 <div className="space-y-1.5">
                   <Label>Contact Name *</Label>
-                  <Input
-                    value={newContactName}
-                    onChange={(e) => setNewContactName(e.target.value)}
-                    placeholder="Full name"
-                    style={{ textTransform: 'capitalize' }}
-                  />
+                  <Input value={newContactName} onChange={(e) => setNewContactName(e.target.value)} placeholder="Full name" style={{ textTransform: 'capitalize' }} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Phone</Label>
-                    <Input
-                      value={newContactPhone}
-                      onChange={(e) => setNewContactPhone(e.target.value)}
-                      type="tel"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Email</Label>
-                    <Input
-                      value={newContactEmail}
-                      onChange={(e) => setNewContactEmail(e.target.value)}
-                      type="email"
-                    />
-                  </div>
+                  <div className="space-y-1.5"><Label>Phone</Label><Input value={newContactPhone} onChange={(e) => setNewContactPhone(e.target.value)} type="tel" /></div>
+                  <div className="space-y-1.5"><Label>Email</Label><Input value={newContactEmail} onChange={(e) => setNewContactEmail(e.target.value)} type="email" /></div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Title / Role</Label>
-                  <Input
-                    value={newContactTitle}
-                    onChange={(e) => setNewContactTitle(e.target.value)}
-                    placeholder="e.g., Store Manager"
-                  />
+                  <Input value={newContactTitle} onChange={(e) => setNewContactTitle(e.target.value)} placeholder="e.g., Store Manager" />
                 </div>
               </div>
             )}
 
             <Separator />
 
-            {/* Photos */}
-            <div className="space-y-1.5">
-              <Label>Photos ({photos.length}/5)</Label>
-              <div className="flex flex-wrap gap-2">
-                {photos.map((photo, i) => (
-                  <div key={i} className="relative">
-                    <img
-                      src={photo.preview}
-                      alt={`Photo ${i + 1}`}
-                      className="h-20 w-20 rounded-md object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(i)}
-                      className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                    <Input
-                      value={photo.caption}
-                      onChange={(e) => updateCaption(i, e.target.value)}
-                      placeholder="Caption"
-                      className="mt-1 h-7 text-xs w-20"
-                      maxLength={140}
-                    />
-                  </div>
-                ))}
-                {photos.length < MAX_PHOTOS && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
-                      <Camera className="h-3.5 w-3.5" /> Camera
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handlePhotoSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
-                      <ImageIcon className="h-3.5 w-3.5" /> Library
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handlePhotoSelect}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                )}
+            {/* ── Photos (in-person only) ──────────────────────────────── */}
+            {visitType === 'in_person' && (
+              <div className="space-y-1.5">
+                <Label>Photos ({photos.length}/{MAX_PHOTOS})</Label>
+                <div className="flex flex-wrap gap-2">
+                  {photos.map((photo, i) => (
+                    <div key={i} className="relative">
+                      <img src={photo.preview} alt={`Photo ${i + 1}`} className="h-20 w-20 rounded-md object-cover" />
+                      <button type="button" onClick={() => removePhoto(i)} className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                      <Input value={photo.caption} onChange={(e) => updateCaption(i, e.target.value)} placeholder="Caption" className="mt-1 h-7 text-xs w-20" maxLength={140} />
+                    </div>
+                  ))}
+                  {photos.length < MAX_PHOTOS && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+                        <Camera className="h-3.5 w-3.5" /> Camera
+                        <input type="file" accept="image/*" capture="environment" onChange={handlePhotoSelect} className="hidden" />
+                      </label>
+                      <label className="flex h-9 w-20 cursor-pointer items-center justify-center gap-1 rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+                        <ImageIcon className="h-3.5 w-3.5" /> Library
+                        <input type="file" accept="image/*" multiple onChange={handlePhotoSelect} className="hidden" />
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Notes */}
+            {/* ── Notes ───────────────────────────────────────────────── */}
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">
+                Notes
+                {visitType === 'phone_call' && <span className="text-destructive ml-1">*</span>}
+              </Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Visit notes..."
+                placeholder={visitType === 'phone_call' ? 'What was discussed on the call...' : 'Visit notes...'}
                 rows={3}
+                required={visitType === 'phone_call'}
               />
             </div>
 
-            {/* KPI */}
-            <div className="space-y-1.5">
-              <Label>KPI</Label>
-              <Select value={kpi} onValueChange={(v) => { setKpi(v); setKpiQuantity(1); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select KPI (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {KPI_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
+            {/* ── KPIs (in-person only) ────────────────────────────────── */}
+            {visitType === 'in_person' && (
+              <div className="space-y-2">
+                <Label>KPIs</Label>
+                {kpis.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No KPIs added yet.</p>
+                )}
+                <div className="space-y-2">
+                  {kpis.map((kpi, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Select value={kpi.type} onValueChange={(v) => updateKpiType(i, v)}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="KPI type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {KPI_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">×</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={kpi.quantity}
+                          onChange={(e) => updateKpiQty(i, parseInt(e.target.value))}
+                          className="w-16 text-center"
+                        />
+                      </div>
+                      <button type="button" onClick={() => removeKpi(i)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-              {kpi && (
-                <div className="space-y-1.5 pt-1">
-                  <Label className="text-xs text-muted-foreground">
-                    If more than 1, please denote amount
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={99}
-                    value={kpiQuantity}
-                    onChange={(e) => setKpiQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-24"
-                  />
                 </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={addKpi}
+                  className="flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {kpis.length === 0 ? 'Add a KPI' : 'Add another KPI'}
+                </button>
+              </div>
+            )}
 
-            {/* Date/Time */}
+            {/* ── Date/Time ────────────────────────────────────────────── */}
             <div className="space-y-1.5">
-              <Label>Date & Time (EST)</Label>
-              <DateTimePicker
-                idPrefix="new-visit"
-                value={visitedAt}
-                onChange={setVisitedAt}
-              />
+              <Label>Date &amp; Time (EST)</Label>
+              <DateTimePicker idPrefix="new-visit" value={visitedAt} onChange={setVisitedAt} />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Saving...' : 'Log Visit'}
+              {loading ? 'Saving...' : visitType === 'phone_call' ? 'Log Phone Call' : 'Log Visit'}
             </Button>
           </form>
         </CardContent>

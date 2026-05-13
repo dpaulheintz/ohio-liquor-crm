@@ -4,12 +4,15 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface KpiVisitRow {
-  id: string;
+/** One row per individual KPI event (one visit may have multiple) */
+export interface KpiEventRow {
+  id: string;           // visit_kpis.id
+  visit_id: string;
   visited_at: string;
-  kpi: string;
-  kpi_quantity: number | null;
+  kpi: string;          // kpi_type
+  kpi_quantity: number; // always ≥ 1
   notes: string | null;
+  visit_type: 'in_person' | 'phone_call';
   rep_id: string;
   rep_name: string | null;
   rep_email: string;
@@ -19,7 +22,7 @@ export interface KpiVisitRow {
 }
 
 export interface KpiDashboardData {
-  kpiVisits: KpiVisitRow[];
+  kpiEvents: KpiEventRow[];
   totalVisitCount: number;
 }
 
@@ -28,43 +31,59 @@ export interface KpiDashboardData {
 export async function getKpiDashboardData(): Promise<KpiDashboardData> {
   const supabase = createAdminClient();
 
-  const [visitResult, countResult] = await Promise.all([
+  const [eventResult, countResult] = await Promise.all([
+    // Query from visit_kpis, join up to visit_logs and its relations
     supabase
-      .from('visit_logs')
+      .from('visit_kpis')
       .select(`
-        id, visited_at, kpi, kpi_quantity, notes, rep_id, account_id,
-        account:accounts!visit_logs_account_id_fkey(id, display_name),
-        rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
-        visit_photos(id)
+        id,
+        kpi_type,
+        kpi_quantity,
+        visit:visit_logs!visit_kpis_visit_id_fkey(
+          id,
+          visited_at,
+          notes,
+          visit_type,
+          account_id,
+          rep_id,
+          account:accounts!visit_logs_account_id_fkey(id, display_name),
+          rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
+          visit_photos(id)
+        )
       `)
-      .not('kpi', 'is', null)
-      .order('visited_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(5000),
+
     supabase
       .from('visit_logs')
       .select('*', { count: 'exact', head: true }),
   ]);
 
-  if (visitResult.error) throw new Error(`KPI fetch failed: ${visitResult.error.message}`);
-  if (countResult.error) throw new Error(`Count failed: ${countResult.error.message}`);
+  if (eventResult.error)  throw new Error(`KPI fetch failed: ${eventResult.error.message}`);
+  if (countResult.error)  throw new Error(`Count failed: ${countResult.error.message}`);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kpiVisits: KpiVisitRow[] = (visitResult.data ?? []).map((r: any) => ({
-    id: String(r.id),
-    visited_at: String(r.visited_at),
-    kpi: String(r.kpi),
-    kpi_quantity: r.kpi_quantity != null ? Number(r.kpi_quantity) : null,
-    notes: r.notes ? String(r.notes) : null,
-    rep_id: String(r.rep_id),
-    rep_name: r.rep?.full_name ? String(r.rep.full_name) : null,
-    rep_email: String(r.rep?.email ?? ''),
-    account_id: String(r.account_id),
-    account_name: String(r.account?.display_name ?? 'Unknown'),
-    photo_count: Array.isArray(r.visit_photos) ? r.visit_photos.length : 0,
-  }));
+  const kpiEvents: KpiEventRow[] = (eventResult.data ?? []).map((r: any) => {
+    const v = r.visit;
+    return {
+      id:           String(r.id),
+      visit_id:     String(v?.id ?? ''),
+      visited_at:   String(v?.visited_at ?? ''),
+      kpi:          String(r.kpi_type),
+      kpi_quantity: Number(r.kpi_quantity ?? 1),
+      notes:        v?.notes ? String(v.notes) : null,
+      visit_type:   (v?.visit_type ?? 'in_person') as 'in_person' | 'phone_call',
+      rep_id:       String(v?.rep_id ?? ''),
+      rep_name:     v?.rep?.full_name ? String(v.rep.full_name) : null,
+      rep_email:    String(v?.rep?.email ?? ''),
+      account_id:   String(v?.account_id ?? ''),
+      account_name: String(v?.account?.display_name ?? 'Unknown'),
+      photo_count:  Array.isArray(v?.visit_photos) ? v.visit_photos.length : 0,
+    };
+  });
 
   return {
-    kpiVisits,
+    kpiEvents,
     totalVisitCount: countResult.count ?? 0,
   };
 }
