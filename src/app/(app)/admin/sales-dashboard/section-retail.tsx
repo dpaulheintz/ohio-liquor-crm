@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,7 +14,7 @@ import {
   Line,
   LabelList,
 } from 'recharts';
-import type { MonthlyRow, SkuMonthlyRow } from '@/app/actions/sales-dashboard';
+import type { MonthlyRow, SkuMonthlyRow, AgencySkuRow } from '@/app/actions/sales-dashboard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?:
 export interface SectionRetailProps {
   monthly: MonthlyRow[];
   skuMonthly: SkuMonthlyRow[];
+  agencySkuMonthly: AgencySkuRow[];
   selectedFamilies: string[];
   dateFrom: string;
   dateTo: string;
@@ -89,9 +90,10 @@ export interface SectionRetailProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionRetail({
-  monthly, skuMonthly, selectedFamilies, dateFrom, dateTo,
+  monthly, skuMonthly, agencySkuMonthly, selectedFamilies, dateFrom, dateTo,
 }: SectionRetailProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
+  const [selectedSkuCode, setSelectedSkuCode] = useState<string>('');
 
   // ── KPIs ────────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -186,6 +188,39 @@ export function SectionRetail({
       .reverse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skuMonthly, selectedFamilies, dateFrom, dateTo]);
+
+  // ── SKU options for agency ranking dropdown ────────────────────────────────
+  const skuOptions = useMemo(() => {
+    const smap = new Map<string, { code: string; name: string; family: string }>();
+    for (const r of agencySkuMonthly) {
+      if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
+      if (!smap.has(r.brand_code)) {
+        smap.set(r.brand_code, { code: r.brand_code, name: r.product_name, family: r.brand_family });
+      }
+    }
+    return [...smap.values()].sort((a, b) => a.name.localeCompare(b.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agencySkuMonthly, selectedFamilies, dateFrom, dateTo]);
+
+  // ── Top 10 agencies for selected SKU ──────────────────────────────────────
+  const topAgencies = useMemo(() => {
+    if (!selectedSkuCode) return [];
+    const amap = new Map<string, { agency_id: string; agency_name: string | null; bottles: number; revenue: number }>();
+    for (const r of agencySkuMonthly) {
+      if (r.brand_code !== selectedSkuCode) continue;
+      if (r.month < dateFrom || r.month > dateTo) continue;
+      if (!amap.has(r.agency_id)) {
+        amap.set(r.agency_id, { agency_id: r.agency_id, agency_name: r.agency_name, bottles: 0, revenue: 0 });
+      }
+      const e = amap.get(r.agency_id)!;
+      e.bottles += r.retail_bottles;
+      e.revenue += r.retail_amount;
+    }
+    return [...amap.values()]
+      .filter(a => a.bottles > 0)
+      .sort((a, b) => b.bottles - a.bottles)
+      .slice(0, 10);
+  }, [agencySkuMonthly, selectedSkuCode, dateFrom, dateTo]);
 
   return (
     <div className="space-y-4">
@@ -321,6 +356,97 @@ export function SectionRetail({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Agency ranking by SKU */}
+      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+            Top 10 Agencies by SKU
+          </h3>
+          <select
+            value={selectedSkuCode}
+            onChange={e => setSelectedSkuCode(e.target.value)}
+            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:border-[#C5A572]/60 max-w-xs"
+          >
+            <option value="">— Select a SKU —</option>
+            {skuOptions.map(s => (
+              <option key={s.code} value={s.code}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {!selectedSkuCode ? (
+          <p className="py-8 text-center text-zinc-600 text-sm">
+            Select a SKU above to see which retail agencies sold the most bottles.
+          </p>
+        ) : topAgencies.length === 0 ? (
+          <p className="py-8 text-center text-zinc-600 text-sm">No agency data for this SKU in the selected range.</p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Horizontal bar chart */}
+            <ResponsiveContainer width="100%" height={Math.max(160, topAgencies.length * 36)}>
+              <BarChart
+                data={[...topAgencies].reverse()}
+                layout="vertical"
+                margin={{ top: 0, right: 56, bottom: 0, left: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  dataKey="agency_name"
+                  type="category"
+                  tick={{ fill: '#a1a1aa', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={180}
+                  tickFormatter={(v: string | null) => v ? (v.length > 22 ? v.slice(0, 21) + '…' : v) : 'Unknown'}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                />
+                <Bar dataKey="bottles" name="Retail Bottles" fill={GOLD} fillOpacity={0.8} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                  <LabelList
+                    dataKey="bottles"
+                    position="right"
+                    style={{ fill: '#a1a1aa', fontSize: 10 }}
+                    formatter={(v: number) => v.toLocaleString()}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-800">
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">#</th>
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Agency</th>
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">ID</th>
+                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Bottles</th>
+                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {topAgencies.map((a, i) => (
+                    <tr key={a.agency_id} className="hover:bg-zinc-900/50 transition-colors">
+                      <td className="px-2 py-2 text-zinc-600 font-mono">{i + 1}</td>
+                      <td className="px-2 py-2 text-zinc-300 font-medium truncate max-w-[160px]">
+                        {a.agency_name ?? 'Unknown'}
+                      </td>
+                      <td className="px-2 py-2 text-zinc-600 font-mono">{a.agency_id}</td>
+                      <td className="px-2 py-2 text-right font-mono text-zinc-300">{a.bottles.toLocaleString()}</td>
+                      <td className="px-2 py-2 text-right font-mono text-zinc-200">
+                        {a.revenue >= 1000 ? `$${(a.revenue / 1000).toFixed(1)}k` : `$${a.revenue.toFixed(0)}`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
     </div>

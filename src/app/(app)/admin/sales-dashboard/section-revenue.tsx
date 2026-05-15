@@ -15,7 +15,7 @@ import {
   Cell,
   LineChart,
 } from 'recharts';
-import type { MonthlyRow } from '@/app/actions/sales-dashboard';
+import type { MonthlyRow, SplitRow, WholesaleSplitRow } from '@/app/actions/sales-dashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +104,8 @@ function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?:
 
 export interface SectionRevenueProps {
   monthly: MonthlyRow[];
+  splitRows: SplitRow[];
+  wholesaleSplit: WholesaleSplitRow[];
   selectedFamilies: string[];
   channel: Channel;
   dateFrom: string;
@@ -116,7 +118,7 @@ export interface SectionRevenueProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionRevenue({
-  monthly, selectedFamilies, channel, dateFrom, dateTo,
+  monthly, splitRows, wholesaleSplit, selectedFamilies, channel, dateFrom, dateTo,
   currentYear, maxCurrentYearMonth, lastUpdated,
 }: SectionRevenueProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
@@ -205,6 +207,52 @@ export function SectionRevenue({
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, channel, dateTo]);
+
+  // ── Split donuts ───────────────────────────────────────────────────────────
+
+  // Donut A: Total Retail vs Wholesale revenue in period
+  const channelSplitDonut = useMemo(() => {
+    let retail = 0, wholesale = 0;
+    for (const r of monthly) {
+      if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
+      retail    += r.retail_amount;
+      wholesale += r.wholesale_amount;
+    }
+    return [
+      { name: 'Retail',    value: retail,    color: GOLD },
+      { name: 'Wholesale', value: wholesale,  color: '#3b82f6' },
+    ].filter(d => d.value > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthly, selectedFamilies, dateFrom, dateTo]);
+
+  // Donut B: Retail — HB agencies vs other retailers
+  const retailHbDonut = useMemo(() => {
+    let hb = 0, outside = 0;
+    for (const r of splitRows) {
+      if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
+      if (r.is_hb_agency) hb      += r.retail_amount;
+      else                 outside += r.retail_amount;
+    }
+    return [
+      { name: 'HB Locations',   value: hb,      color: GOLD },
+      { name: 'Other Retailers', value: outside, color: '#64748b' },
+    ].filter(d => d.value > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splitRows, selectedFamilies, dateFrom, dateTo]);
+
+  // Donut C: Wholesale — HB bar sales vs external accounts
+  const wholesaleHbDonut = useMemo(() => {
+    let hb = 0, outside = 0;
+    for (const r of wholesaleSplit) {
+      if (r.month < dateFrom || r.month > dateTo) continue;
+      hb      += r.hb_amount;
+      outside += r.outside_amount;
+    }
+    return [
+      { name: 'HB Bar',            value: hb,      color: GOLD },
+      { name: 'External Accounts', value: outside,  color: '#22c55e' },
+    ].filter(d => d.value > 0);
+  }, [wholesaleSplit, dateFrom, dateTo]);
 
   const y0 = String(currentYear);
   const y1 = String(currentYear - 1);
@@ -413,6 +461,82 @@ export function SectionRevenue({
             />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Revenue split donuts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {[
+          { title: 'Wholesale vs Retail', data: channelSplitDonut },
+          { title: 'Retail — HB vs Outside', data: retailHbDonut },
+          { title: 'Wholesale — HB Bar vs Outside', data: wholesaleHbDonut },
+        ].map(({ title, data }) => {
+          const total = data.reduce((s, d) => s + d.value, 0);
+          return (
+            <div key={title} className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
+              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+                {title}
+              </h3>
+              {total === 0 ? (
+                <p className="flex-1 flex items-center justify-center text-xs text-zinc-600 py-8">
+                  No data for selected range
+                </p>
+              ) : (
+                <>
+                  <div className="relative flex items-center justify-center" style={{ height: 148 }}>
+                    <ResponsiveContainer width="100%" height={148}>
+                      <PieChart>
+                        <Pie
+                          data={data}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={44}
+                          outerRadius={66}
+                          paddingAngle={2}
+                          startAngle={90}
+                          endAngle={-270}
+                          isAnimationActive={false}
+                        >
+                          {data.map((d) => (
+                            <Cell key={d.name} fill={d.color} fillOpacity={0.88} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v: number) => fmtDollar(v)}
+                          contentStyle={{
+                            background: '#0f0f0f',
+                            border: '1px solid #3f3f46',
+                            borderRadius: 8,
+                            fontSize: 11,
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-base font-bold text-white font-serif leading-none">
+                        {fmtDollar(total)}
+                      </span>
+                      <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">total</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    {data.map(({ name, value, color }) => (
+                      <div key={name} className="flex items-center gap-2 text-xs">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                        <span className="flex-1 truncate text-zinc-400">{name}</span>
+                        <span className="font-mono text-zinc-300">{fmtDollar(value)}</span>
+                        <span className="font-mono text-zinc-600 w-9 text-right">
+                          {total > 0 ? ((value / total) * 100).toFixed(0) : 0}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

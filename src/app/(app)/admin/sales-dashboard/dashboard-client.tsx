@@ -7,6 +7,7 @@ import { SectionWholesale } from './section-wholesale';
 import { SectionRetail } from './section-retail';
 import { SectionHbLocations } from './section-hb-locations';
 import { SectionHbWholesale } from './section-hb-wholesale';
+import { SectionSkuTable } from './section-sku-table';
 import { SkuLeaderboard } from './sku-leaderboard';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
@@ -27,12 +28,13 @@ const FAMILY_COLORS: Record<string, string> = {
   'Midnight (Discontinued)': '#7c3aed',
   Bourbon: '#f97316',
   RTD: '#ec4899',
+  Misc: '#a78bfa',
   Unknown: '#6b7280',
 };
 const FAMILY_COLOR_DEFAULT = '#94a3b8';
 
 const ALL_FAMILIES = [
-  'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD',
+  'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD', 'Misc',
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -180,7 +182,8 @@ function FilterBar({
 export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const {
     monthly, products: _products, skuMonthly, splitRows,
-    wholesaleRecent, wholesaleFull, accountGroups, lastUpdated,
+    wholesaleRecent, wholesaleFull, accountGroups,
+    agencySkuMonthly, wholesaleSplit, lastUpdated,
   } = data;
   void _products; // available but we pass to child sections as needed
 
@@ -330,6 +333,8 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           />
           <SectionRevenue
             monthly={monthly}
+            splitRows={splitRows}
+            wholesaleSplit={wholesaleSplit}
             selectedFamilies={selectedFamilies}
             channel={channel}
             dateFrom={dateFrom}
@@ -337,6 +342,21 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
             currentYear={currentYear}
             maxCurrentYearMonth={maxCurrentYearMonth}
             lastUpdated={lastUpdated}
+          />
+        </section>
+
+        {/* ── SKU Revenue Breakdown ────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="SKU Revenue Breakdown"
+            subtitle="Every SKU ranked by revenue with monthly sparklines — sortable and exportable"
+          />
+          <SectionSkuTable
+            skuMonthly={skuMonthly}
+            selectedFamilies={selectedFamilies}
+            channel={channel}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
           />
         </section>
 
@@ -367,6 +387,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           <SectionRetail
             monthly={monthly}
             skuMonthly={skuMonthly}
+            agencySkuMonthly={agencySkuMonthly}
             selectedFamilies={selectedFamilies}
             dateFrom={dateFrom}
             dateTo={dateTo}
