@@ -8,6 +8,7 @@ import { SectionRetail } from './section-retail';
 import { SectionHbLocations } from './section-hb-locations';
 import { SectionHbWholesale } from './section-hb-wholesale';
 import { SectionSkuTable } from './section-sku-table';
+import { SectionBreweries } from './section-breweries';
 import { SkuLeaderboard } from './sku-leaderboard';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
@@ -371,6 +372,22 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
             monthly={monthly}
             skuMonthly={skuMonthly}
             wholesaleFull={wholesaleFull}
+            accountGroups={accountGroups}
+            selectedFamilies={selectedFamilies}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+        </section>
+
+        {/* ── Brewery Accounts ────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Brewery Accounts"
+            subtitle="Named brewery partners ranked by wholesale bottle volume"
+          />
+          <SectionBreweries
+            wholesaleFull={wholesaleFull}
+            accountGroups={accountGroups}
             selectedFamilies={selectedFamilies}
             dateFrom={dateFrom}
             dateTo={dateTo}

@@ -21,6 +21,7 @@ import type {
   MonthlyRow,
   WholesaleFullRow,
   SkuMonthlyRow,
+  AccountGroupData,
 } from '@/app/actions/sales-dashboard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -39,6 +40,37 @@ const FAMILY_COLORS: Record<string, string> = {
 const FAMILY_COLOR_DEFAULT = '#94a3b8';
 const GOLD = '#C5A572';
 
+// ─── Account-resolution helpers (same logic as WholesaleLeaderboard) ─────────
+
+function isHighBank(wholesaler: string | null, dba: string | null): boolean {
+  const w = (wholesaler ?? '').toUpperCase();
+  const d = (dba ?? '').toUpperCase();
+  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
+}
+
+function resolveAccount(
+  wholesaler: string | null,
+  dba: string | null,
+  groups: AccountGroupData[]
+): { key: string; displayName: string; groupColor?: string } {
+  const wl = (wholesaler ?? '').toLowerCase();
+  const dl = (dba ?? '').toLowerCase();
+
+  for (const group of groups) {
+    const hit = (text: string) =>
+      group.match_terms.some((term) => text.includes(term.toLowerCase()));
+    const matched =
+      group.match_columns === 'wholesaler' ? hit(wl) :
+      group.match_columns === 'dba'        ? hit(dl) :
+      hit(wl) || hit(dl);
+    if (matched) {
+      return { key: `group::${group.id}`, displayName: group.group_name, groupColor: group.color };
+    }
+  }
+  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
+  return { key: `raw::${name}`, displayName: name };
+}
+
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
 function fmtDollar(n: number): string {
@@ -50,10 +82,6 @@ function fmtDollar(n: number): string {
 function fmtBottles(n: number): string {
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return n.toLocaleString();
-}
-
-function accountDisplayName(r: WholesaleFullRow): string {
-  return r.wholesaler_name ?? r.dba ?? r.agency_name ?? r.agency_id;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -93,6 +121,7 @@ export interface SectionWholesaleProps {
   monthly: MonthlyRow[];
   skuMonthly: SkuMonthlyRow[];
   wholesaleFull: WholesaleFullRow[];
+  accountGroups: AccountGroupData[];
   selectedFamilies: string[];
   dateFrom: string;
   dateTo: string;
@@ -101,7 +130,7 @@ export interface SectionWholesaleProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionWholesale({
-  monthly, skuMonthly, wholesaleFull, selectedFamilies, dateFrom, dateTo,
+  monthly, skuMonthly, wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo,
 }: SectionWholesaleProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
 
@@ -144,22 +173,31 @@ export function SectionWholesale({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
 
-  // ── Top 10 accounts horizontal bar ─────────────────────────────────────────
+  // ── Top 20 accounts — grouped by wholesaler/DBA, not by agency ─────────────
   const topAccounts = useMemo(() => {
-    const amap = new Map<string, { name: string; bottles: number }>();
+    type Acc = { displayName: string; bottles: number; color?: string };
+    const amap = new Map<string, Acc>();
+
     for (const r of wholesaleFull) {
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
-      const key = r.agency_id;
-      const e = amap.get(key) ?? { name: accountDisplayName(r), bottles: 0 };
-      e.bottles += r.bottles_sold;
-      amap.set(key, e);
+      if (isHighBank(r.wholesaler_name, r.dba)) continue; // exclude HB
+
+      const resolved = resolveAccount(r.wholesaler_name, r.dba, accountGroups);
+      const existing = amap.get(resolved.key) ?? {
+        displayName: resolved.displayName,
+        bottles: 0,
+        color: resolved.groupColor,
+      };
+      existing.bottles += r.bottles_sold;
+      amap.set(resolved.key, existing);
     }
+
     return [...amap.values()]
       .sort((a, b) => b.bottles - a.bottles)
-      .slice(0, 10)
-      .reverse(); // reverse so largest renders at top
+      .slice(0, 20)
+      .reverse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wholesaleFull, selectedFamilies, dateFrom, dateTo]);
+  }, [wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo]);
 
   // ── Bottles by family pie ──────────────────────────────────────────────────
   const familyPie = useMemo(() => {
@@ -173,17 +211,12 @@ export function SectionWholesale({
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
   const pieTotalBtl = familyPie.reduce((s, r) => s + r.value, 0);
 
-  // ── SKU bubble chart (scatter: x=bottles, y=revenue, z=proportion) ─────────
+  // ── SKU bubble chart ───────────────────────────────────────────────────────
   const skuBubbles = useMemo(() => {
     const smap = new Map<string, { name: string; bottles: number; revenue: number; family: string }>();
     for (const r of skuMonthly) {
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
-      const e = smap.get(r.brand_code) ?? {
-        name: r.product_name,
-        bottles: 0,
-        revenue: 0,
-        family: r.brand_family,
-      };
+      const e = smap.get(r.brand_code) ?? { name: r.product_name, bottles: 0, revenue: 0, family: r.brand_family };
       e.bottles += r.wholesale_bottles;
       e.revenue += r.wholesale_amount;
       smap.set(r.brand_code, e);
@@ -202,11 +235,7 @@ export function SectionWholesale({
       <div className="grid grid-cols-3 gap-3">
         <KpiCard label="Wholesale Bottles Sold" value={fmtBottles(kpis.bottles)} />
         <KpiCard label="Wholesale Revenue" value={fmtDollar(kpis.revenue)} />
-        <KpiCard
-          label="Active Accounts"
-          value={kpis.accountCount.toString()}
-          sub="Unique buyers in period"
-        />
+        <KpiCard label="Active Accounts" value={kpis.accountCount.toString()} sub="Unique buyers in period" />
       </div>
 
       {/* Monthly bars + Family pie */}
@@ -218,25 +247,11 @@ export function SectionWholesale({
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyBars} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fill: '#71717a', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: '#71717a', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
-                width={42}
-              />
+              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
               <Tooltip
                 content={(props) => (
-                  <ChartTip
-                    active={props.active}
-                    payload={props.payload as []}
-                    label={String(props.label)}
-                  />
+                  <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
                 )}
               />
               <Bar dataKey="bottles" name="Bottles" fill="#3b82f6" fillOpacity={0.8} radius={[3, 3, 0, 0]} maxBarSize={28} />
@@ -252,41 +267,28 @@ export function SectionWholesale({
           <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 160 }}>
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
-                <Pie
-                  data={familyPie}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={46}
-                  outerRadius={68}
-                  paddingAngle={2}
-                  startAngle={90}
-                  endAngle={-270}
-                >
+                <Pie data={familyPie} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                  innerRadius={46} outerRadius={68} paddingAngle={2} startAngle={90} endAngle={-270}>
                   {familyPie.map(e => (
                     <Cell key={e.name} fill={FAMILY_COLORS[e.name] ?? FAMILY_COLOR_DEFAULT} fillOpacity={0.9} />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  itemStyle={{ color: '#e4e4e7' }}
+                  labelStyle={{ color: '#71717a' }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-base font-bold text-white font-serif leading-none">
-                {fmtBottles(pieTotalBtl)}
-              </span>
+              <span className="text-base font-bold text-white font-serif leading-none">{fmtBottles(pieTotalBtl)}</span>
               <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">bottles</span>
             </div>
           </div>
           <div className="space-y-1 mt-2">
             {familyPie.slice(0, 5).map(({ name, value }) => (
               <div key={name} className="flex items-center gap-2 text-xs">
-                <span
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }}
-                />
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }} />
                 <span className="flex-1 truncate text-zinc-400">{name}</span>
                 <span className="font-mono text-zinc-300">{value.toLocaleString()}</span>
               </div>
@@ -295,34 +297,36 @@ export function SectionWholesale({
         </div>
       </div>
 
-      {/* Top 10 accounts horizontal bar */}
+      {/* Top 20 accounts — grouped by actual buyer */}
       <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
         <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
-          Top 10 Wholesale Accounts by Bottles
+          Top 20 Wholesale Accounts by Bottles
         </h3>
         {topAccounts.length === 0 ? (
           <p className="py-8 text-center text-zinc-600 text-sm">No data for selected range.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(200, topAccounts.length * 34)}>
-            <BarChart
-              data={topAccounts}
-              layout="vertical"
-              margin={{ top: 0, right: 64, bottom: 0, left: 8 }}
-            >
+          <ResponsiveContainer width="100%" height={Math.max(240, topAccounts.length * 32)}>
+            <BarChart data={topAccounts} layout="vertical" margin={{ top: 0, right: 64, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis
-                dataKey="name"
+                dataKey="displayName"
                 type="category"
                 tick={{ fill: '#a1a1aa', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                width={180}
+                width={200}
+                tickFormatter={(v: string) => v.length > 28 ? v.slice(0, 27) + '…' : v}
               />
               <Tooltip
                 contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                itemStyle={{ color: '#e4e4e7' }}
+                labelStyle={{ color: '#a1a1aa' }}
               />
-              <Bar dataKey="bottles" name="Bottles" fill={GOLD} fillOpacity={0.8} radius={[0, 3, 3, 0]}>
+              <Bar dataKey="bottles" name="Bottles" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                {topAccounts.map((acc, i) => (
+                  <Cell key={i} fill={acc.color ?? GOLD} fillOpacity={0.82} />
+                ))}
                 <LabelList
                   dataKey="bottles"
                   position="right"
@@ -347,21 +351,14 @@ export function SectionWholesale({
             <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis
-                dataKey="bottles"
-                name="Bottles"
-                tick={{ fill: '#71717a', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
+                dataKey="bottles" name="Bottles"
+                tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false}
                 label={{ value: 'Bottles Sold', position: 'insideBottom', offset: -12, fill: '#52525b', fontSize: 9 }}
               />
               <YAxis
-                dataKey="revenue"
-                name="Revenue"
+                dataKey="revenue" name="Revenue"
                 tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }}
-                axisLine={false}
-                tickLine={false}
-                width={52}
+                tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={52}
               />
               <ZAxis dataKey="z" range={[24, 600]} />
               <Tooltip
@@ -373,12 +370,8 @@ export function SectionWholesale({
                   return (
                     <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl max-w-[220px]">
                       <p className="text-white font-medium mb-1 leading-snug">{d?.name}</p>
-                      <p className="text-zinc-400">
-                        Bottles: <span className="text-white font-mono">{(d?.bottles ?? 0).toLocaleString()}</span>
-                      </p>
-                      <p className="text-zinc-400">
-                        Revenue: <span className="text-white font-mono">{fmtDollar(d?.revenue ?? 0)}</span>
-                      </p>
+                      <p className="text-zinc-400">Bottles: <span className="text-white font-mono">{(d?.bottles ?? 0).toLocaleString()}</span></p>
+                      <p className="text-zinc-400">Revenue: <span className="text-white font-mono">{fmtDollar(d?.revenue ?? 0)}</span></p>
                       <p className="text-zinc-600 text-[10px] mt-0.5">{d?.family}</p>
                     </div>
                   );

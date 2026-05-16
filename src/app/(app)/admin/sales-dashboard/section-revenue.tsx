@@ -384,12 +384,9 @@ export function SectionRevenue({
                 </Pie>
                 <Tooltip
                   formatter={(v: number) => fmtDollar(v)}
-                  contentStyle={{
-                    background: '#0f0f0f',
-                    border: '1px solid #3f3f46',
-                    borderRadius: 8,
-                    fontSize: 11,
-                  }}
+                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  itemStyle={{ color: '#e4e4e7' }}
+                  labelStyle={{ color: '#71717a' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -504,12 +501,9 @@ export function SectionRevenue({
                         </Pie>
                         <Tooltip
                           formatter={(v: number) => fmtDollar(v)}
-                          contentStyle={{
-                            background: '#0f0f0f',
-                            border: '1px solid #3f3f46',
-                            borderRadius: 8,
-                            fontSize: 11,
-                          }}
+                          contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                          itemStyle={{ color: '#e4e4e7' }}
+                          labelStyle={{ color: '#71717a' }}
                         />
                       </PieChart>
                     </ResponsiveContainer>

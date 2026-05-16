@@ -229,9 +229,10 @@ export function SectionSkuTable({
         </button>
       </div>
 
-      {/* SKU chip selector */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
+      {/* SKU chip selector — grouped by brand family */}
+      <div className="mb-4 space-y-2">
+        {/* Controls row */}
+        <div className="flex items-center gap-2">
           <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium shrink-0">SKU</span>
           <button
             onClick={clearAll}
@@ -250,30 +251,55 @@ export function SectionSkuTable({
             Select all
           </button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {skuList.map((s) => {
-            const isActive = selected.includes(s.brand_code);
-            const color = FAMILY_COLORS[s.brand_family] ?? FAMILY_COLOR_DEFAULT;
-            const label = `${s.brand_code} · ${s.product_name}${s.size ? ` (${s.size})` : ''}`;
+        {/* Family groups */}
+        {(() => {
+          // Group SKUs by family, preserving revenue-sort order within each family
+          const familyOrder: string[] = [];
+          const byFamily = new Map<string, typeof skuList>();
+          for (const s of skuList) {
+            if (!byFamily.has(s.brand_family)) {
+              familyOrder.push(s.brand_family);
+              byFamily.set(s.brand_family, []);
+            }
+            byFamily.get(s.brand_family)!.push(s);
+          }
+          return familyOrder.map((family) => {
+            const skus = byFamily.get(family)!;
+            const color = FAMILY_COLORS[family] ?? FAMILY_COLOR_DEFAULT;
             return (
-              <button
-                key={s.brand_code}
-                onClick={() => toggleSku(s.brand_code)}
-                title={label}
-                className="rounded px-2 py-0.5 text-xs transition-all whitespace-nowrap"
-                style={{
-                  backgroundColor: isActive ? color + '28' : 'rgb(39,39,42)',
-                  color: isActive ? color : '#71717a',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: isActive ? color + '70' : 'transparent',
-                }}
-              >
-                {label}
-              </button>
+              <div key={family} className="flex flex-wrap items-center gap-1.5">
+                {/* Family label */}
+                <span
+                  className="text-[9px] uppercase tracking-widest font-semibold shrink-0 mr-0.5"
+                  style={{ color: color + 'aa' }}
+                >
+                  {family}
+                </span>
+                {skus.map((s) => {
+                  const isActive = selected.includes(s.brand_code);
+                  const label = `${s.brand_code} · ${s.product_name}${s.size ? ` (${s.size})` : ''}`;
+                  return (
+                    <button
+                      key={s.brand_code}
+                      onClick={() => toggleSku(s.brand_code)}
+                      title={label}
+                      className="rounded px-2 py-0.5 text-xs transition-all whitespace-nowrap"
+                      style={{
+                        backgroundColor: isActive ? color + '28' : 'rgb(39,39,42)',
+                        color: isActive ? color : '#71717a',
+                        borderWidth: 1,
+                        borderStyle: 'solid',
+                        borderColor: isActive ? color + '70' : 'transparent',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             );
-          })}
-        </div>
+          });
+        })()}
       </div>
 
       {/* Chart */}
