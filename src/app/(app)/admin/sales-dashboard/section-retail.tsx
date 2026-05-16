@@ -32,6 +32,24 @@ const FAMILY_COLORS: Record<string, string> = {
 const FAMILY_COLOR_DEFAULT = '#94a3b8';
 const GOLD = '#C5A572';
 
+// ─── Month helpers (timezone-safe) ────────────────────────────────────────────
+
+function eachMonth(from: string, to: string): string[] {
+  const months: string[] = [];
+  let [y, m] = from.split('-').map(Number);
+  const [ey, em] = to.split('-').map(Number);
+  while (y < ey || (y === ey && m <= em)) {
+    months.push(`${y}-${String(m).padStart(2, '0')}`);
+    if (++m > 12) { m = 1; y++; }
+  }
+  return months;
+}
+
+function fmtMonthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
 function fmtDollar(n: number): string {
@@ -116,18 +134,10 @@ export function SectionRetail({
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
       sums.set(r.month, (sums.get(r.month) ?? 0) + r.retail_amount);
     }
-    const result: { month: string; revenue: number }[] = [];
-    const d = new Date(dateFrom + '-01');
-    const end = new Date(dateTo + '-01');
-    while (d <= end) {
-      const key = d.toISOString().slice(0, 7);
-      result.push({
-        month: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-        revenue: sums.get(key) ?? 0,
-      });
-      d.setMonth(d.getMonth() + 1);
-    }
-    return result;
+    return eachMonth(dateFrom, dateTo).map(ym => ({
+      month: fmtMonthLabel(ym),
+      revenue: sums.get(ym) ?? 0,
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
 
@@ -151,41 +161,44 @@ export function SectionRetail({
       entry[r.brand_family] = (entry[r.brand_family] ?? 0) + r.retail_bottles;
       mmap.set(r.month, entry);
     }
-    const result: Record<string, string | number>[] = [];
-    const d = new Date(dateFrom + '-01');
-    const end = new Date(dateTo + '-01');
-    while (d <= end) {
-      const key = d.toISOString().slice(0, 7);
-      const row: Record<string, string | number> = {
-        month: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      };
-      const data = mmap.get(key) ?? {};
+    return eachMonth(dateFrom, dateTo).map(ym => {
+      const row: Record<string, string | number> = { month: fmtMonthLabel(ym) };
+      const data = mmap.get(ym) ?? {};
       for (const f of families) row[f] = data[f] ?? 0;
-      result.push(row);
-      d.setMonth(d.getMonth() + 1);
-    }
-    return result;
+      return row;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, families, dateFrom, dateTo]);
 
   // ── Top 15 SKUs by retail bottles ──────────────────────────────────────────
   const topSkus = useMemo(() => {
-    const smap = new Map<string, { name: string; bottles: number; family: string }>();
+    const smap = new Map<string, { name: string; size: string; bottles: number; family: string }>();
     for (const r of skuMonthly) {
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
       const e = smap.get(r.brand_code) ?? {
         name: r.product_name,
+        size: r.size ?? '',
         bottles: 0,
         family: r.brand_family,
       };
       e.bottles += r.retail_bottles;
       smap.set(r.brand_code, e);
     }
-    return [...smap.values()]
+    const ranked = [...smap.values()]
       .filter(s => s.bottles > 0)
       .sort((a, b) => b.bottles - a.bottles)
-      .slice(0, 15)
-      .reverse();
+      .slice(0, 15);
+
+    // Add size suffix for any product name that appears more than once in this list
+    const nameCounts = new Map<string, number>();
+    for (const s of ranked) nameCounts.set(s.name, (nameCounts.get(s.name) ?? 0) + 1);
+
+    return ranked.map(s => ({
+      ...s,
+      displayName: (nameCounts.get(s.name) ?? 0) > 1 && s.size
+        ? `${s.name} (${s.size})`
+        : s.name,
+    })).reverse(); // reverse so largest appears at bottom of horizontal bar (Recharts renders bottom-up)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skuMonthly, selectedFamilies, dateFrom, dateTo]);
 
@@ -325,7 +338,7 @@ export function SectionRetail({
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis
-                dataKey="name"
+                dataKey="displayName"
                 type="category"
                 tick={{ fill: '#a1a1aa', fontSize: 10 }}
                 axisLine={false}
@@ -334,6 +347,8 @@ export function SectionRetail({
               />
               <Tooltip
                 contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                itemStyle={{ color: '#e4e4e7' }}
+                labelStyle={{ color: '#a1a1aa' }}
               />
               <Bar
                 dataKey="bottles"
@@ -343,7 +358,7 @@ export function SectionRetail({
               >
                 {topSkus.map((s) => (
                   <Cell
-                    key={s.name}
+                    key={s.displayName}
                     fill={FAMILY_COLORS[s.family] ?? FAMILY_COLOR_DEFAULT}
                     fillOpacity={0.8}
                   />

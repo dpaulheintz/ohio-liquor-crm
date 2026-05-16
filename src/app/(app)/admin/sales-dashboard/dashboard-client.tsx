@@ -394,7 +394,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
             selectedFamilies={selectedFamilies}
             channel={channel}
             dateFrom={dateFrom}
-            dateTo={dateTo}
+            dateTo={maxMonth}
           />
         </section>
 
@@ -407,7 +407,6 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           />
           <SectionWholesale
             monthly={monthly}
-            skuMonthly={skuMonthly}
             wholesaleFull={wholesaleFull}
             accountGroups={accountGroups}
             selectedFamilies={selectedFamilies}

@@ -12,17 +12,31 @@ import {
   PieChart,
   Pie,
   Cell,
-  ScatterChart,
-  Scatter,
-  ZAxis,
   LabelList,
 } from 'recharts';
 import type {
   MonthlyRow,
   WholesaleFullRow,
-  SkuMonthlyRow,
   AccountGroupData,
 } from '@/app/actions/sales-dashboard';
+
+// ─── Month helpers (timezone-safe) ────────────────────────────────────────────
+
+function eachMonth(from: string, to: string): string[] {
+  const months: string[] = [];
+  let [y, m] = from.split('-').map(Number);
+  const [ey, em] = to.split('-').map(Number);
+  while (y < ey || (y === ey && m <= em)) {
+    months.push(`${y}-${String(m).padStart(2, '0')}`);
+    if (++m > 12) { m = 1; y++; }
+  }
+  return months;
+}
+
+function fmtMonthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -119,7 +133,6 @@ function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?:
 
 export interface SectionWholesaleProps {
   monthly: MonthlyRow[];
-  skuMonthly: SkuMonthlyRow[];
   wholesaleFull: WholesaleFullRow[];
   accountGroups: AccountGroupData[];
   selectedFamilies: string[];
@@ -130,7 +143,7 @@ export interface SectionWholesaleProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionWholesale({
-  monthly, skuMonthly, wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo,
+  monthly, wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo,
 }: SectionWholesaleProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
 
@@ -158,18 +171,10 @@ export function SectionWholesale({
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
       sums.set(r.month, (sums.get(r.month) ?? 0) + r.wholesale_bottles);
     }
-    const result: { month: string; bottles: number }[] = [];
-    const d = new Date(dateFrom + '-01');
-    const end = new Date(dateTo + '-01');
-    while (d <= end) {
-      const key = d.toISOString().slice(0, 7);
-      result.push({
-        month: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-        bottles: sums.get(key) ?? 0,
-      });
-      d.setMonth(d.getMonth() + 1);
-    }
-    return result;
+    return eachMonth(dateFrom, dateTo).map(ym => ({
+      month: fmtMonthLabel(ym),
+      bottles: sums.get(ym) ?? 0,
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
 
@@ -196,8 +201,7 @@ export function SectionWholesale({
 
     return [...amap.values()]
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 20)
-      .reverse();
+      .slice(0, 20);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo]);
 
@@ -213,23 +217,6 @@ export function SectionWholesale({
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
   const pieTotalBtl = familyPie.reduce((s, r) => s + r.value, 0);
 
-  // ── SKU bubble chart ───────────────────────────────────────────────────────
-  const skuBubbles = useMemo(() => {
-    const smap = new Map<string, { name: string; bottles: number; revenue: number; family: string }>();
-    for (const r of skuMonthly) {
-      if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
-      const e = smap.get(r.brand_code) ?? { name: r.product_name, bottles: 0, revenue: 0, family: r.brand_family };
-      e.bottles += r.wholesale_bottles;
-      e.revenue += r.wholesale_amount;
-      smap.set(r.brand_code, e);
-    }
-    return [...smap.values()]
-      .filter(s => s.bottles > 0)
-      .sort((a, b) => b.bottles - a.bottles)
-      .slice(0, 40)
-      .map(s => ({ ...s, z: Math.sqrt(s.revenue) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skuMonthly, selectedFamilies, dateFrom, dateTo]);
 
   return (
     <div className="space-y-4">
@@ -348,49 +335,6 @@ export function SectionWholesale({
         )}
       </div>
 
-      {/* SKU bubble scatter chart */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
-          Wholesale by SKU — Bottles vs Revenue (bubble size = revenue)
-        </h3>
-        {skuBubbles.length === 0 ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">No SKU data for selected range.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="bottles" name="Bottles"
-                tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false}
-                label={{ value: 'Bottles Sold', position: 'insideBottom', offset: -12, fill: '#52525b', fontSize: 9 }}
-              />
-              <YAxis
-                dataKey="revenue" name="Revenue"
-                tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={52}
-              />
-              <ZAxis dataKey="z" range={[24, 600]} />
-              <Tooltip
-                cursor={{ strokeDasharray: '3 3', stroke: '#3f3f46' }}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const d = (payload[0] as any)?.payload;
-                  return (
-                    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl max-w-[220px]">
-                      <p className="text-white font-medium mb-1 leading-snug">{d?.name}</p>
-                      <p className="text-zinc-400">Bottles: <span className="text-white font-mono">{(d?.bottles ?? 0).toLocaleString()}</span></p>
-                      <p className="text-zinc-400">Revenue: <span className="text-white font-mono">{fmtDollar(d?.revenue ?? 0)}</span></p>
-                      <p className="text-zinc-600 text-[10px] mt-0.5">{d?.family}</p>
-                    </div>
-                  );
-                }}
-              />
-              <Scatter data={skuBubbles} fill={GOLD} fillOpacity={0.55} />
-            </ScatterChart>
-          </ResponsiveContainer>
-        )}
-      </div>
     </div>
   );
 }

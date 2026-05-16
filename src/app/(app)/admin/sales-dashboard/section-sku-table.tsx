@@ -125,13 +125,14 @@ export function SectionSkuTable({
     [skuList.map(s => s.brand_code).join(',')]
   );
 
-  const [activeCodes, setActiveCodes] = useState<string[]>([]);
+  // null = "user hasn't touched it yet" → show defaults
+  // []  = "user explicitly cleared" → show nothing
+  const [activeCodes, setActiveCodes] = useState<string[] | null>(null);
 
-  // Merge default + user-toggled state: on first render use defaults
-  const selected = activeCodes.length > 0 ? activeCodes : defaultSelected;
+  const selected = activeCodes ?? defaultSelected;
 
   function toggleSku(code: string) {
-    const current = activeCodes.length > 0 ? activeCodes : defaultSelected;
+    const current = activeCodes ?? defaultSelected;
     setActiveCodes(
       current.includes(code) ? current.filter(c => c !== code) : [...current, code]
     );
@@ -237,7 +238,7 @@ export function SectionSkuTable({
           <button
             onClick={clearAll}
             className={`rounded px-2 py-0.5 text-xs transition-colors ${
-              selected.length === 0
+              activeCodes !== null && activeCodes.length === 0
                 ? 'bg-[#C5A572] text-black font-semibold'
                 : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
             }`}

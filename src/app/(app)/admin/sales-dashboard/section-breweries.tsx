@@ -129,7 +129,7 @@ export function SectionBreweries({
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(200, breweries.length * 34)}>
             <BarChart
-              data={[...breweries].reverse()}
+              data={breweries}
               layout="vertical"
               margin={{ top: 0, right: 80, bottom: 0, left: 8 }}
             >
@@ -152,7 +152,7 @@ export function SectionBreweries({
                 }
               />
               <Bar dataKey="bottles" name="bottles" radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                {[...breweries].reverse().map((b, i) => (
+                {breweries.map((b, i) => (
                   <Cell key={i} fill={b.color} fillOpacity={0.85} />
                 ))}
                 <LabelList
