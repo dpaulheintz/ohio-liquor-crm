@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { SalesDashboardData } from '@/app/actions/sales-dashboard';
+import type { SalesDashboardData, AccountGroupData } from '@/app/actions/sales-dashboard';
 import { SectionRevenue } from './section-revenue';
 import { SectionWholesale } from './section-wholesale';
 import { SectionRetail } from './section-retail';
@@ -37,6 +37,34 @@ const FAMILY_COLOR_DEFAULT = '#94a3b8';
 const ALL_FAMILIES = [
   'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD', 'Misc',
 ];
+
+// ─── Account-resolution helpers (mirrors section-wholesale.tsx) ───────────────
+
+function isHighBank(wholesaler: string | null, dba: string | null): boolean {
+  const w = (wholesaler ?? '').toUpperCase();
+  const d = (dba ?? '').toUpperCase();
+  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
+}
+
+function resolveAccount(
+  wholesaler: string | null,
+  dba: string | null,
+  groups: AccountGroupData[]
+): { key: string; displayName: string } {
+  const wl = (wholesaler ?? '').toLowerCase();
+  const dl = (dba ?? '').toLowerCase();
+  for (const group of groups) {
+    const hit = (text: string) =>
+      group.match_terms.some((term) => text.includes(term.toLowerCase()));
+    const matched =
+      group.match_columns === 'wholesaler' ? hit(wl) :
+      group.match_columns === 'dba'        ? hit(dl) :
+      hit(wl) || hit(dl);
+    if (matched) return { key: `group::${group.id}`, displayName: group.group_name };
+  }
+  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
+  return { key: `raw::${name}`, displayName: name };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,7 +211,7 @@ function FilterBar({
 export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const {
     monthly, products: _products, skuMonthly, splitRows,
-    wholesaleRecent, wholesaleFull, accountGroups,
+    wholesaleFull, accountGroups,
     agencySkuMonthly, wholesaleSplit, lastUpdated,
   } = data;
   void _products; // available but we pass to child sections as needed
@@ -224,26 +252,35 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   );
 
   // ── Hot accounts (last 6 months vs prior 6 months) ───────────────────────
+  // Uses wholesaleFull (has wholesaler_name/dba) so accounts resolve correctly.
+  // Groups by actual buyer identity, not agency_id (avoids the J Liu bug).
   const { growing, declining, recentPeriod, priorPeriod } = useMemo(() => {
     if (!lastUpdated) return { growing: [], declining: [], recentPeriod: '', priorPeriod: '' };
 
-    const allMonths = [...new Set(wholesaleRecent.map(r => r.month))].sort();
+    // Take last 6 distinct months present in wholesaleFull
+    const allMonths = [...new Set(wholesaleFull.map(r => r.month))].sort().slice(-6);
     const recentMonths = allMonths.slice(-3);
-    const priorMonths = allMonths.slice(-6, -3);
+    const priorMonths = allMonths.slice(0, 3);
 
-    const filtered = wholesaleRecent.filter(r => inFamilies(r.brand_family, selectedFamilies));
+    // Pre-filter: 6-month window + family filter + exclude HB accounts
+    const filtered = wholesaleFull.filter(r =>
+      allMonths.includes(r.month) &&
+      inFamilies(r.brand_family, selectedFamilies) &&
+      !isHighBank(r.wholesaler_name, r.dba)
+    );
 
-    const sumByAgency = (months: string[]) => {
+    const sumByAccount = (months: string[]) => {
       const map = new Map<
         string,
-        { bottles: number; revenue: number; name: string | null; products: Map<string, number> }
+        { bottles: number; revenue: number; name: string; products: Map<string, number> }
       >();
       for (const r of filtered) {
         if (!months.includes(r.month)) continue;
-        if (!map.has(r.agency_id)) {
-          map.set(r.agency_id, { bottles: 0, revenue: 0, name: r.agency_name, products: new Map() });
+        const resolved = resolveAccount(r.wholesaler_name, r.dba, accountGroups);
+        if (!map.has(resolved.key)) {
+          map.set(resolved.key, { bottles: 0, revenue: 0, name: resolved.displayName, products: new Map() });
         }
-        const entry = map.get(r.agency_id)!;
+        const entry = map.get(resolved.key)!;
         entry.bottles += r.bottles_sold;
         entry.revenue += r.amount;
         entry.products.set(r.product_name, (entry.products.get(r.product_name) ?? 0) + r.bottles_sold);
@@ -251,11 +288,11 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
       return map;
     };
 
-    const recentMap = sumByAgency(recentMonths);
-    const priorMap = sumByAgency(priorMonths);
+    const recentMap = sumByAccount(recentMonths);
+    const priorMap = sumByAccount(priorMonths);
 
-    const accounts: HotAccount[] = Array.from(recentMap.entries()).map(([id, r]) => {
-      const p = priorMap.get(id);
+    const accounts: HotAccount[] = Array.from(recentMap.entries()).map(([key, r]) => {
+      const p = priorMap.get(key);
       const change = r.bottles - (p?.bottles ?? 0);
       const pct = p && p.bottles > 0 ? (change / p.bottles) * 100 : null;
       const topProduct =
@@ -263,8 +300,8 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           ? [...r.products.entries()].sort((a, b) => b[1] - a[1])[0][0]
           : null;
       return {
-        agency_id: id,
-        agency_name: r.name,
+        account_key: key,
+        account_name: r.name,
         recent_bottles: r.bottles,
         prior_bottles: p?.bottles ?? 0,
         bottle_change: change,
@@ -274,12 +311,12 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
       };
     });
 
-    // Add agencies that were in prior but disappeared from recent
-    for (const [id, p] of priorMap.entries()) {
-      if (!recentMap.has(id)) {
+    // Add accounts that were in prior but disappeared from recent
+    for (const [key, p] of priorMap.entries()) {
+      if (!recentMap.has(key)) {
         accounts.push({
-          agency_id: id,
-          agency_name: p.name,
+          account_key: key,
+          account_name: p.name,
           recent_bottles: 0,
           prior_bottles: p.bottles,
           bottle_change: -p.bottles,
@@ -305,7 +342,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
       recentPeriod: fmtPeriod(recentMonths),
       priorPeriod: fmtPeriod(priorMonths),
     };
-  }, [wholesaleRecent, selectedFamilies, lastUpdated]);
+  }, [wholesaleFull, accountGroups, selectedFamilies, lastUpdated]);
 
   // ─────────────────────────────────────────────────────────────────────────
 

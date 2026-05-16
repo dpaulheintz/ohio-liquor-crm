@@ -78,6 +78,7 @@ export interface AccountGroupData {
   match_terms: string[];
   match_columns: 'wholesaler' | 'dba' | 'both';
   color: string;
+  is_brewery: boolean;
 }
 
 // Per-agency × SKU × month retail row — for agency ranking by SKU feature
@@ -217,6 +218,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     match_terms:    (g.match_terms as string[]) ?? [],
     match_columns:  g.match_columns as 'wholesaler' | 'dba' | 'both',
     color:          String(g.color),
+    is_brewery:     Boolean(g.is_brewery),
   }));
 
   // ── agencySkuMonthly (month × brand_code × agency) ───────────────────────

@@ -173,9 +173,9 @@ export function SectionWholesale({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthly, selectedFamilies, dateFrom, dateTo]);
 
-  // ── Top 20 accounts — grouped by wholesaler/DBA, not by agency ─────────────
+  // ── Top 20 accounts — grouped by wholesaler/DBA, sorted by revenue ──────────
   const topAccounts = useMemo(() => {
-    type Acc = { displayName: string; bottles: number; color?: string };
+    type Acc = { displayName: string; bottles: number; revenue: number; color?: string };
     const amap = new Map<string, Acc>();
 
     for (const r of wholesaleFull) {
@@ -186,14 +186,16 @@ export function SectionWholesale({
       const existing = amap.get(resolved.key) ?? {
         displayName: resolved.displayName,
         bottles: 0,
+        revenue: 0,
         color: resolved.groupColor,
       };
       existing.bottles += r.bottles_sold;
+      existing.revenue += r.amount;
       amap.set(resolved.key, existing);
     }
 
     return [...amap.values()]
-      .sort((a, b) => b.bottles - a.bottles)
+      .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 20)
       .reverse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -297,18 +299,24 @@ export function SectionWholesale({
         </div>
       </div>
 
-      {/* Top 20 accounts — grouped by actual buyer */}
+      {/* Top 20 accounts — grouped by actual buyer, ranked by revenue */}
       <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
         <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
-          Top 20 Wholesale Accounts by Bottles
+          Top 20 Wholesale Accounts by Revenue
         </h3>
         {topAccounts.length === 0 ? (
           <p className="py-8 text-center text-zinc-600 text-sm">No data for selected range.</p>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(240, topAccounts.length * 32)}>
-            <BarChart data={topAccounts} layout="vertical" margin={{ top: 0, right: 64, bottom: 0, left: 8 }}>
+            <BarChart data={topAccounts} layout="vertical" margin={{ top: 0, right: 80, bottom: 0, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <XAxis
+                type="number"
+                tickFormatter={fmtDollar}
+                tick={{ fill: '#71717a', fontSize: 9 }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis
                 dataKey="displayName"
                 type="category"
@@ -322,16 +330,17 @@ export function SectionWholesale({
                 contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 itemStyle={{ color: '#e4e4e7' }}
                 labelStyle={{ color: '#a1a1aa' }}
+                formatter={(v: number) => [fmtDollar(v), 'Revenue']}
               />
-              <Bar dataKey="bottles" name="Bottles" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+              <Bar dataKey="revenue" name="Revenue" radius={[0, 3, 3, 0]} isAnimationActive={false}>
                 {topAccounts.map((acc, i) => (
                   <Cell key={i} fill={acc.color ?? GOLD} fillOpacity={0.82} />
                 ))}
                 <LabelList
-                  dataKey="bottles"
+                  dataKey="revenue"
                   position="right"
                   style={{ fill: '#a1a1aa', fontSize: 10 }}
-                  formatter={(v: number) => v.toLocaleString()}
+                  formatter={(v: number) => fmtDollar(v)}
                 />
               </Bar>
             </BarChart>

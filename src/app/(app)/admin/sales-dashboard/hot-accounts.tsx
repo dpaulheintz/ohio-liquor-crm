@@ -3,8 +3,8 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export interface HotAccount {
-  agency_id: string;
-  agency_name: string | null;
+  account_key: string;
+  account_name: string | null;
   recent_bottles: number;
   prior_bottles: number;
   bottle_change: number;
@@ -42,7 +42,7 @@ function AccountRow({
       <span className="text-xs text-zinc-600 w-4 shrink-0 text-right font-mono">{rank}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-zinc-200 truncate font-medium group-hover:text-white transition-colors">
-          {account.agency_name || account.agency_id}
+          {account.account_name || account.account_key}
         </p>
         {account.top_product && (
           <p className="text-xs text-zinc-600 truncate">{account.top_product}</p>
@@ -91,7 +91,7 @@ function AccountPanel({
           <p className="py-6 text-center text-sm text-zinc-600">No data</p>
         ) : (
           accounts.map((a, i) => (
-            <AccountRow key={a.agency_id} account={a} direction={direction} rank={i + 1} />
+            <AccountRow key={a.account_key} account={a} direction={direction} rank={i + 1} />
           ))
         )}
       </div>

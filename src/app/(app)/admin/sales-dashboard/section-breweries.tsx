@@ -66,7 +66,13 @@ export function SectionBreweries({
 }: SectionBreweriesProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
 
-  // Aggregate only rows that match a named group, excluding HB
+  // Only brewery-flagged groups (excludes e.g. Elliot's)
+  const breweryGroups = useMemo(
+    () => accountGroups.filter(g => g.is_brewery),
+    [accountGroups]
+  );
+
+  // Aggregate only rows that match a named brewery group, excluding HB
   const breweries = useMemo(() => {
     type Row = { name: string; bottles: number; revenue: number; color: string };
     const map = new Map<string, Row>();
@@ -75,8 +81,8 @@ export function SectionBreweries({
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
       if (isHighBank(r.wholesaler_name, r.dba)) continue;
 
-      const grp = resolveGroup(r.wholesaler_name, r.dba, accountGroups);
-      if (!grp) continue; // skip ungrouped accounts
+      const grp = resolveGroup(r.wholesaler_name, r.dba, breweryGroups);
+      if (!grp) continue; // skip ungrouped / non-brewery accounts
 
       const existing = map.get(grp.groupName) ?? { name: grp.groupName, bottles: 0, revenue: 0, color: grp.color };
       existing.bottles += r.bottles_sold;
@@ -88,7 +94,7 @@ export function SectionBreweries({
       .filter(r => r.bottles > 0)
       .sort((a, b) => b.bottles - a.bottles);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wholesaleFull, accountGroups, selectedFamilies, dateFrom, dateTo]);
+  }, [wholesaleFull, breweryGroups, selectedFamilies, dateFrom, dateTo]);
 
   const totalBottles = breweries.reduce((s, r) => s + r.bottles, 0);
   const totalRevenue = breweries.reduce((s, r) => s + r.revenue, 0);
