@@ -89,6 +89,7 @@ export interface AgencySkuRow {
   size: string;
   agency_id: string;
   agency_name: string | null;
+  is_hb_agency: boolean;
   retail_bottles: number;
   retail_amount: number;
 }
@@ -228,6 +229,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     size:           String(r.size ?? ''),
     agency_id:      String(r.agency_id ?? ''),
     agency_name:    r.agency_name ? String(r.agency_name) : null,
+    is_hb_agency:   Boolean(r.is_hb_agency),
     retail_bottles: Number(r.retail_bottles ?? 0),
     retail_amount:  Number(r.retail_amount ?? 0),
   })).sort((a: AgencySkuRow, b: AgencySkuRow) => a.month.localeCompare(b.month));

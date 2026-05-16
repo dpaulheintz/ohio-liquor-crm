@@ -1,7 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import type { SkuMonthlyRow } from '@/app/actions/sales-dashboard';
 import type { Channel } from './section-revenue';
 
@@ -20,6 +29,14 @@ const FAMILY_COLORS: Record<string, string> = {
   Unknown: '#6b7280',
 };
 const FAMILY_COLOR_DEFAULT = '#94a3b8';
+const GOLD = '#C5A572';
+
+// Cycle of distinct chart colors for multi-SKU lines
+const LINE_COLORS = [
+  '#C5A572', '#3b82f6', '#22c55e', '#ec4899',
+  '#8b5cf6', '#06b6d4', '#f97316', '#eab308',
+  '#10b981', '#6366f1', '#f43f5e', '#84cc16',
+];
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
@@ -27,32 +44,6 @@ function fmtDollar(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
   return `$${n.toFixed(0)}`;
-}
-
-// ─── Sparkline ────────────────────────────────────────────────────────────────
-
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const pts = data.map((v, i) => ({ v, i }));
-  return (
-    <ResponsiveContainer width={80} height={28}>
-      <LineChart data={pts} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-        <Tooltip
-          formatter={(v: number) => v.toLocaleString()}
-          contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 6, fontSize: 10 }}
-          itemStyle={{ color: '#e4e4e7' }}
-          labelFormatter={() => ''}
-        />
-        <Line
-          dataKey="v"
-          stroke={color}
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-          connectNulls
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -65,240 +56,306 @@ export interface SectionSkuTableProps {
   dateTo: string;
 }
 
-type SortKey = 'product_name' | 'brand_family' | 'size' | 'bottles' | 'revenue' | 'pct';
-type SortDir = 'asc' | 'desc';
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionSkuTable({
-  skuMonthly, selectedFamilies, channel, dateFrom, dateTo,
+  skuMonthly, selectedFamilies, channel, dateTo,
 }: SectionSkuTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('revenue');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [familyFilter, setFamilyFilter] = useState<string>('');
-
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
 
-  // ── Build ordered month list in range ──────────────────────────────────────
-  const rangeMonths = useMemo(() => {
+  // ── Build trailing-12-month window from dateTo ─────────────────────────────
+  const ttmMonths = useMemo(() => {
     const months: string[] = [];
-    const d = new Date(dateFrom + '-01');
-    const end = new Date(dateTo + '-01');
-    while (d <= end) {
+    const anchor = new Date(dateTo + '-01');
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
       months.push(d.toISOString().slice(0, 7));
-      d.setMonth(d.getMonth() + 1);
     }
     return months;
-  }, [dateFrom, dateTo]);
+  }, [dateTo]);
 
-  // ── Aggregate by SKU across range ─────────────────────────────────────────
-  const rows = useMemo(() => {
-    type SkuAgg = {
-      brand_code: string;
-      product_name: string;
-      brand_family: string;
-      size: string;
-      bottles: number;
-      revenue: number;
-      monthly: Map<string, number>; // month → bottles|revenue
-    };
+  // ── Aggregate SKUs over TTM window ────────────────────────────────────────
+  type SkuMeta = {
+    brand_code: string;
+    product_name: string;
+    brand_family: string;
+    size: string;
+    total: number; // total revenue in window for default ranking
+    byMonth: Map<string, number>;
+  };
 
-    const map = new Map<string, SkuAgg>();
+  const skuMap = useMemo(() => {
+    const map = new Map<string, SkuMeta>();
     for (const r of skuMonthly) {
-      if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
-      const bottles = channel === 'retail' ? r.retail_bottles
-        : channel === 'wholesale' ? r.wholesale_bottles
-        : r.retail_bottles + r.wholesale_bottles;
-      const revenue = channel === 'retail' ? r.retail_amount
-        : channel === 'wholesale' ? r.wholesale_amount
-        : r.retail_amount + r.wholesale_amount;
+      if (!ttmMonths.includes(r.month)) continue;
+      if (!inFam(r.brand_family)) continue;
+      const revenue =
+        channel === 'retail' ? r.retail_amount :
+        channel === 'wholesale' ? r.wholesale_amount :
+        r.retail_amount + r.wholesale_amount;
       if (!map.has(r.brand_code)) {
         map.set(r.brand_code, {
           brand_code: r.brand_code,
           product_name: r.product_name,
           brand_family: r.brand_family,
           size: r.size,
-          bottles: 0,
-          revenue: 0,
-          monthly: new Map(),
+          total: 0,
+          byMonth: new Map(),
         });
       }
       const entry = map.get(r.brand_code)!;
-      entry.bottles += bottles;
-      entry.revenue += revenue;
-      entry.monthly.set(r.month, (entry.monthly.get(r.month) ?? 0) + revenue);
+      entry.total += revenue;
+      entry.byMonth.set(r.month, (entry.byMonth.get(r.month) ?? 0) + revenue);
     }
-    return [...map.values()].filter(r => r.bottles > 0 || r.revenue > 0);
+    return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skuMonthly, selectedFamilies, channel, dateFrom, dateTo]);
+  }, [skuMonthly, selectedFamilies, channel, ttmMonths]);
 
-  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+  // Sorted SKU list for chip selector (by TTM revenue desc)
+  const skuList = useMemo(
+    () => [...skuMap.values()].filter(s => s.total > 0).sort((a, b) => b.total - a.total),
+    [skuMap]
+  );
 
-  // ── Unique families for filter dropdown ───────────────────────────────────
-  const families = useMemo(() => {
-    const set = new Set(rows.map(r => r.brand_family));
-    return [...set].sort();
-  }, [rows]);
+  // Default: top 3 SKUs pre-selected
+  const defaultSelected = useMemo(
+    () => skuList.slice(0, 3).map(s => s.brand_code),
+    // Only recompute when skuList identity changes (i.e. filter/channel changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [skuList.map(s => s.brand_code).join(',')]
+  );
 
-  // ── Sort + filter ──────────────────────────────────────────────────────────
-  const sorted = useMemo(() => {
-    let filtered = familyFilter ? rows.filter(r => r.brand_family === familyFilter) : rows;
-    const dir = sortDir === 'asc' ? 1 : -1;
-    filtered = [...filtered].sort((a, b) => {
-      if (sortKey === 'product_name') return dir * a.product_name.localeCompare(b.product_name);
-      if (sortKey === 'brand_family') return dir * a.brand_family.localeCompare(b.brand_family);
-      if (sortKey === 'size')         return dir * a.size.localeCompare(b.size);
-      if (sortKey === 'bottles')      return dir * (a.bottles - b.bottles);
-      if (sortKey === 'revenue')      return dir * (a.revenue - b.revenue);
-      if (sortKey === 'pct')          return dir * (a.revenue - b.revenue); // same order as revenue
-      return 0;
+  const [activeCodes, setActiveCodes] = useState<string[]>([]);
+
+  // Merge default + user-toggled state: on first render use defaults
+  const selected = activeCodes.length > 0 ? activeCodes : defaultSelected;
+
+  function toggleSku(code: string) {
+    const current = activeCodes.length > 0 ? activeCodes : defaultSelected;
+    setActiveCodes(
+      current.includes(code) ? current.filter(c => c !== code) : [...current, code]
+    );
+  }
+
+  function selectAll() { setActiveCodes(skuList.map(s => s.brand_code)); }
+  function clearAll()  { setActiveCodes([]); }
+
+  // ── Build chart data ───────────────────────────────────────────────────────
+  const chartData = useMemo(() => {
+    return ttmMonths.map(m => {
+      const row: Record<string, string | number | null> = {
+        month: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      };
+      for (const code of selected) {
+        const meta = skuMap.get(code);
+        row[code] = meta?.byMonth.get(m) ?? null;
+      }
+      return row;
     });
-    return filtered;
-  }, [rows, sortKey, sortDir, familyFilter]);
+  }, [ttmMonths, selected, skuMap]);
 
-  function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('desc'); }
+  // Assign a chart color index to each active SKU
+  const colorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    selected.forEach((code, i) => {
+      const meta = skuMap.get(code);
+      // If only 1 selected, use gold; otherwise use family color or cycle color
+      if (selected.length === 1) {
+        map.set(code, GOLD);
+      } else {
+        map.set(code, FAMILY_COLORS[meta?.brand_family ?? ''] ?? LINE_COLORS[i % LINE_COLORS.length]);
+      }
+    });
+    return map;
+  }, [selected, skuMap]);
+
+  // ── Tooltip ───────────────────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function ChartTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[150px]">
+        {label && <p className="text-zinc-400 mb-1.5 font-medium border-b border-zinc-800 pb-1">{label}</p>}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {payload.map((p: any) => {
+          if (p.value == null) return null;
+          const meta = skuMap.get(p.dataKey as string);
+          return (
+            <p key={p.dataKey} className="flex justify-between gap-3">
+              <span style={{ color: p.color ?? p.fill }} className="truncate max-w-[110px]">
+                {meta ? `${meta.brand_code} · ${meta.product_name}` : p.name}
+              </span>
+              <span className="font-mono font-semibold text-white">{fmtDollar(p.value)}</span>
+            </p>
+          );
+        })}
+      </div>
+    );
   }
 
   // ── CSV export ─────────────────────────────────────────────────────────────
   function exportCsv() {
-    const header = 'SKU,Brand Family,Size,Bottles,Revenue,% of Total';
-    const lines = sorted.map(r =>
-      `"${r.product_name}","${r.brand_family}","${r.size}",${r.bottles},${r.revenue.toFixed(2)},${totalRevenue > 0 ? ((r.revenue / totalRevenue) * 100).toFixed(1) : '0'}`
+    const header = ['SKU Code', 'Product Name', 'Size', 'Brand Family', ...ttmMonths].join(',');
+    const lines = skuList.map(s =>
+      [
+        s.brand_code,
+        `"${s.product_name}"`,
+        s.size,
+        s.brand_family,
+        ...ttmMonths.map(m => (s.byMonth.get(m) ?? 0).toFixed(2)),
+      ].join(',')
     );
-    const blob = new Blob([header + '\n' + lines.join('\n')], { type: 'text/csv' });
+    const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `sku-breakdown-${dateFrom}-${dateTo}.csv`;
+    a.download = `sku-ttm-${dateTo}.csv`;
     a.click();
   }
 
-  const thClass = (key: SortKey) =>
-    `px-3 py-2 text-left text-[10px] uppercase tracking-widest font-medium cursor-pointer select-none whitespace-nowrap transition-colors ${
-      sortKey === key ? 'text-[#C5A572]' : 'text-zinc-500 hover:text-zinc-300'
-    }`;
-  const arrow = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '';
+  const isSingle = selected.length === 1;
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
-      {/* Header + controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
-          SKU Revenue Breakdown — {rangeMonths.length} month{rangeMonths.length !== 1 ? 's' : ''}
+          SKU Revenue — Trailing 12 Months (ending {new Date(dateTo + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})
         </h3>
-        <div className="flex items-center gap-2">
-          {/* Family filter */}
-          <select
-            value={familyFilter}
-            onChange={e => setFamilyFilter(e.target.value)}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:border-[#C5A572]/60"
-          >
-            <option value="">All families</option>
-            {families.map(f => (
-              <option key={f} value={f}>{f}</option>
-            ))}
-          </select>
-          {/* CSV */}
+        <button
+          onClick={exportCsv}
+          className="rounded px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors shrink-0"
+        >
+          Export CSV
+        </button>
+      </div>
+
+      {/* SKU chip selector */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium shrink-0">SKU</span>
           <button
-            onClick={exportCsv}
-            className="rounded px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+            onClick={clearAll}
+            className={`rounded px-2 py-0.5 text-xs transition-colors ${
+              selected.length === 0
+                ? 'bg-[#C5A572] text-black font-semibold'
+                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+            }`}
           >
-            Export CSV
+            All
           </button>
+          <button
+            onClick={selectAll}
+            className="rounded px-2 py-0.5 text-xs bg-zinc-800 text-zinc-500 hover:bg-zinc-700 transition-colors"
+          >
+            Select all
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {skuList.map((s) => {
+            const isActive = selected.includes(s.brand_code);
+            const color = FAMILY_COLORS[s.brand_family] ?? FAMILY_COLOR_DEFAULT;
+            const label = `${s.brand_code} · ${s.product_name}${s.size ? ` (${s.size})` : ''}`;
+            return (
+              <button
+                key={s.brand_code}
+                onClick={() => toggleSku(s.brand_code)}
+                title={label}
+                className="rounded px-2 py-0.5 text-xs transition-all whitespace-nowrap"
+                style={{
+                  backgroundColor: isActive ? color + '28' : 'rgb(39,39,42)',
+                  color: isActive ? color : '#71717a',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderColor: isActive ? color + '70' : 'transparent',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {sorted.length === 0 ? (
-        <p className="py-10 text-center text-zinc-600 text-sm">No SKU data for selected range.</p>
+      {/* Chart */}
+      {selected.length === 0 || skuList.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-zinc-600 text-sm">
+          Select one or more SKUs above to chart their revenue trend.
+        </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-zinc-800">
-                <th className={thClass('product_name')} onClick={() => handleSort('product_name')}>
-                  SKU{arrow('product_name')}
-                </th>
-                <th className={thClass('brand_family')} onClick={() => handleSort('brand_family')}>
-                  Family{arrow('brand_family')}
-                </th>
-                <th className={thClass('size')} onClick={() => handleSort('size')}>
-                  Size{arrow('size')}
-                </th>
-                <th className={thClass('bottles')} onClick={() => handleSort('bottles')}>
-                  Bottles{arrow('bottles')}
-                </th>
-                <th className={thClass('revenue')} onClick={() => handleSort('revenue')}>
-                  Revenue{arrow('revenue')}
-                </th>
-                <th className={thClass('pct')} onClick={() => handleSort('pct')}>
-                  % Total{arrow('pct')}
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
-                  Trend
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-900">
-              {sorted.map((r) => {
-                const color = FAMILY_COLORS[r.brand_family] ?? FAMILY_COLOR_DEFAULT;
-                const pct = totalRevenue > 0 ? (r.revenue / totalRevenue) * 100 : 0;
-                const sparkData = rangeMonths.map(m => r.monthly.get(m) ?? 0);
-                return (
-                  <tr key={r.brand_code} className="hover:bg-zinc-900/50 transition-colors">
-                    <td className="px-3 py-2.5 font-medium text-zinc-200">{r.product_name}</td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className="inline-flex items-center gap-1 text-[10px] font-medium"
-                        style={{ color }}
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: color }} />
-                        {r.brand_family}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-zinc-400 tabular-nums">{r.size}</td>
-                    <td className="px-3 py-2.5 text-zinc-300 font-mono tabular-nums">
-                      {r.bottles.toLocaleString()}
-                    </td>
-                    <td className="px-3 py-2.5 text-zinc-200 font-mono tabular-nums font-semibold">
-                      {fmtDollar(r.revenue)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${Math.min(100, pct * 2)}%`, background: color }}
-                          />
-                        </div>
-                        <span className="font-mono text-zinc-500 w-8 text-right">
-                          {pct.toFixed(1)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-1 py-1">
-                      <Sparkline data={sparkData} color={color} />
-                    </td>
-                  </tr>
+        <>
+          <ResponsiveContainer width="100%" height={240}>
+            <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#71717a', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={fmtDollar}
+                tick={{ fill: '#71717a', fontSize: 9 }}
+                axisLine={false}
+                tickLine={false}
+                width={52}
+              />
+              <Tooltip content={(props) => (
+                <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
+              )} />
+              {selected.map((code) => {
+                const color = colorMap.get(code) ?? GOLD;
+                return isSingle ? (
+                  <Bar
+                    key={code}
+                    dataKey={code}
+                    name={code}
+                    fill={color}
+                    fillOpacity={0.85}
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={36}
+                    isAnimationActive={false}
+                  />
+                ) : (
+                  <Line
+                    key={code}
+                    dataKey={code}
+                    name={code}
+                    stroke={color}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: color }}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
                 );
               })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-zinc-700">
-                <td colSpan={3} className="px-3 py-2.5 text-xs text-zinc-500 font-medium">
-                  {sorted.length} SKUs
-                </td>
-                <td className="px-3 py-2.5 font-mono text-zinc-300">
-                  {sorted.reduce((s, r) => s + r.bottles, 0).toLocaleString()}
-                </td>
-                <td className="px-3 py-2.5 font-mono text-zinc-200 font-semibold">
-                  {fmtDollar(sorted.reduce((s, r) => s + r.revenue, 0))}
-                </td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+            </ComposedChart>
+          </ResponsiveContainer>
+
+          {/* Legend / summary row */}
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+            {selected.map((code) => {
+              const meta = skuMap.get(code);
+              const color = colorMap.get(code) ?? GOLD;
+              if (!meta) return null;
+              return (
+                <div key={code} className="flex items-center gap-2 text-xs">
+                  {isSingle ? (
+                    <span className="h-2.5 w-2.5 rounded-sm inline-block shrink-0" style={{ background: color }} />
+                  ) : (
+                    <span className="inline-block w-5 h-0 border-t-2 shrink-0" style={{ borderColor: color }} />
+                  )}
+                  <span className="text-zinc-400">
+                    <span className="font-mono text-zinc-300">{code}</span>
+                    {' · '}{meta.product_name}
+                    {meta.size && <span className="text-zinc-600"> ({meta.size})</span>}
+                  </span>
+                  <span className="font-mono text-[#C5A572] font-semibold">{fmtDollar(meta.total)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

@@ -191,24 +191,25 @@ export function SectionRetail({
 
   // ── SKU options for agency ranking dropdown ────────────────────────────────
   const skuOptions = useMemo(() => {
-    const smap = new Map<string, { code: string; name: string; family: string }>();
+    const smap = new Map<string, { code: string; name: string; size: string; family: string }>();
     for (const r of agencySkuMonthly) {
       if (r.month < dateFrom || r.month > dateTo || !inFam(r.brand_family)) continue;
       if (!smap.has(r.brand_code)) {
-        smap.set(r.brand_code, { code: r.brand_code, name: r.product_name, family: r.brand_family });
+        smap.set(r.brand_code, { code: r.brand_code, name: r.product_name, size: r.size, family: r.brand_family });
       }
     }
-    return [...smap.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return [...smap.values()].sort((a, b) => a.code.localeCompare(b.code));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agencySkuMonthly, selectedFamilies, dateFrom, dateTo]);
 
-  // ── Top 10 agencies for selected SKU ──────────────────────────────────────
+  // ── Top 10 agencies for selected SKU (excluding HB agencies) ──────────────
   const topAgencies = useMemo(() => {
     if (!selectedSkuCode) return [];
     const amap = new Map<string, { agency_id: string; agency_name: string | null; bottles: number; revenue: number }>();
     for (const r of agencySkuMonthly) {
       if (r.brand_code !== selectedSkuCode) continue;
       if (r.month < dateFrom || r.month > dateTo) continue;
+      if (r.is_hb_agency) continue; // exclude High Bank locations
       if (!amap.has(r.agency_id)) {
         amap.set(r.agency_id, { agency_id: r.agency_id, agency_name: r.agency_name, bottles: 0, revenue: 0 });
       }
@@ -372,7 +373,9 @@ export function SectionRetail({
           >
             <option value="">— Select a SKU —</option>
             {skuOptions.map(s => (
-              <option key={s.code} value={s.code}>{s.name}</option>
+              <option key={s.code} value={s.code}>
+                {s.code} · {s.name}{s.size ? ` (${s.size})` : ''}
+              </option>
             ))}
           </select>
         </div>
