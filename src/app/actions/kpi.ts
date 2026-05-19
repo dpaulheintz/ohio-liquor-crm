@@ -11,6 +11,7 @@ export interface KpiEventRow {
   visited_at: string;
   kpi: string;          // kpi_type
   kpi_quantity: number; // always ≥ 1
+  sold_status: 'sold' | 'unsold';
   notes: string | null;
   visit_type: 'in_person' | 'phone_call';
   rep_id: string;
@@ -19,6 +20,7 @@ export interface KpiEventRow {
   account_id: string;
   account_name: string;
   photo_count: number;
+  photo_urls: string[];
 }
 
 export interface KpiDashboardData {
@@ -39,6 +41,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
         id,
         kpi_type,
         kpi_quantity,
+        sold_status,
         visit:visit_logs!visit_kpis_visit_id_fkey(
           id,
           visited_at,
@@ -48,7 +51,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
           rep_id,
           account:accounts!visit_logs_account_id_fkey(id, display_name),
           rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
-          visit_photos(id)
+          visit_photos(id, photo_url)
         )
       `)
       .order('created_at', { ascending: false })
@@ -71,6 +74,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
       visited_at:   String(v?.visited_at ?? ''),
       kpi:          String(r.kpi_type),
       kpi_quantity: Number(r.kpi_quantity ?? 1),
+      sold_status:  (r.sold_status ?? 'sold') as 'sold' | 'unsold',
       notes:        v?.notes ? String(v.notes) : null,
       visit_type:   (v?.visit_type ?? 'in_person') as 'in_person' | 'phone_call',
       rep_id:       String(v?.rep_id ?? ''),
@@ -79,6 +83,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
       account_id:   String(v?.account_id ?? ''),
       account_name: String(v?.account?.display_name ?? 'Unknown'),
       photo_count:  Array.isArray(v?.visit_photos) ? v.visit_photos.length : 0,
+      photo_urls:   Array.isArray(v?.visit_photos) ? v.visit_photos.map((p: any) => String(p.photo_url)) : [],
     };
   });
 

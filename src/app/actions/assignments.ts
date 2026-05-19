@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const ASSIGNMENT_SELECT = `
-  id, account_id, assigned_to, assigned_by, notes, status, created_at, completed_at,
+  id, account_id, assigned_to, assigned_by, notes, status, photo_urls, created_at, completed_at,
   account:accounts!assignments_account_id_fkey(id, display_name, city, type),
   rep:profiles!assignments_assigned_to_fkey(id, full_name, email),
   assigner:profiles!assignments_assigned_by_fkey(id, full_name, email)
@@ -64,12 +64,14 @@ const createAssignmentSchema = z.object({
   accountId: z.string().uuid(),
   assignedTo: z.string().uuid(),
   notes: z.string().max(1000).optional(),
+  photoUrls: z.array(z.string().url()).max(3).optional(),
 });
 
 export async function createAssignment(input: {
   accountId: string;
   assignedTo: string;
   notes?: string;
+  photoUrls?: string[];
 }) {
   const parsed = createAssignmentSchema.parse(input);
   const supabase = await createClient();
@@ -89,6 +91,7 @@ export async function createAssignment(input: {
       assigned_by: user.id,
       notes: parsed.notes || null,
       status: 'pending',
+      photo_urls: parsed.photoUrls ?? [],
     })
     .select(ASSIGNMENT_SELECT)
     .single();

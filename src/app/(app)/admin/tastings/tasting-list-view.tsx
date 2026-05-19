@@ -54,6 +54,8 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
     else { setSortKey(key); setSortDir('asc'); }
   }
 
+  const ACTIVE_STATUSES = new Set(['needs_staff', 'scheduled', 'staffed']);
+
   const filtered = tastings
     .filter((t) => statusFilter === 'all' || t.status === statusFilter)
     .filter((t) => categoryFilter === 'all' || t.staff_category === categoryFilter)
@@ -65,6 +67,12 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
     .filter((t) => !dateFrom || t.date >= dateFrom)
     .filter((t) => !dateTo || t.date <= dateTo)
     .sort((a, b) => {
+      // Group: active (0) before terminal (1)
+      const ga = ACTIVE_STATUSES.has(a.status) ? 0 : 1;
+      const gb = ACTIVE_STATUSES.has(b.status) ? 0 : 1;
+      if (ga !== gb) return ga - gb;
+
+      // Within each group, apply the user's chosen sort
       let va = '', vb = '';
       switch (sortKey) {
         case 'date':
@@ -88,7 +96,9 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
           vb = b.status;
           break;
       }
-      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      // For terminal group, flip date sort so most recent appears first (by default)
+      const dir = (sortKey === 'date' && ga === 1) ? (sortDir === 'asc' ? 'desc' : 'asc') : sortDir;
+      return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
     });
 
   const hasFilters =

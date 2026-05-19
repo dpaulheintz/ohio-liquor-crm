@@ -77,13 +77,14 @@ function monthLabel(m: string) {
 }
 
 function exportCsv(events: KpiEventRow[]) {
-  const headers = ['Date', 'Rep', 'Account', 'KPI Type', 'Quantity', 'Photos', 'Notes'];
+  const headers = ['Date', 'Rep', 'Account', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Photos', 'Notes'];
   const rows = events.map(e => [
     fmtDate(e.visited_at),
     e.rep_name || e.rep_email,
     e.account_name,
     e.kpi,
     String(e.kpi_quantity),
+    e.sold_status,
     String(e.photo_count),
     (e.notes ?? '').replace(/"/g, '""'),
   ]);
@@ -125,6 +126,8 @@ interface VisitGroup {
   account_name: string;
   notes: string | null;
   photo_count: number;
+  photo_urls: string[];
+  visit_type: 'in_person' | 'phone_call';
   kpis: KpiEventRow[]; // all KPI events for this visit (from filtered set)
 }
 
@@ -140,6 +143,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
   const [accountSearch, setAccountSearch] = useState('');
   const [hasPhotos, setHasPhotos]         = useState(false);
   const [qtyGt1, setQtyGt1]               = useState(false);
+  const [soldStatusFilter, setSoldStatusFilter] = useState<'all' | 'sold' | 'unsold'>('all');
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [showCharts, setShowCharts]       = useState(true);
 
@@ -171,9 +175,10 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
       const q = accountSearch.toLowerCase();
       result  = result.filter(e => e.account_name.toLowerCase().includes(q));
     }
+    if (soldStatusFilter !== 'all') result = result.filter(e => e.sold_status === soldStatusFilter);
     // hasPhotos + qtyGt1 are visit-level / event-level filters respectively
     return result;
-  }, [kpiEvents, dateFrom, dateTo, repId, kpiType, accountSearch]);
+  }, [kpiEvents, dateFrom, dateTo, repId, kpiType, accountSearch, soldStatusFilter]);
 
   // ── Group filtered events by visit (for table) ────────────────────────────
   const visitGroups = useMemo(() => {
@@ -190,6 +195,8 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
           account_name: e.account_name,
           notes:       e.notes,
           photo_count: e.photo_count,
+          photo_urls:  e.photo_urls ?? [],
+          visit_type:  e.visit_type,
           kpis:        [],
         });
       }
@@ -285,6 +292,16 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
       .sort((a, b) => parseInt(a.qty.slice(1)) - parseInt(b.qty.slice(1)));
   }, [visibleEvents]);
 
+  // ── Sold / Unsold counts ──────────────────────────────────────────────────
+  const soldCount   = useMemo(() =>
+    visibleEvents.filter(e => e.sold_status === 'sold'   && (e.kpi === 'Menu' || e.kpi === 'Feature')).length,
+    [visibleEvents]
+  );
+  const unsoldCount = useMemo(() =>
+    visibleEvents.filter(e => e.sold_status === 'unsold' && (e.kpi === 'Menu' || e.kpi === 'Feature')).length,
+    [visibleEvents]
+  );
+
   // ── Total KPI visits (all time, for coverage card) ────────────────────────
   const totalKpiVisits = useMemo(() => new Set(kpiEvents.map(e => e.visit_id)).size, [kpiEvents]);
 
@@ -375,6 +392,15 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
               Qty &gt; 1
             </button>
 
+            <div className="flex rounded border border-zinc-700 overflow-hidden text-xs">
+              {(['all', 'sold', 'unsold'] as const).map(s => (
+                <button key={s} onClick={() => setSoldStatusFilter(s)}
+                  className={`px-2.5 py-1 capitalize transition-colors ${soldStatusFilter === s ? 'bg-[#C5A572] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}>
+                  {s === 'all' ? 'All' : s}
+                </button>
+              ))}
+            </div>
+
             <span className="text-xs text-zinc-600 ml-auto">
               {visibleGroups.length.toLocaleString()} visits · {visibleEvents.length.toLocaleString()} KPI events
             </span>
@@ -421,6 +447,15 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
             </p>
           </div>
         </div>
+
+        {/* ── Sold/Unsold summary ──────────────────────────────────────── */}
+        {(stats.byType['Menu'] > 0 || stats.byType['Feature'] > 0) && (
+          <div className="flex gap-4 text-sm">
+            <span className="text-zinc-500">Menu + Feature KPIs:</span>
+            <span className="text-emerald-400 font-medium">✓ {soldCount} sold</span>
+            <span className="text-amber-400 font-medium">○ {unsoldCount} unsold</span>
+          </div>
+        )}
 
         {/* ── Charts ───────────────────────────────────────────────────── */}
         <div>
@@ -592,6 +627,14 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
                     {isExpanded && (
                       <div className="px-4 md:pl-[148px] pb-4 pt-2 bg-black/20 border-t border-zinc-800/40">
                         <div className="space-y-3">
+                          {/* Visit type badge */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-zinc-600 uppercase tracking-wide">Visit Type:</span>
+                            <span className="text-xs font-medium text-zinc-300">
+                              {group.visit_type === 'phone_call' ? '📞 Phone Call' : '📍 In Person'}
+                            </span>
+                          </div>
+
                           {/* All KPIs for this visit */}
                           <div>
                             <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1.5">KPIs</p>
@@ -607,6 +650,11 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
                                     {k.kpi_quantity > 1 && (
                                       <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded">×{k.kpi_quantity}</span>
                                     )}
+                                    {(k.kpi === 'Menu' || k.kpi === 'Feature') && (
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${k.sold_status === 'sold' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-amber-900/50 text-amber-400'}`}>
+                                        {k.sold_status}
+                                      </span>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -617,6 +665,20 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount }: KpiDashboardD
                             <div>
                               <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1">Notes</p>
                               <p className="text-sm text-zinc-200 leading-relaxed">{group.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Photos */}
+                          {group.photo_count > 0 && group.photo_urls.length > 0 && (
+                            <div>
+                              <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1.5">Photos</p>
+                              <div className="flex gap-2 overflow-x-auto pb-1">
+                                {group.photo_urls.map((url, i) => (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                    <img src={url} alt={`Photo ${i+1}`} className="h-28 w-28 rounded-lg object-cover shrink-0 hover:opacity-90 transition-opacity border border-zinc-700" />
+                                  </a>
+                                ))}
+                              </div>
                             </div>
                           )}
 

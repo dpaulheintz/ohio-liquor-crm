@@ -68,6 +68,7 @@ export interface VisitKpi {
   visit_id: string;
   kpi_type: string;
   kpi_quantity: number;
+  sold_status: 'sold' | 'unsold';
   created_at: string;
 }
 
@@ -99,6 +100,7 @@ export interface Assignment {
   assigned_by: string;
   notes: string | null;
   status: AssignmentStatus;
+  photo_urls: string[];
   created_at: string;
   completed_at: string | null;
   // Joined

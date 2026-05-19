@@ -44,7 +44,11 @@ import {
   ChevronRight,
   ChevronDown,
   User,
+  Camera,
+  X,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 import { formatVisitDate } from '@/lib/date-utils';
 
@@ -98,6 +102,9 @@ export default function AdminAssignmentsPage() {
 
   // Step 4: Notes
   const [newNotes, setNewNotes] = useState('');
+
+  // Step 4.5: Photos
+  const [assignmentPhotos, setAssignmentPhotos] = useState<{file: File; preview: string}[]>([]);
 
   // ── Fetch assignments ─────────────────────────────────────────
   const fetchAssignments = useCallback(async () => {
@@ -167,6 +174,7 @@ export default function AdminAssignmentsPage() {
     setNewContactEmail('');
     setNewContactTitle('');
     setNewNotes('');
+    setAssignmentPhotos([]);
   }
 
   function handleDialogOpenChange(open: boolean) {
@@ -217,11 +225,30 @@ export default function AdminAssignmentsPage() {
         });
       }
 
-      // Step 3: Create the assignment
+      // Step 3: Upload photos (non-fatal)
+      let uploadedUrls: string[] = [];
+      if (assignmentPhotos.length > 0) {
+        try {
+          const supabase = createClient();
+          for (let i = 0; i < assignmentPhotos.length; i++) {
+            const p = assignmentPhotos[i];
+            const compressed = await imageCompression(p.file, { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true });
+            const fileName = `assignment-${Date.now()}-${i}-${compressed.name}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage.from('visit-photos').upload(fileName, compressed, { cacheControl: '3600', upsert: false });
+            if (!uploadError && uploadData) {
+              const { data: { publicUrl } } = supabase.storage.from('visit-photos').getPublicUrl(uploadData.path);
+              uploadedUrls.push(publicUrl);
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+
+      // Step 4: Create the assignment
       await createAssignment({
         accountId: resolvedAccountId,
         assignedTo: newRep,
         notes: newNotes || undefined,
+        photoUrls: uploadedUrls,
       });
 
       toast.success('Assignment created');
@@ -595,6 +622,39 @@ export default function AdminAssignmentsPage() {
                 />
               </div>
 
+              {/* ── Photos ── */}
+              <div className="space-y-1.5">
+                <Label>Photos <span className="text-muted-foreground font-normal">(optional, max 3)</span></Label>
+                <div className="flex flex-wrap gap-2">
+                  {assignmentPhotos.map((p, i) => (
+                    <div key={i} className="relative">
+                      <img src={p.preview} alt={`Photo ${i+1}`} className="h-16 w-16 rounded-md object-cover" />
+                      <button type="button" onClick={() => {
+                        const updated = [...assignmentPhotos];
+                        URL.revokeObjectURL(updated[i].preview);
+                        updated.splice(i, 1);
+                        setAssignmentPhotos(updated);
+                      }} className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {assignmentPhotos.length < 3 && (
+                    <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-md border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50">
+                      <Camera className="h-4 w-4" />
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                        const files = e.target.files;
+                        if (!files) return;
+                        const remaining = 3 - assignmentPhotos.length;
+                        const newFiles = Array.from(files).slice(0, remaining);
+                        setAssignmentPhotos(prev => [...prev, ...newFiles.map(f => ({ file: f, preview: URL.createObjectURL(f) }))]);
+                        e.target.value = '';
+                      }} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
@@ -746,6 +806,16 @@ function AssignmentCard({
 
             {a.notes && (
               <p className="text-xs text-muted-foreground mt-1 italic">{a.notes}</p>
+            )}
+
+            {a.photo_urls && a.photo_urls.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {a.photo_urls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                    <img src={url} alt={`Photo ${i+1}`} className="h-14 w-14 rounded object-cover border hover:opacity-90 transition-opacity" />
+                  </a>
+                ))}
+              </div>
             )}
 
             <p className="text-[10px] text-muted-foreground mt-1">

@@ -315,7 +315,15 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
               </p>
             ) : (
               <div className="space-y-2">
-                {tastings.map((tasting) => {
+                {[...tastings].sort((a, b) => {
+                  const ACTIVE = new Set(['needs_staff', 'scheduled', 'staffed']);
+                  const ga = ACTIVE.has(a.status) ? 0 : 1;
+                  const gb = ACTIVE.has(b.status) ? 0 : 1;
+                  if (ga !== gb) return ga - gb;
+                  return ga === 0
+                    ? a.date.localeCompare(b.date)
+                    : b.date.localeCompare(a.date);
+                }).map((tasting) => {
                   const sc = statusConfig(tasting.status);
                   const isPast =
                     tasting.status === 'completed' || tasting.status === 'cancelled';

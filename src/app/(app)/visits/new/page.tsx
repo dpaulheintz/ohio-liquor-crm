@@ -51,6 +51,7 @@ interface PhotoItem {
 interface KpiEntry {
   type: string;
   quantity: number;
+  soldStatus: 'sold' | 'unsold';
 }
 
 export default function NewVisitPage() {
@@ -139,7 +140,7 @@ function NewVisitForm() {
 
   // ── KPI handlers ────────────────────────────────────────────────────────────
   function addKpi() {
-    setKpis([...kpis, { type: '', quantity: 1 }]);
+    setKpis([...kpis, { type: '', quantity: 1, soldStatus: 'sold' }]);
   }
 
   function removeKpi(index: number) {
@@ -148,7 +149,7 @@ function NewVisitForm() {
 
   function updateKpiType(index: number, type: string) {
     const updated = [...kpis];
-    updated[index] = { ...updated[index], type };
+    updated[index] = { ...updated[index], type, soldStatus: 'sold' };
     setKpis(updated);
   }
 
@@ -260,7 +261,7 @@ function NewVisitForm() {
         accountId: resolvedAccountId,
         visitType,
         notes: notes || undefined,
-        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis : undefined,
+        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldStatus })) : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: visitType === 'in_person' && photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -514,9 +515,9 @@ function NewVisitForm() {
                 )}
                 <div className="space-y-2">
                   {kpis.map((kpi, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={i} className="flex items-center gap-2 flex-wrap">
                       <Select value={kpi.type} onValueChange={(v) => updateKpiType(i, v)}>
-                        <SelectTrigger className="flex-1">
+                        <SelectTrigger className="flex-1 min-w-[120px]">
                           <SelectValue placeholder="KPI type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -536,6 +537,20 @@ function NewVisitForm() {
                           className="w-16 text-center"
                         />
                       </div>
+                      {(kpi.type === 'Menu' || kpi.type === 'Feature') && (
+                        <div className="flex rounded border border-border overflow-hidden text-xs">
+                          <button
+                            type="button"
+                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'sold' }; setKpis(u); }}
+                            className={`px-2 py-1 transition-colors ${kpi.soldStatus === 'sold' ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                          >Sold</button>
+                          <button
+                            type="button"
+                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'unsold' }; setKpis(u); }}
+                            className={`px-2 py-1 border-l border-border transition-colors ${kpi.soldStatus === 'unsold' ? 'bg-amber-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                          >Unsold</button>
+                        </div>
+                      )}
                       <button type="button" onClick={() => removeKpi(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                         <X className="h-4 w-4" />
                       </button>

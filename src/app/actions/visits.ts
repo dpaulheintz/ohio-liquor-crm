@@ -74,8 +74,9 @@ export async function getVisitsByAccount(accountId: string) {
 // ─── createVisit ──────────────────────────────────────────────────────────────
 
 const kpiEntrySchema = z.object({
-  type:     z.enum(KPI_OPTIONS),
-  quantity: z.number().int().min(1).max(99).default(1),
+  type:       z.enum(KPI_OPTIONS),
+  quantity:   z.number().int().min(1).max(99).default(1),
+  soldStatus: z.enum(['sold', 'unsold']).default('sold'),
 });
 
 const visitSchema = z.object({
@@ -100,7 +101,7 @@ export async function createVisit(input: {
   accountId: string;
   visitType?: 'in_person' | 'phone_call';
   notes?: string;
-  kpis?: { type: string; quantity: number }[];
+  kpis?: { type: string; quantity: number; soldStatus?: 'sold' | 'unsold' }[];
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
@@ -134,6 +135,7 @@ export async function createVisit(input: {
       visit_id:     visit.id,
       kpi_type:     k.type,
       kpi_quantity: k.quantity,
+      sold_status:  k.soldStatus ?? 'sold',
     }));
     const { error: kpiError } = await supabase.from('visit_kpis').insert(kpiRecords);
     if (kpiError) throw kpiError;

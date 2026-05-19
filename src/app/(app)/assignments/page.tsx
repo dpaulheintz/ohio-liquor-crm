@@ -165,6 +165,16 @@ function RepAssignmentCard({
               </p>
             )}
 
+            {a.photo_urls && a.photo_urls.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {a.photo_urls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                    <img src={url} alt={`Photo ${i+1}`} className="h-14 w-14 rounded object-cover border hover:opacity-90 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            )}
+
             <p className="text-[10px] text-muted-foreground mt-1">
               {isDone && a.completed_at
                 ? `Completed ${formatVisitDate(a.completed_at)}`
