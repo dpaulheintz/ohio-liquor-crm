@@ -17,6 +17,7 @@ import {
   BarChart2,
   Layers,
   TrendingUp,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -36,6 +37,7 @@ const adminItems = [
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
   { href: '/admin/sales-dashboard', label: 'Sales Dashboard', icon: TrendingUp },
+  { href: '/admin/restaurant-analytics', label: 'Restaurant Analytics', icon: UtensilsCrossed },
   { href: '/admin/sales-upload', label: 'Sales Upload', icon: BarChart2 },
   { href: '/admin/account-groups', label: 'Account Groups', icon: Layers },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
