@@ -15,7 +15,7 @@ import {
   Cell,
   LineChart,
 } from 'recharts';
-import type { MonthlyRow, SplitRow } from '@/app/actions/sales-dashboard';
+import type { MonthlyRow, SplitRow, BailmentRow } from '@/app/actions/sales-dashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +105,7 @@ function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?:
 export interface SectionRevenueProps {
   monthly: MonthlyRow[];
   splitRows: SplitRow[];
+  bailmentMonthly: BailmentRow[];
   selectedFamilies: string[];
   channel: Channel;
   dateFrom: string;
@@ -117,7 +118,7 @@ export interface SectionRevenueProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionRevenue({
-  monthly, splitRows, selectedFamilies, channel, dateFrom, dateTo,
+  monthly, splitRows, bailmentMonthly, selectedFamilies, channel, dateFrom, dateTo,
   currentYear, maxCurrentYearMonth, lastUpdated,
 }: SectionRevenueProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
@@ -239,6 +240,40 @@ export function SectionRevenue({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitRows, selectedFamilies, dateFrom, dateTo]);
 
+
+  // ── Bailment YoY chart data ───────────────────────────────────────────────
+  const bailmentYoy = useMemo(() => {
+    const byMonth = new Map<string, number>(bailmentMonthly.map(r => [r.month, r.amount]));
+    const y0s = String(currentYear);
+    const y1s = String(currentYear - 1);
+    return MONTH_LABELS.map((lbl, i) => {
+      const mm = String(i + 1).padStart(2, '0');
+      return {
+        month: lbl,
+        [y0s]: byMonth.get(`${y0s}-${mm}`) ?? null,
+        [y1s]: byMonth.get(`${y1s}-${mm}`) ?? null,
+      };
+    });
+  }, [bailmentMonthly, currentYear]);
+
+  // ── Bailment YTD comparison ───────────────────────────────────────────────
+  const bailmentYtd = useMemo(() => {
+    // Find max month in current year that has data
+    const cyRows = bailmentMonthly.filter(r => r.month.startsWith(String(currentYear)));
+    if (cyRows.length === 0) return null;
+    const maxMm = cyRows.map(r => r.month.slice(5, 7)).sort().pop()!;
+
+    const sumYear = (yr: number) =>
+      bailmentMonthly
+        .filter(r => r.month.startsWith(String(yr)) && r.month.slice(5, 7) <= maxMm)
+        .reduce((s, r) => s + r.amount, 0);
+
+    const cur = sumYear(currentYear);
+    const ly  = sumYear(currentYear - 1);
+    const diff = cur - ly;
+    const pct  = ly > 0 ? (diff / ly) * 100 : null;
+    return { cur, ly, diff, pct, thru: maxMm };
+  }, [bailmentMonthly, currentYear]);
 
   const y0 = String(currentYear);
   const y1 = String(currentYear - 1);
@@ -398,6 +433,85 @@ export function SectionRevenue({
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bailment — Year over Year ──────────────────────────────────────── */}
+      <div className="space-y-3">
+        {/* YTD comparison card + chart side-by-side on large screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* YTD KPI card */}
+          <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-2 justify-center">
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+              YTD Bailment {currentYear}
+            </span>
+            <span className="text-3xl font-serif font-bold text-white leading-none">
+              {bailmentYtd ? fmtDollar(bailmentYtd.cur) : '—'}
+            </span>
+            {bailmentYtd && (
+              <>
+                <span className="text-xs text-zinc-600">
+                  vs LY: {fmtDollar(bailmentYtd.ly)}
+                </span>
+                <span className={`text-sm font-mono font-semibold ${bailmentYtd.diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {bailmentYtd.diff >= 0 ? '+' : ''}{fmtDollar(bailmentYtd.diff)}
+                  {bailmentYtd.pct !== null && (
+                    <span className="ml-1 font-normal text-xs">
+                      ({bailmentYtd.pct >= 0 ? '+' : ''}{bailmentYtd.pct.toFixed(2)}%)
+                    </span>
+                  )}
+                </span>
+                <span className="text-[10px] text-zinc-700">
+                  Jan–{new Date(currentYear, parseInt(bailmentYtd.thru, 10) - 1, 1)
+                    .toLocaleDateString('en-US', { month: 'short' })} {currentYear} vs {currentYear - 1}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Bailment YoY chart */}
+          <div className="lg:col-span-3 rounded-xl border border-zinc-800 bg-[#111] p-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+                Bailment — Year over Year
+              </h3>
+              <div className="flex items-center gap-5 text-[10px] text-zinc-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: GOLD }} />
+                  {y0}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-5 h-0 border-t-2 border-dashed border-slate-500" />
+                  {y1}
+                </span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={bailmentYoy} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tickFormatter={fmtDollar}
+                  tick={{ fill: '#71717a', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={52}
+                />
+                <Tooltip
+                  content={(props) => (
+                    <ChartTip
+                      active={props.active}
+                      payload={props.payload as []}
+                      label={String(props.label)}
+                      fmt={fmtDollar}
+                    />
+                  )}
+                />
+                <Bar dataKey={y0} name={y0} fill={GOLD} fillOpacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={30} isAnimationActive={false} />
+                <Line dataKey={y1} name={y1} stroke="#64748b" strokeWidth={2} dot={false} strokeDasharray="5 3" connectNulls isAnimationActive={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

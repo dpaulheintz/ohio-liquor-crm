@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { SalesDashboardData, AccountGroupData } from '@/app/actions/sales-dashboard';
+import type { SalesDashboardData, AccountGroupData, BailmentRow } from '@/app/actions/sales-dashboard';
 import { SectionRevenue } from './section-revenue';
 import { SectionWholesale } from './section-wholesale';
 import { SectionRetail } from './section-retail';
@@ -211,9 +211,10 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const {
     monthly, products: _products, skuMonthly, splitRows,
     wholesaleFull, accountGroups,
-    agencySkuMonthly, wholesaleSplit: _wholesaleSplit, lastUpdated,
+    agencySkuMonthly, wholesaleSplit: _wholesaleSplit, bailmentMonthly, lastUpdated,
   } = data;
-  void _products; // available but we pass to child sections as needed
+  void _products;        // available but we pass to child sections as needed
+  void _wholesaleSplit;  // retained in SalesDashboardData for compat
 
   // ── Filter state ─────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
@@ -371,6 +372,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           <SectionRevenue
             monthly={monthly}
             splitRows={splitRows}
+            bailmentMonthly={bailmentMonthly}
             selectedFamilies={selectedFamilies}
             channel={channel}
             dateFrom={dateFrom}
