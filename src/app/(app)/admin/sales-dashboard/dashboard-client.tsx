@@ -9,7 +9,6 @@ import { SectionHbLocations } from './section-hb-locations';
 import { SectionHbWholesale } from './section-hb-wholesale';
 import { SectionSkuTable } from './section-sku-table';
 import { SectionBreweries } from './section-breweries';
-import { SkuLeaderboard } from './sku-leaderboard';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
 import { HotAccounts, type HotAccount } from './hot-accounts';
@@ -212,7 +211,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const {
     monthly, products: _products, skuMonthly, splitRows,
     wholesaleFull, accountGroups,
-    agencySkuMonthly, wholesaleSplit, lastUpdated,
+    agencySkuMonthly, wholesaleSplit: _wholesaleSplit, lastUpdated,
   } = data;
   void _products; // available but we pass to child sections as needed
 
@@ -372,7 +371,6 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           <SectionRevenue
             monthly={monthly}
             splitRows={splitRows}
-            wholesaleSplit={wholesaleSplit}
             selectedFamilies={selectedFamilies}
             channel={channel}
             dateFrom={dateFrom}
@@ -475,21 +473,6 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
             dateFrom={dateFrom}
             dateTo={dateTo}
           />
-        </section>
-
-        {/* ── SKU Leaderboard ─────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader title="SKU Leaderboard" subtitle="All individual SKUs ranked by volume or revenue, with sparklines and export" />
-          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
-            <SkuLeaderboard
-              skuMonthly={skuMonthly}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              selectedFamilies={selectedFamilies}
-              channel={channel}
-              maxMonth={maxMonth}
-            />
-          </div>
         </section>
 
         {/* ── Retail vs Wholesale Split ────────────────────────────────────── */}

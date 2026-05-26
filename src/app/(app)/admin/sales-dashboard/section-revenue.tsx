@@ -15,7 +15,7 @@ import {
   Cell,
   LineChart,
 } from 'recharts';
-import type { MonthlyRow, SplitRow, WholesaleSplitRow } from '@/app/actions/sales-dashboard';
+import type { MonthlyRow, SplitRow } from '@/app/actions/sales-dashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,7 +105,6 @@ function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?:
 export interface SectionRevenueProps {
   monthly: MonthlyRow[];
   splitRows: SplitRow[];
-  wholesaleSplit: WholesaleSplitRow[];
   selectedFamilies: string[];
   channel: Channel;
   dateFrom: string;
@@ -118,7 +117,7 @@ export interface SectionRevenueProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SectionRevenue({
-  monthly, splitRows, wholesaleSplit, selectedFamilies, channel, dateFrom, dateTo,
+  monthly, splitRows, selectedFamilies, channel, dateFrom, dateTo,
   currentYear, maxCurrentYearMonth, lastUpdated,
 }: SectionRevenueProps) {
   const inFam = (bf: string) => selectedFamilies.length === 0 || selectedFamilies.includes(bf);
@@ -240,19 +239,6 @@ export function SectionRevenue({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitRows, selectedFamilies, dateFrom, dateTo]);
 
-  // Donut C: Wholesale — HB bar sales vs external accounts
-  const wholesaleHbDonut = useMemo(() => {
-    let hb = 0, outside = 0;
-    for (const r of wholesaleSplit) {
-      if (r.month < dateFrom || r.month > dateTo) continue;
-      hb      += r.hb_amount;
-      outside += r.outside_amount;
-    }
-    return [
-      { name: 'HB Bar',            value: hb,      color: GOLD },
-      { name: 'External Accounts', value: outside,  color: '#22c55e' },
-    ].filter(d => d.value > 0);
-  }, [wholesaleSplit, dateFrom, dateTo]);
 
   const y0 = String(currentYear);
   const y1 = String(currentYear - 1);
@@ -461,11 +447,10 @@ export function SectionRevenue({
       </div>
 
       {/* Revenue split donuts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {[
           { title: 'Wholesale vs Retail', data: channelSplitDonut },
           { title: 'Retail — HB vs Outside', data: retailHbDonut },
-          { title: 'Wholesale — HB Bar vs Outside', data: wholesaleHbDonut },
         ].map(({ title, data }) => {
           const total = data.reduce((s, d) => s + d.value, 0);
           return (
