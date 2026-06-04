@@ -91,7 +91,11 @@ async function syncMenus(location: Location): Promise<number> {
     return 0;
   }
 
-  const rows = flat.map((item) => ({
+  // Deduplicate by toast_guid (same item can appear in multiple menus)
+  const deduped = new Map<string, typeof flat[0]>();
+  for (const item of flat) deduped.set(item.guid, item);
+
+  const rows = [...deduped.values()].map((item) => ({
     location_id: location.id,
     toast_guid: item.guid,
     name: item.name,
