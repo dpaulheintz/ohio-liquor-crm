@@ -106,11 +106,21 @@ async function syncMenus(location: Location): Promise<number> {
   }));
 
   let count = 0;
-  for (const batch of chunk(rows, 500)) {
+  for (const batch of chunk(rows, 200)) {
     const { error } = await supabase
       .from('menu_items')
-      .upsert(batch, { onConflict: 'location_id,toast_guid' });
-    if (error) throw new Error(`Menu upsert failed: ${error.message}`);
+      .upsert(batch, { onConflict: 'location_id,toast_guid', ignoreDuplicates: false });
+    if (error) {
+      console.error(`[${location.name}] Menu upsert error (batch of ${batch.length}): ${error.message}`);
+      // Fall back to one-by-one inserts
+      for (const row of batch) {
+        const { error: singleErr } = await supabase
+          .from('menu_items')
+          .upsert(row, { onConflict: 'location_id,toast_guid' });
+        if (!singleErr) count++;
+      }
+      continue;
+    }
     count += batch.length;
   }
 
