@@ -261,8 +261,8 @@ async function syncOrders(
     // Upsert daily_item_sales — create menu_items from order data on the fly
     for (const [bizDate, items] of itemsByDate.entries()) {
       for (const [toastGuid, agg] of items.entries()) {
-        // Ensure the menu item exists (upsert from order data)
-        const { data: menuItem, error: miErr } = await supabase
+        // Ensure the menu item exists (insert-or-update from order data)
+        await supabase
           .from('menu_items')
           .upsert(
             {
@@ -271,15 +271,18 @@ async function syncOrders(
               name: agg.display_name,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: 'location_id,toast_guid' }
-          )
-          .select('id')
-          .single();
+            { onConflict: 'location_id,toast_guid', ignoreDuplicates: false }
+          );
 
-        if (miErr || !menuItem) {
-          console.error(`[${location.name}] menu_item upsert error for ${toastGuid}:`, miErr?.message);
-          continue;
-        }
+        // Look up the ID (separate query — upsert .select() is unreliable on conflict)
+        const { data: menuItem } = await supabase
+          .from('menu_items')
+          .select('id')
+          .eq('location_id', location.id)
+          .eq('toast_guid', toastGuid)
+          .maybeSingle();
+
+        if (!menuItem) continue;
 
         const { error } = await supabase
           .from('daily_item_sales')
