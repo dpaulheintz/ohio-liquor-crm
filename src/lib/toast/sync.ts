@@ -83,7 +83,15 @@ async function getActiveLocations(): Promise<Location[]> {
 
 async function syncMenus(location: Location): Promise<number> {
   const supabase = createAdminClient();
-  const menus = await fetchMenus(location.toast_guid);
+  const raw = await fetchMenus(location.toast_guid);
+
+  // Toast may return an array directly or an object wrapping an array
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const menus: any[] = Array.isArray(raw) ? raw : (raw as any)?.menus ?? (raw as any)?.data ?? [raw];
+  if (!Array.isArray(menus)) {
+    console.error(`[${location.name}] Menus: unexpected response shape:`, JSON.stringify(raw).slice(0, 500));
+    return 0;
+  }
 
   // Flatten the menu tree into individual items
   const items: {
@@ -97,15 +105,20 @@ async function syncMenus(location: Location): Promise<number> {
   }[] = [];
 
   for (const menu of menus) {
-    for (const group of menu.groups ?? []) {
-      for (const item of group.items ?? []) {
+    // Handle both "groups" and "menuGroups" field names
+    const groups = menu.groups ?? menu.menuGroups ?? [];
+    for (const group of groups) {
+      // Handle both "items" and "menuItems" field names
+      const groupItems = group.items ?? group.menuItems ?? [];
+      for (const item of groupItems) {
+        if (!item.guid) continue;
         items.push({
           location_id: location.id,
           toast_guid: item.guid,
-          name: item.name,
-          category: menu.name,
-          menu_group: group.name,
-          current_price: item.price,
+          name: item.name ?? item.displayName ?? 'Unknown',
+          category: menu.name ?? 'Uncategorized',
+          menu_group: group.name ?? 'Ungrouped',
+          current_price: item.price ?? null,
           updated_at: new Date().toISOString(),
         });
       }
