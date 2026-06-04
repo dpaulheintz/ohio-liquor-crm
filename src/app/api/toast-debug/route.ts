@@ -18,13 +18,21 @@ export async function GET(request: NextRequest) {
   const endpoint = sp.get('endpoint') ?? '/menus/v2/menus';
   const restaurant = sp.get('restaurant') ?? 'b5d9fdc1-ae0c-43d1-b7b8-ef097ff7b546'; // Grandview default
 
+  // Collect extra params to pass through
+  const extraParams: Record<string, string> = {};
+  for (const [k, v] of sp.entries()) {
+    if (k !== 'endpoint' && k !== 'restaurant') extraParams[k] = v;
+  }
+
   try {
     // Test auth first
     const token = await getToastToken();
     const tokenPreview = `${token.slice(0, 15)}...${token.slice(-8)}`;
 
-    // Make the raw call
-    const raw = await toastGet<unknown>(endpoint, restaurant);
+    // Make the raw call with extra params
+    const raw = Object.keys(extraParams).length > 0
+      ? await toastGet<unknown>(endpoint, restaurant, extraParams)
+      : await toastGet<unknown>(endpoint, restaurant);
 
     // Inspect shape
     const shape = {
