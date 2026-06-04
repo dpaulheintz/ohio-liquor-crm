@@ -21,9 +21,9 @@ import {
   fetchOrders,
   fetchTimeEntries,
   fetchMenus,
+  flattenMenuItems,
   type ToastOrder,
   type ToastTimeEntry,
-  type ToastMenu,
 } from './client';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,52 +84,25 @@ async function getActiveLocations(): Promise<Location[]> {
 async function syncMenus(location: Location): Promise<number> {
   const supabase = createAdminClient();
   const raw = await fetchMenus(location.toast_guid);
+  const flat = flattenMenuItems(raw);
 
-  // Toast may return an array directly or an object wrapping an array
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const menus: any[] = Array.isArray(raw) ? raw : (raw as any)?.menus ?? (raw as any)?.data ?? [raw];
-  if (!Array.isArray(menus)) {
-    console.error(`[${location.name}] Menus: unexpected response shape:`, JSON.stringify(raw).slice(0, 500));
+  if (flat.length === 0) {
+    console.warn(`[${location.name}] Menus: 0 items extracted. Raw shape: ${JSON.stringify(raw).slice(0, 300)}`);
     return 0;
   }
 
-  // Flatten the menu tree into individual items
-  const items: {
-    location_id: string;
-    toast_guid: string;
-    name: string;
-    category: string;
-    menu_group: string;
-    current_price: number | null;
-    updated_at: string;
-  }[] = [];
+  const rows = flat.map((item) => ({
+    location_id: location.id,
+    toast_guid: item.guid,
+    name: item.name,
+    category: item.menuName,
+    menu_group: item.groupName,
+    current_price: item.price,
+    updated_at: new Date().toISOString(),
+  }));
 
-  for (const menu of menus) {
-    // Handle both "groups" and "menuGroups" field names
-    const groups = menu.groups ?? menu.menuGroups ?? [];
-    for (const group of groups) {
-      // Handle both "items" and "menuItems" field names
-      const groupItems = group.items ?? group.menuItems ?? [];
-      for (const item of groupItems) {
-        if (!item.guid) continue;
-        items.push({
-          location_id: location.id,
-          toast_guid: item.guid,
-          name: item.name ?? item.displayName ?? 'Unknown',
-          category: menu.name ?? 'Uncategorized',
-          menu_group: group.name ?? 'Ungrouped',
-          current_price: item.price ?? null,
-          updated_at: new Date().toISOString(),
-        });
-      }
-    }
-  }
-
-  if (items.length === 0) return 0;
-
-  // Upsert in batches (Supabase has payload limits)
   let count = 0;
-  for (const batch of chunk(items, 500)) {
+  for (const batch of chunk(rows, 500)) {
     const { error } = await supabase
       .from('menu_items')
       .upsert(batch, { onConflict: 'location_id,toast_guid' });

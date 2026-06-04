@@ -272,13 +272,55 @@ export interface ToastMenuItem {
 
 /**
  * Fetch the full resolved menu tree for a restaurant.
- * Returns all menus with nested groups and items in one call.
+ * Returns the raw API response — caller must handle shape.
  */
-export async function fetchMenus(
-  restaurantId: string
-): Promise<ToastMenu[]> {
-  return toastGet<ToastMenu[]>(
-    '/menus/v2/menus',
-    restaurantId
-  );
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchMenus(restaurantId: string): Promise<any> {
+  return toastGet<unknown>('/menus/v2/menus', restaurantId);
+}
+
+/**
+ * Flatten whatever Toast returns into a flat list of menu items.
+ * Handles: array of menus, single menu object, or nested structures.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function flattenMenuItems(raw: any): { guid: string; name: string; price: number | null; menuName: string; groupName: string }[] {
+  const results: { guid: string; name: string; price: number | null; menuName: string; groupName: string }[] = [];
+
+  // Normalize to array
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let menus: any[];
+  if (Array.isArray(raw)) {
+    menus = raw;
+  } else if (raw && typeof raw === 'object') {
+    // Could be { menus: [...] } or a single menu object
+    menus = raw.menus ?? raw.data ?? [raw];
+  } else {
+    return results;
+  }
+
+  for (const menu of menus) {
+    const menuName = menu.name ?? 'Uncategorized';
+    const groups = menu.groups ?? menu.menuGroups ?? [];
+    if (!Array.isArray(groups)) continue;
+
+    for (const group of groups) {
+      const groupName = group.name ?? 'Ungrouped';
+      const items = group.items ?? group.menuItems ?? [];
+      if (!Array.isArray(items)) continue;
+
+      for (const item of items) {
+        if (!item.guid) continue;
+        results.push({
+          guid: item.guid,
+          name: item.name ?? item.displayName ?? 'Unknown',
+          price: item.price ?? null,
+          menuName,
+          groupName,
+        });
+      }
+    }
+  }
+
+  return results;
 }
