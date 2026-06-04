@@ -385,14 +385,36 @@ export interface SyncResult {
   errors: string[];
 }
 
-export async function runSync(mode: 'daily' | 'backfill'): Promise<SyncResult[]> {
-  const locations = await getActiveLocations();
+export interface SyncOptions {
+  mode: 'daily' | 'backfill';
+  /** Filter to a single location name (e.g. "Grandview") */
+  locationFilter?: string;
+  /** Override start date (YYYY-MM-DD). Only used when mode=backfill. */
+  startDate?: string;
+  /** Override end date (YYYY-MM-DD). Only used when mode=backfill. */
+  endDate?: string;
+}
+
+export async function runSync(opts: SyncOptions): Promise<SyncResult[]> {
+  let locations = await getActiveLocations();
   const results: SyncResult[] = [];
+
+  // Optional location filter
+  if (opts.locationFilter) {
+    locations = locations.filter(
+      (l) => l.name.toLowerCase() === opts.locationFilter!.toLowerCase()
+    );
+    if (locations.length === 0) {
+      throw new Error(`No active location found matching "${opts.locationFilter}"`);
+    }
+  }
 
   // Determine date range
   let dates: string[];
-  if (mode === 'backfill') {
-    dates = dateRange('2024-01-01', new Date().toISOString().slice(0, 10));
+  if (opts.mode === 'backfill') {
+    const start = opts.startDate ?? '2024-01-01';
+    const end = opts.endDate ?? new Date().toISOString().slice(0, 10);
+    dates = dateRange(start, end);
   } else {
     // Daily mode: yesterday
     const yesterday = new Date();
@@ -401,7 +423,7 @@ export async function runSync(mode: 'daily' | 'backfill'): Promise<SyncResult[]>
     dates = [yd];
   }
 
-  console.log(`[Toast Sync] Mode: ${mode}, dates: ${dates[0]} → ${dates[dates.length - 1]} (${dates.length} days), ${locations.length} locations`);
+  console.log(`[Toast Sync] Mode: ${opts.mode}, dates: ${dates[0]} → ${dates[dates.length - 1]} (${dates.length} days), ${locations.length} locations`);
 
   for (const location of locations) {
     console.log(`\n[${location.name}] Starting sync...`);
@@ -458,7 +480,7 @@ export async function runSync(mode: 'daily' | 'backfill'): Promise<SyncResult[]>
 
   await writeSyncLog(
     'toast',
-    mode,
+    opts.mode,
     hasErrors ? 'partial' : 'success',
     totalRows,
     summary

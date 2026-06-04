@@ -2,21 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runSync } from '@/lib/toast/sync';
 
 /**
- * POST /api/toast-sync?mode=daily|backfill
+ * POST /api/toast-sync
  *
  * Triggers a Toast → Supabase sync.
- * Protected by a shared secret in the `Authorization` header
- * to prevent unauthorized triggering.
- *
- * Headers:
- *   Authorization: Bearer <CRON_SECRET>
+ * Protected by a shared secret in the `Authorization` header.
  *
  * Query params:
- *   mode: "daily" (default) or "backfill"
+ *   mode       — "daily" (default) or "backfill"
+ *   location   — filter to a single location name (e.g. "Grandview")
+ *   startDate  — override backfill start (YYYY-MM-DD)
+ *   endDate    — override backfill end (YYYY-MM-DD)
  *
- * Usage:
- *   curl -X POST "https://your-app.vercel.app/api/toast-sync?mode=daily" \
+ * Examples:
+ *   # Daily sync (yesterday, all locations)
+ *   curl -X POST ".../api/toast-sync" -H "Authorization: Bearer $CRON_SECRET"
+ *
+ *   # Test: one location, one week
+ *   curl -X POST ".../api/toast-sync?mode=backfill&location=Grandview&startDate=2024-01-01&endDate=2024-01-07" \
  *     -H "Authorization: Bearer $CRON_SECRET"
+ *
+ *   # Full backfill
+ *   curl -X POST ".../api/toast-sync?mode=backfill" -H "Authorization: Bearer $CRON_SECRET"
  */
 export async function POST(request: NextRequest) {
   // Verify authorization
@@ -27,11 +33,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const mode = request.nextUrl.searchParams.get('mode') === 'backfill' ? 'backfill' : 'daily';
+  const sp = request.nextUrl.searchParams;
+  const mode = sp.get('mode') === 'backfill' ? 'backfill' : 'daily';
+  const locationFilter = sp.get('location') ?? undefined;
+  const startDate = sp.get('startDate') ?? undefined;
+  const endDate = sp.get('endDate') ?? undefined;
 
   try {
-    const results = await runSync(mode);
-    return NextResponse.json({ ok: true, mode, results });
+    const results = await runSync({ mode, locationFilter, startDate, endDate });
+    return NextResponse.json({ ok: true, mode, locationFilter, startDate, endDate, results });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[toast-sync] Fatal error:', message);
