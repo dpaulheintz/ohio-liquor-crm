@@ -22,7 +22,7 @@ import {
   fetchTimeEntries,
   fetchMenus,
   flattenMenuItems,
-  toastGetAllPages,
+  toastGet,
   type ToastOrder,
   type ToastTimeEntry,
 } from './client';
@@ -222,7 +222,8 @@ async function syncOrders(
 
     let orders: ToastOrder[];
     try {
-      orders = await toastGetAllPages<ToastOrder>(
+      // Use businessDate (yyyymmdd) — Toast returns all orders for that day in one call
+      orders = await toastGet<ToastOrder[]>(
         '/orders/v2/ordersBulk',
         location.toast_guid,
         { businessDate: bizDateInt }
