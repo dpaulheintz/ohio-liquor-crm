@@ -25,11 +25,11 @@ import { runSync } from '@/lib/toast/sync';
  *   curl -X POST ".../api/toast-sync?mode=backfill" -H "Authorization: Bearer $CRON_SECRET"
  */
 export async function POST(request: NextRequest) {
-  // Verify authorization
+  // Verify authorization (skip if SYNC_SECRET is not configured)
   const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
+  const syncSecret = process.env.SYNC_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (syncSecret && authHeader !== `Bearer ${syncSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

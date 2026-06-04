@@ -8,9 +8,9 @@ import { getToastToken, toastGet } from '@/lib/toast/client';
  * Shows the first 5000 chars to inspect response shapes.
  */
 export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
+  const syncSecret = process.env.SYNC_SECRET;
   const authHeader = request.headers.get('authorization');
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (syncSecret && authHeader !== `Bearer ${syncSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
