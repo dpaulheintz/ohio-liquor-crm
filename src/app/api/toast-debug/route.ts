@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       isArray: Array.isArray(raw),
       topKeys: raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.keys(raw as Record<string, unknown>) : null,
       arrayLength: Array.isArray(raw) ? (raw as unknown[]).length : null,
-      preview: JSON.stringify(raw).slice(0, 5000),
+      preview: JSON.stringify(raw).slice(0, 15000),
     };
 
     return NextResponse.json({ ok: true, tokenPreview, endpoint, restaurant, shape });
