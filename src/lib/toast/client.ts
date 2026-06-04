@@ -184,12 +184,14 @@ export interface ToastCheck {
 
 export interface ToastSelection {
   guid: string;
-  itemGuid: string | null;  // reference to menu item
+  item: { guid: string; entityType: string } | null;  // nested menu item reference
   displayName: string;
   quantity: number;
   price: number;
   voided: boolean;
   deselected: boolean;
+  salesCategory: { name: string; guid: string } | null;
+  selectionType: string | null;
 }
 
 export interface ToastAppliedDiscount {

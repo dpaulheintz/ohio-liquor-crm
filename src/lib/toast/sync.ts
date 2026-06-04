@@ -184,10 +184,10 @@ function aggregateOrders(orders: ToastOrder[]): {
       // F&B revenue = subtotal (before tax); retail tracked separately if tagged
       day.fnb_revenue += check.amount ?? 0;
 
-      // Item-level aggregation
+      // Item-level aggregation — extract guid from nested item reference
       for (const sel of check.selections ?? []) {
         if (sel.voided || sel.deselected) continue;
-        const itemGuid = sel.itemGuid;
+        const itemGuid = sel.item?.guid;
         if (!itemGuid) continue;
 
         const existing = dayItems.get(itemGuid) ?? {
@@ -258,18 +258,28 @@ async function syncOrders(
       else salesRows++;
     }
 
-    // Upsert daily_item_sales — need to resolve menu_item_id from toast_guid
+    // Upsert daily_item_sales — create menu_items from order data on the fly
     for (const [bizDate, items] of itemsByDate.entries()) {
       for (const [toastGuid, agg] of items.entries()) {
-        // Look up the menu_item id by toast_guid + location
-        const { data: menuItem } = await supabase
+        // Ensure the menu item exists (upsert from order data)
+        const { data: menuItem, error: miErr } = await supabase
           .from('menu_items')
+          .upsert(
+            {
+              location_id: location.id,
+              toast_guid: toastGuid,
+              name: agg.display_name,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'location_id,toast_guid' }
+          )
           .select('id')
-          .eq('location_id', location.id)
-          .eq('toast_guid', toastGuid)
-          .maybeSingle();
+          .single();
 
-        if (!menuItem) continue; // skip items not in our menu_items table
+        if (miErr || !menuItem) {
+          console.error(`[${location.name}] menu_item upsert error for ${toastGuid}:`, miErr?.message);
+          continue;
+        }
 
         const { error } = await supabase
           .from('daily_item_sales')
@@ -315,7 +325,13 @@ async function syncLabor(
     try {
       entries = await fetchTimeEntries(location.toast_guid, startDate, endDate);
     } catch (err) {
-      console.error(`[${location.name}] Labor fetch failed for ${window[0]}–${window[window.length - 1]}:`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      // 403 = no labor API access — skip gracefully, don't retry
+      if (msg.includes('403')) {
+        console.warn(`[${location.name}] Labor API: 403 Forbidden — skipping (no labor scope on API credentials)`);
+        return updated;
+      }
+      console.error(`[${location.name}] Labor fetch failed for ${window[0]}–${window[window.length - 1]}:`, msg);
       continue;
     }
 
