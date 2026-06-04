@@ -22,6 +22,7 @@ import {
   fetchTimeEntries,
   fetchMenus,
   flattenMenuItems,
+  toastGetAllPages,
   type ToastOrder,
   type ToastTimeEntry,
 } from './client';
@@ -216,18 +217,22 @@ async function syncOrders(
   // Process in day-sized chunks to keep API calls manageable
   // Toast orders endpoint uses modification timestamps, so we query day by day
   for (const dateStr of dates) {
-    const startDate = `${dateStr}T00:00:00.000+0000`;
-    const endDate = `${dateStr}T23:59:59.999+0000`;
+    // Use businessDate param (yyyymmdd) — simpler and avoids timezone encoding issues
+    const bizDateInt = dateStr.replace(/-/g, '');
 
     let orders: ToastOrder[];
     try {
-      orders = await fetchOrders(location.toast_guid, startDate, endDate);
+      orders = await toastGetAllPages<ToastOrder>(
+        '/orders/v2/ordersBulk',
+        location.toast_guid,
+        { businessDate: bizDateInt }
+      );
     } catch (err) {
       console.error(`[${location.name}] Orders fetch failed for ${dateStr}:`, err);
       continue;
     }
 
-    if (orders.length === 0) continue;
+    if (!Array.isArray(orders) || orders.length === 0) continue;
 
     const { byDate, itemsByDate } = aggregateOrders(orders);
 
@@ -302,8 +307,8 @@ async function syncLabor(
   const windows = chunk(dates, 28);
 
   for (const window of windows) {
-    const startDate = `${window[0]}T00:00:00.000+0000`;
-    const endDate = `${window[window.length - 1]}T23:59:59.999+0000`;
+    const startDate = `${window[0]}T00:00:00.000Z`;
+    const endDate = `${window[window.length - 1]}T23:59:59.999Z`;
 
     let entries: ToastTimeEntry[];
     try {
