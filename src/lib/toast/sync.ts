@@ -363,16 +363,10 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
       result.errors.push(`Metrics ${chunk.start}: ${msg}`);
     }
 
-    // 2. Labor
-    try {
-      const n = await syncLabor(locations, chunk.start, chunk.end);
-      result.laborUpdates += n;
-      console.log(`    Labor: ${n} updates`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`    Labor error: ${msg}`);
-      result.errors.push(`Labor ${chunk.start}: ${msg}`);
-    }
+    // 2. Labor — skipped: labor data comes inline from the metrics report
+    //    (hourlyJobTotalHours, hourlyJobTotalPay fields)
+    //    The separate /era/v1/labor endpoint requires additional permissions.
+    console.log(`    Labor: included in metrics (${result.metricsRows} rows have labor data)`);
 
     // 3. Menu item sales
     try {

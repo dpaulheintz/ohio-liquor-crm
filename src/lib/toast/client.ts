@@ -250,13 +250,13 @@ export async function fetchLabor(
   );
 }
 
-// ── Menu (item-level sales) ───────────────────────────────────────────────────
+// ── Menu item sales (via Analytics menu report) ───────────────────────────────
 
 export interface MenuItemRow {
   restaurantGuid: string;
   businessDate: string;
-  menuItemGuid: string;
-  menuItemName: string;
+  menuItemGuid?: string;
+  menuItemName?: string;
   menuGroupGuid?: string;
   menuGroupName?: string;
   quantitySold: number;
@@ -270,16 +270,125 @@ export async function fetchMenuItemSales(
   startDate: string,
   endDate: string
 ): Promise<MenuItemRow[]> {
-  const body: ReportRequest = {
-    startBusinessDate: toToastDate(startDate),
-    endBusinessDate: toToastDate(endDate),
-    restaurantIds,
-    excludedRestaurantIds: [],
-    groupBy: ['MENU_ITEM'],
-  };
-  return requestAndPollReport<MenuItemRow[]>(
-    '/era/v1/menu',
-    '/era/v1/menu',
-    body
-  );
+  // Try with MENU_ITEM groupBy first
+  try {
+    const body: ReportRequest = {
+      startBusinessDate: toToastDate(startDate),
+      endBusinessDate: toToastDate(endDate),
+      restaurantIds,
+      excludedRestaurantIds: [],
+      groupBy: ['MENU_ITEM'],
+    };
+    return await requestAndPollReport<MenuItemRow[]>(
+      '/era/v1/menu',
+      '/era/v1/menu',
+      body
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // If groupBy not supported, fall back to orders API for item data
+    if (msg.includes('groupBy') || msg.includes('400')) {
+      console.warn('Menu report groupBy not supported — falling back to orders API');
+      return fetchItemsFromOrders(restaurantIds, startDate, endDate);
+    }
+    throw err;
+  }
+}
+
+// ── Fallback: extract item sales from Standard API orders ─────────────────────
+
+interface ToastOrderSelection {
+  item: { guid: string } | null;
+  displayName: string;
+  quantity: number;
+  price: number;
+  voided: boolean;
+  deselected: boolean;
+}
+
+interface ToastOrderCheck {
+  totalAmount: number;
+  selections: ToastOrderSelection[];
+  voided: boolean;
+  deleted: boolean;
+}
+
+interface ToastOrderBulk {
+  businessDate: number;
+  checks: ToastOrderCheck[];
+  voided: boolean;
+  deleted: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+async function fetchItemsFromOrders(
+  restaurantIds: string[],
+  startDate: string,
+  endDate: string
+): Promise<MenuItemRow[]> {
+  const results: MenuItemRow[] = [];
+  const dates: string[] = [];
+
+  // Generate date list
+  const d = new Date(startDate + 'T00:00:00');
+  const ed = new Date(endDate + 'T00:00:00');
+  while (d <= ed) {
+    dates.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+
+  for (const restaurantId of restaurantIds) {
+    for (const dateStr of dates) {
+      const bizDate = dateStr.replace(/-/g, '');
+      let orders: ToastOrderBulk[];
+      try {
+        orders = await toastGet<ToastOrderBulk[]>(
+          '/orders/v2/ordersBulk',
+          restaurantId,
+          { businessDate: bizDate }
+        );
+      } catch {
+        continue;
+      }
+
+      if (!Array.isArray(orders) || orders.length === 0) continue;
+
+      // Aggregate items for this day
+      const dayItems = new Map<string, { name: string; qty: number; rev: number }>();
+      for (const order of orders) {
+        if (order.voided || order.deleted) continue;
+        for (const check of order.checks ?? []) {
+          if (check.voided || check.deleted) continue;
+          for (const sel of check.selections ?? []) {
+            if (sel.voided || sel.deselected) continue;
+            const guid = sel.item?.guid;
+            if (!guid) continue;
+            const e = dayItems.get(guid) ?? { name: sel.displayName ?? 'Unknown', qty: 0, rev: 0 };
+            e.qty += sel.quantity ?? 1;
+            e.rev += sel.price ?? 0;
+            dayItems.set(guid, e);
+          }
+        }
+      }
+
+      for (const [guid, agg] of dayItems) {
+        results.push({
+          restaurantGuid: restaurantId,
+          businessDate: bizDate,
+          menuItemGuid: guid,
+          menuItemName: agg.name,
+          quantitySold: agg.qty,
+          grossSalesAmount: agg.rev,
+          netSalesAmount: agg.rev,
+          discountAmount: 0,
+        });
+      }
+
+      // Brief rate-limit pause
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
+  return results;
 }
