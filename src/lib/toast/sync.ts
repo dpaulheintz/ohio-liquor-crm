@@ -260,6 +260,8 @@ export interface SyncOptions {
   locationFilter?: string;
   startDate?: string;
   endDate?: string;
+  /** Run only a specific step: "metrics", "items", or "all" (default) */
+  step?: 'metrics' | 'items' | 'all';
 }
 
 export async function runSync(opts: SyncOptions): Promise<SyncResult> {
@@ -285,7 +287,8 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     start = end = yesterday.toISOString().slice(0, 10);
   }
 
-  console.log(`[Toast Sync] Mode: ${opts.mode}, ${start} → ${end}, locations: ${locations.map(l => l.name).join(', ')}`);
+  const step = opts.step ?? 'all';
+  console.log(`[Toast Sync] Mode: ${opts.mode}, step: ${step}, ${start} → ${end}, locations: ${locations.map(l => l.name).join(', ')}`);
 
   const result: SyncResult = {
     locations: locations.map((l) => l.name),
@@ -297,42 +300,40 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     errors: [],
   };
 
-  // Analytics API supports multi-day + multi-location in one call.
   // Chunk into 7-day windows to stay within Vercel timeout (~60s).
   const chunks = chunkDateRange(start, end, 7);
 
   for (const chunk of chunks) {
     console.log(`  Processing ${chunk.start} → ${chunk.end}...`);
 
-    // 1. Metrics (sales)
-    try {
-      const n = await syncMetrics(locations, chunk.start, chunk.end);
-      result.metricsRows += n;
-      console.log(`    Metrics: ${n} rows`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`    Metrics error: ${msg}`);
-      result.errors.push(`Metrics ${chunk.start}: ${msg}`);
+    // 1. Metrics + labor (Analytics API — one call gets both)
+    if (step === 'all' || step === 'metrics') {
+      try {
+        const n = await syncMetrics(locations, chunk.start, chunk.end);
+        result.metricsRows += n;
+        console.log(`    Metrics: ${n} rows (includes labor)`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`    Metrics error: ${msg}`);
+        result.errors.push(`Metrics ${chunk.start}: ${msg}`);
+      }
     }
 
-    // 2. Labor — skipped: labor data comes inline from the metrics report
-    //    (hourlyJobTotalHours, hourlyJobTotalPay fields)
-    //    The separate /era/v1/labor endpoint requires additional permissions.
-    console.log(`    Labor: included in metrics (${result.metricsRows} rows have labor data)`);
-
-    // 3. Item sales (from orders API — Analytics menu endpoint lacks groupBy support)
-    try {
-      const { menuItems, itemSales } = await syncItemSales(locations, chunk.start, chunk.end);
-      result.menuItems += menuItems;
-      result.itemSalesRows += itemSales;
-      console.log(`    Items: ${menuItems} menu items, ${itemSales} daily_item_sales`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`    Items error: ${msg}`);
-      result.errors.push(`Items ${chunk.start}: ${msg}`);
+    // 2. Item sales (Standard API /orders/v2/ordersBulk — separate credentials)
+    if (step === 'all' || step === 'items') {
+      try {
+        const { menuItems, itemSales } = await syncItemSales(locations, chunk.start, chunk.end);
+        result.menuItems += menuItems;
+        result.itemSalesRows += itemSales;
+        console.log(`    Items: ${menuItems} menu items, ${itemSales} daily_item_sales`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`    Items error: ${msg}`);
+        result.errors.push(`Items ${chunk.start}: ${msg}`);
+      }
     }
 
-    await sleep(500); // rate limit between chunks
+    await sleep(500);
   }
 
   // Write sync log

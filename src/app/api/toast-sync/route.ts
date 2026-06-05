@@ -38,9 +38,11 @@ export async function POST(request: NextRequest) {
   const locationFilter = sp.get('location') ?? undefined;
   const startDate = sp.get('startDate') ?? undefined;
   const endDate = sp.get('endDate') ?? undefined;
+  const stepParam = sp.get('step');
+  const step = (stepParam === 'metrics' || stepParam === 'items') ? stepParam : 'all';
 
   try {
-    const results = await runSync({ mode, locationFilter, startDate, endDate });
+    const results = await runSync({ mode, locationFilter, startDate, endDate, step });
     return NextResponse.json({ ok: true, mode, locationFilter, startDate, endDate, results });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
