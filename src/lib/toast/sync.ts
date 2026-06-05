@@ -21,7 +21,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import {
   fetchMetrics,
-  toastGet,
+  toastGetStandard,
   type MetricsRow,
 } from './client';
 
@@ -148,7 +148,7 @@ async function syncItemSales(
       // Fetch orders for this day from Standard API
       let orders: { businessDate: number; checks: { totalAmount: number; selections: { item: { guid: string } | null; displayName: string; quantity: number; price: number; voided: boolean; deselected: boolean }[]; voided: boolean; deleted: boolean }[]; voided: boolean; deleted: boolean }[];
       try {
-        orders = await toastGet('/orders/v2/ordersBulk', location.toast_guid, { businessDate: bizDate });
+        orders = await toastGetStandard('/orders/v2/ordersBulk', location.toast_guid, { businessDate: bizDate });
       } catch {
         continue;
       }

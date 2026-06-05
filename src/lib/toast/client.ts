@@ -11,10 +11,15 @@
  *   TOAST_API_URL                 — Base URL (default: https://ws-api.toasttab.com)
  */
 
-// ─── Token cache ──────────────────────────────────────────────────────────────
+// ─── Token cache (dual: analytics + standard) ────────────────────────────────
 
-let cachedToken: string | null = null;
-let tokenExpiresAt = 0;
+interface TokenCache {
+  token: string | null;
+  expiresAt: number;
+}
+
+const analyticsCache: TokenCache = { token: null, expiresAt: 0 };
+const standardCache: TokenCache = { token: null, expiresAt: 0 };
 
 function getBaseUrl(): string {
   return process.env.TOAST_API_URL ?? 'https://ws-api.toasttab.com';
@@ -22,18 +27,13 @@ function getBaseUrl(): string {
 
 // ─── Authentication ───────────────────────────────────────────────────────────
 
-export async function getToastToken(): Promise<string> {
-  if (cachedToken && Date.now() < tokenExpiresAt - 5 * 60 * 1000) {
-    return cachedToken;
-  }
-
-  const clientId = process.env.TOAST_ANALYTICS_CLIENT_ID;
-  const clientSecret = process.env.TOAST_ANALYTICS_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error(
-      'Missing TOAST_ANALYTICS_CLIENT_ID or TOAST_ANALYTICS_CLIENT_SECRET'
-    );
+async function authenticate(
+  clientId: string,
+  clientSecret: string,
+  cache: TokenCache
+): Promise<string> {
+  if (cache.token && Date.now() < cache.expiresAt - 5 * 60 * 1000) {
+    return cache.token;
   }
 
   const res = await fetch(
@@ -60,9 +60,25 @@ export async function getToastToken(): Promise<string> {
     throw new Error(`Toast auth status: ${data.status}`);
   }
 
-  cachedToken = data.token.accessToken;
-  tokenExpiresAt = Date.now() + data.token.expiresIn * 1000;
-  return cachedToken!;
+  cache.token = data.token.accessToken;
+  cache.expiresAt = Date.now() + data.token.expiresIn * 1000;
+  return cache.token!;
+}
+
+/** Analytics API token (for /era/v1/* reports) */
+export async function getToastToken(): Promise<string> {
+  const id = process.env.TOAST_ANALYTICS_CLIENT_ID;
+  const secret = process.env.TOAST_ANALYTICS_CLIENT_SECRET;
+  if (!id || !secret) throw new Error('Missing TOAST_ANALYTICS_CLIENT_ID or TOAST_ANALYTICS_CLIENT_SECRET');
+  return authenticate(id, secret, analyticsCache);
+}
+
+/** Standard API token (for /orders/v2/*, /menus/v2/*, /labor/v1/*) */
+export async function getStandardToken(): Promise<string> {
+  const id = process.env.TOAST_CLIENT_ID;
+  const secret = process.env.TOAST_CLIENT_SECRET;
+  if (!id || !secret) throw new Error('Missing TOAST_CLIENT_ID or TOAST_CLIENT_SECRET');
+  return authenticate(id, secret, standardCache);
 }
 
 // ─── Low-level helpers ────────────────────────────────────────────────────────
@@ -84,6 +100,7 @@ async function toastPost<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** GET using Analytics API credentials */
 export async function toastGet<T>(
   path: string,
   restaurantId?: string,
@@ -107,6 +124,34 @@ export async function toastGet<T>(
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Toast GET ${path} failed (${res.status}): ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** GET using Standard API credentials (for /orders/v2/*, /menus/v2/*) */
+export async function toastGetStandard<T>(
+  path: string,
+  restaurantId: string,
+  params?: Record<string, string>
+): Promise<T> {
+  const token = await getStandardToken();
+  const url = new URL(path, getBaseUrl());
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+  }
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Toast-Restaurant-External-ID': restaurantId,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Toast Standard GET ${path} failed (${res.status}): ${text}`);
   }
   return res.json() as Promise<T>;
 }
