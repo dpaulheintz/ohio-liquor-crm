@@ -188,40 +188,32 @@ async function syncItemSales(
           .upsert(row, { onConflict: 'location_id,toast_guid' });
       }
 
-      // Fetch all menu_item IDs for this location in one query
-      const guids = [...dayItems.keys()];
-      const { data: miRows } = await supabase
-        .from('menu_items')
-        .select('id, toast_guid')
-        .eq('location_id', location.id)
-        .in('toast_guid', guids);
-
-      if (!miRows || miRows.length === 0) continue;
-
-      const guidToMiId = new Map(miRows.map((r) => [r.toast_guid, r.id]));
       menuItemCount += menuRows.length;
 
-      // Batch upsert daily_item_sales
-      const itemSalesRows = [...dayItems.entries()]
-        .map(([guid, agg]) => {
-          const miId = guidToMiId.get(guid);
-          if (!miId) return null;
-          return {
-            location_id: location.id,
-            menu_item_id: miId,
-            business_date: dateStr,
-            quantity_sold: agg.qty,
-            gross_revenue: agg.rev,
-          };
-        })
-        .filter(Boolean);
+      // Upsert daily_item_sales — individual lookups + upserts
+      for (const [guid, agg] of dayItems) {
+        const { data: mi } = await supabase
+          .from('menu_items')
+          .select('id')
+          .eq('location_id', location.id)
+          .eq('toast_guid', guid)
+          .maybeSingle();
+        if (!mi) continue;
 
-      if (itemSalesRows.length > 0) {
         const { error } = await supabase
           .from('daily_item_sales')
-          .upsert(itemSalesRows, { onConflict: 'location_id,menu_item_id,business_date' });
-        if (error) console.error(`daily_item_sales batch upsert error:`, error.message);
-        else itemSalesCount += itemSalesRows.length;
+          .upsert(
+            {
+              location_id: location.id,
+              menu_item_id: mi.id,
+              business_date: dateStr,
+              quantity_sold: agg.qty,
+              gross_revenue: agg.rev,
+            },
+            { onConflict: 'location_id,menu_item_id,business_date' }
+          );
+        if (error) console.error(`daily_item_sales upsert error for ${guid}:`, error.message);
+        else itemSalesCount++;
       }
 
       // Rate limit
