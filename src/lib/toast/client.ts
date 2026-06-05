@@ -1,328 +1,285 @@
 /**
- * Toast Standard API Client
+ * Toast Analytics API Client
  *
- * Handles OAuth client-credentials authentication and provides typed
- * methods for the Orders, Labor, and Menus endpoints.
+ * Uses the async report pattern:
+ *   1. POST to create a report request → reportRequestGuid
+ *   2. GET to poll until 200 (data ready) or timeout
  *
- * Environment variables required:
- *   TOAST_CLIENT_ID        — API client identifier
- *   TOAST_CLIENT_SECRET    — API client secret
- *   TOAST_API_URL          — Base URL (default: https://ws-api.toasttab.com)
- *
- * Each restaurant's Toast GUID must be stored in the `locations` table
- * in the `toast_guid` column.
+ * Environment variables:
+ *   TOAST_ANALYTICS_CLIENT_ID     — Analytics API client identifier
+ *   TOAST_ANALYTICS_CLIENT_SECRET — Analytics API client secret
+ *   TOAST_API_URL                 — Base URL (default: https://ws-api.toasttab.com)
  */
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface TokenResponse {
-  token: {
-    tokenType: string;
-    scope: string;
-    expiresIn: number;
-    accessToken: string;
-    idToken: string;
-    refreshToken: string;
-  };
-  status: string;
-}
 
 // ─── Token cache ──────────────────────────────────────────────────────────────
 
 let cachedToken: string | null = null;
-let tokenExpiresAt = 0; // epoch ms
-
-// ─── Core client ──────────────────────────────────────────────────────────────
+let tokenExpiresAt = 0;
 
 function getBaseUrl(): string {
   return process.env.TOAST_API_URL ?? 'https://ws-api.toasttab.com';
 }
 
-/**
- * Authenticate with Toast using OAuth 2 client-credentials grant.
- * Caches the token until 5 minutes before expiry.
- */
+// ─── Authentication ───────────────────────────────────────────────────────────
+
 export async function getToastToken(): Promise<string> {
-  // Return cached token if still valid (with 5-min buffer)
   if (cachedToken && Date.now() < tokenExpiresAt - 5 * 60 * 1000) {
     return cachedToken;
   }
 
-  const clientId = process.env.TOAST_CLIENT_ID;
-  const clientSecret = process.env.TOAST_CLIENT_SECRET;
+  const clientId = process.env.TOAST_ANALYTICS_CLIENT_ID;
+  const clientSecret = process.env.TOAST_ANALYTICS_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     throw new Error(
-      'Missing TOAST_CLIENT_ID or TOAST_CLIENT_SECRET environment variables'
+      'Missing TOAST_ANALYTICS_CLIENT_ID or TOAST_ANALYTICS_CLIENT_SECRET'
     );
   }
 
-  const url = `${getBaseUrl()}/authentication/v1/authentication/login`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      clientId,
-      clientSecret,
-      userAccessType: 'TOAST_MACHINE_CLIENT',
-    }),
-  });
+  const res = await fetch(
+    `${getBaseUrl()}/authentication/v1/authentication/login`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId,
+        clientSecret,
+        userAccessType: 'TOAST_MACHINE_CLIENT',
+      }),
+    }
+  );
 
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Toast auth failed (${res.status}): ${body}`);
   }
 
-  const data: TokenResponse = await res.json();
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json();
   if (data.status !== 'SUCCESS') {
-    throw new Error(`Toast auth returned status: ${data.status}`);
+    throw new Error(`Toast auth status: ${data.status}`);
   }
 
   cachedToken = data.token.accessToken;
   tokenExpiresAt = Date.now() + data.token.expiresIn * 1000;
-
-  return cachedToken;
+  return cachedToken!;
 }
 
-/**
- * Make an authenticated GET request to a Toast API endpoint.
- *
- * @param path         - API path (e.g. `/orders/v2/ordersBulk`)
- * @param restaurantId - Toast-Restaurant-External-ID (restaurant GUID)
- * @param params       - Query parameters
- */
+// ─── Low-level helpers ────────────────────────────────────────────────────────
+
+async function toastPost<T>(path: string, body: unknown): Promise<T> {
+  const token = await getToastToken();
+  const res = await fetch(`${getBaseUrl()}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Toast POST ${path} failed (${res.status}): ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export async function toastGet<T>(
   path: string,
-  restaurantId: string,
+  restaurantId?: string,
   params?: Record<string, string>
 ): Promise<T> {
   const token = await getToastToken();
   const url = new URL(path, getBaseUrl());
-
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);
     }
   }
-
-  const res = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Toast-Restaurant-External-ID': restaurantId,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Toast API ${path} failed (${res.status}): ${body}`);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  if (restaurantId) {
+    headers['Toast-Restaurant-External-ID'] = restaurantId;
   }
-
+  const res = await fetch(url.toString(), { method: 'GET', headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Toast GET ${path} failed (${res.status}): ${text}`);
+  }
   return res.json() as Promise<T>;
 }
 
-// ─── Paginated fetch helper ───────────────────────────────────────────────────
+// ─── Async report pattern ─────────────────────────────────────────────────────
 
 /**
- * Fetch all pages from a paginated Toast endpoint.
- * Toast uses `page` (0-indexed) and `pageSize` (max 100).
- * Returns all items concatenated.
+ * POST to create a report request, then poll GET until data is ready.
+ * Returns the parsed response body on 200.
+ * Throws on 409 (failed) or timeout.
  */
-export async function toastGetAllPages<T>(
-  path: string,
-  restaurantId: string,
-  params: Record<string, string>,
-  pageSize = 100
-): Promise<T[]> {
-  const allItems: T[] = [];
-  let page = 0;
+export async function requestAndPollReport<T>(
+  postPath: string,
+  getPathPrefix: string,
+  body: unknown,
+  maxPollMs = 30_000,
+  pollIntervalMs = 2_000
+): Promise<T> {
+  // POST → get reportRequestGuid (returned as a plain string with quotes)
+  const guidRaw = await toastPost<string>(postPath, body);
+  // Toast returns the GUID as a quoted string like "abc-123"
+  const guid = typeof guidRaw === 'string' ? guidRaw.replace(/"/g, '') : String(guidRaw);
 
-  while (true) {
-    const pageParams = { ...params, pageSize: String(pageSize), page: String(page) };
-    const batch = await toastGet<T[]>(path, restaurantId, pageParams);
-
-    if (!Array.isArray(batch) || batch.length === 0) break;
-
-    allItems.push(...batch);
-
-    // If we got fewer than pageSize, we've reached the last page
-    if (batch.length < pageSize) break;
-
-    page++;
+  if (!guid || guid.length < 10) {
+    throw new Error(`Invalid reportRequestGuid from ${postPath}: ${guid}`);
   }
 
-  return allItems;
+  // Poll GET until 200
+  const deadline = Date.now() + maxPollMs;
+  while (Date.now() < deadline) {
+    const token = await getToastToken();
+    const url = `${getBaseUrl()}${getPathPrefix}/${guid}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (res.status === 200) {
+      return res.json() as Promise<T>;
+    }
+    if (res.status === 202) {
+      // Still processing — wait and retry
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+      continue;
+    }
+    if (res.status === 409) {
+      throw new Error(`Report request failed (409) — need new request`);
+    }
+    const text = await res.text();
+    throw new Error(`Report poll ${url} failed (${res.status}): ${text}`);
+  }
+
+  throw new Error(`Report poll timed out after ${maxPollMs}ms`);
 }
 
-// ─── Orders API ───────────────────────────────────────────────────────────────
+// ─── Analytics report types ───────────────────────────────────────────────────
 
-/** Minimal order shape — we only extract what we need for daily_sales */
-export interface ToastOrder {
-  guid: string;
-  businessDate: number;    // yyyymmdd integer
-  openedDate: string;      // ISO-8601
-  closedDate: string | null;
-  checks: ToastCheck[];
-  numberOfGuests: number;
-  voided: boolean;
-  deleted: boolean;
+/** Date as YYYYMMDD string */
+function toToastDate(dateStr: string): string {
+  return dateStr.replace(/-/g, '');
 }
 
-export interface ToastCheck {
-  guid: string;
-  totalAmount: number;
-  amount: number;           // subtotal before tax
-  taxAmount: number;
-  selections: ToastSelection[];
-  appliedDiscounts: ToastAppliedDiscount[];
-  voided: boolean;
-  deleted: boolean;
+export interface ReportRequest {
+  startBusinessDate: string; // YYYYMMDD
+  endBusinessDate: string;   // YYYYMMDD
+  restaurantIds: string[];
+  excludedRestaurantIds: string[];
+  groupBy: string[];
 }
 
-export interface ToastSelection {
-  guid: string;
-  item: { guid: string; entityType: string } | null;  // nested menu item reference
-  displayName: string;
-  quantity: number;
-  price: number;
-  voided: boolean;
-  deselected: boolean;
-  salesCategory: { name: string; guid: string } | null;
-  selectionType: string | null;
-}
+// ── Aggregated Sales (metrics) ────────────────────────────────────────────────
 
-export interface ToastAppliedDiscount {
+export interface MetricsRow {
+  restaurantGuid: string;
+  businessDate: string;        // YYYYMMDD
+  guestCount: number;
+  ordersCount: number;
+  closedOrderCount: number;
+  netSalesAmount: number;
+  grossSalesAmount: number;
   discountAmount: number;
-  name: string;
+  voidOrdersAmount: number;
+  refundAmount: number;
+  hourlyJobTotalHours: string;  // returned as string
+  hourlyJobTotalPay: string;    // returned as string
 }
 
-/**
- * Fetch all orders for a restaurant in a date range.
- * Toast requires ISO-8601 timestamps for startDate/endDate.
- * Max range per request varies; we paginate with pageSize=100.
- */
-export async function fetchOrders(
-  restaurantId: string,
-  startDate: string,  // ISO-8601 e.g. "2024-01-01T00:00:00.000Z"
-  endDate: string     // ISO-8601
-): Promise<ToastOrder[]> {
-  return toastGetAllPages<ToastOrder>(
-    '/orders/v2/ordersBulk',
-    restaurantId,
-    { startDate, endDate }
+export async function fetchMetrics(
+  restaurantIds: string[],
+  startDate: string,   // YYYY-MM-DD
+  endDate: string
+): Promise<MetricsRow[]> {
+  const body: ReportRequest = {
+    startBusinessDate: toToastDate(startDate),
+    endBusinessDate: toToastDate(endDate),
+    restaurantIds,
+    excludedRestaurantIds: [],
+    groupBy: [],
+  };
+  return requestAndPollReport<MetricsRow[]>(
+    '/era/v1/metrics',
+    '/era/v1/metrics',
+    body
   );
 }
 
-// ─── Labor API ────────────────────────────────────────────────────────────────
+// ── Labor ─────────────────────────────────────────────────────────────────────
 
-export interface ToastTimeEntry {
-  guid: string;
-  employeeReference: { guid: string };
-  jobReference: { guid: string } | null;
-  inDate: string;              // ISO-8601
-  outDate: string | null;
-  autoClockedOut: boolean;
+export interface LaborRow {
+  restaurantGuid: string;
+  businessDate: string;
   regularHours: number;
   overtimeHours: number;
-  hourlyWage: number;
-  declaredCashTips: number;
-  nonCashTips: number;
-  nonCashGratuityServiceCharges: number;
-  cashGratuityServiceCharges: number;
+  totalHours: number;
+  regularCost: number;
+  overtimeCost: number;
+  totalCost: number;
+  jobGuid?: string;
+  jobTitle?: string;
 }
 
-/**
- * Fetch time entries for a restaurant.
- * Uses businessDate (yyyymmdd) or startDate/endDate (ISO-8601, max 1 month).
- */
-export async function fetchTimeEntries(
-  restaurantId: string,
+export async function fetchLabor(
+  restaurantIds: string[],
   startDate: string,
   endDate: string
-): Promise<ToastTimeEntry[]> {
-  return toastGet<ToastTimeEntry[]>(
-    '/labor/v1/timeEntries',
-    restaurantId,
-    { startDate, endDate }
+): Promise<LaborRow[]> {
+  const body: ReportRequest = {
+    startBusinessDate: toToastDate(startDate),
+    endBusinessDate: toToastDate(endDate),
+    restaurantIds,
+    excludedRestaurantIds: [],
+    groupBy: [],
+  };
+  return requestAndPollReport<LaborRow[]>(
+    '/era/v1/labor',
+    '/era/v1/labor',
+    body
   );
 }
 
-// ─── Menus API ────────────────────────────────────────────────────────────────
+// ── Menu (item-level sales) ───────────────────────────────────────────────────
 
-export interface ToastMenu {
-  name: string;
-  guid: string;
-  groups: ToastMenuGroup[];
+export interface MenuItemRow {
+  restaurantGuid: string;
+  businessDate: string;
+  menuItemGuid: string;
+  menuItemName: string;
+  menuGroupGuid?: string;
+  menuGroupName?: string;
+  quantitySold: number;
+  grossSalesAmount: number;
+  netSalesAmount: number;
+  discountAmount: number;
 }
 
-export interface ToastMenuGroup {
-  name: string;
-  guid: string;
-  items: ToastMenuItem[];
-}
-
-export interface ToastMenuItem {
-  name: string;
-  guid: string;
-  price: number | null;
-  plu: string | null;     // PLU / SKU code
-  calories: number | null;
-}
-
-/**
- * Fetch the full resolved menu tree for a restaurant.
- * Returns the raw API response — caller must handle shape.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function fetchMenus(restaurantId: string): Promise<any> {
-  return toastGet<unknown>('/menus/v2/menus', restaurantId);
-}
-
-/**
- * Flatten whatever Toast returns into a flat list of menu items.
- * Handles: array of menus, single menu object, or nested structures.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function flattenMenuItems(raw: any): { guid: string; name: string; price: number | null; menuName: string; groupName: string }[] {
-  const results: { guid: string; name: string; price: number | null; menuName: string; groupName: string }[] = [];
-
-  // Normalize to array
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let menus: any[];
-  if (Array.isArray(raw)) {
-    menus = raw;
-  } else if (raw && typeof raw === 'object') {
-    // Could be { menus: [...] } or a single menu object
-    menus = raw.menus ?? raw.data ?? [raw];
-  } else {
-    return results;
-  }
-
-  for (const menu of menus) {
-    const menuName = menu.name ?? 'Uncategorized';
-    const groups = menu.groups ?? menu.menuGroups ?? [];
-    if (!Array.isArray(groups)) continue;
-
-    for (const group of groups) {
-      const groupName = group.name ?? 'Ungrouped';
-      const items = group.items ?? group.menuItems ?? [];
-      if (!Array.isArray(items)) continue;
-
-      for (const item of items) {
-        if (!item.guid) continue;
-        results.push({
-          guid: item.guid,
-          name: item.name ?? item.displayName ?? 'Unknown',
-          price: item.price ?? null,
-          menuName,
-          groupName,
-        });
-      }
-    }
-  }
-
-  return results;
+export async function fetchMenuItemSales(
+  restaurantIds: string[],
+  startDate: string,
+  endDate: string
+): Promise<MenuItemRow[]> {
+  const body: ReportRequest = {
+    startBusinessDate: toToastDate(startDate),
+    endBusinessDate: toToastDate(endDate),
+    restaurantIds,
+    excludedRestaurantIds: [],
+    groupBy: ['MENU_ITEM'],
+  };
+  return requestAndPollReport<MenuItemRow[]>(
+    '/era/v1/menu',
+    '/era/v1/menu',
+    body
+  );
 }
