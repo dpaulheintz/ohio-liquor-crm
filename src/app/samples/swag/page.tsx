@@ -33,7 +33,7 @@ export default function SwagSamplePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const needsAccount = category === 'Wholesale Account Samples' || category === 'Prospect Samples';
+  const needsAccount = category === 'Existing Accounts' || category === 'New Accounts';
 
   const updateLine = useCallback((id: number, updates: Partial<SwagLine>) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)));
@@ -53,8 +53,7 @@ export default function SwagSamplePage() {
   const canSubmit =
     name.trim() &&
     category &&
-    lines.every((l) => l.itemName && l.size && l.quantity > 0) &&
-    (!needsAccount || accountName.trim());
+    lines.every((l) => l.itemName && l.size && l.quantity > 0);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -64,7 +63,7 @@ export default function SwagSamplePage() {
         pull_type: 'swag',
         person_name: name,
         category,
-        account_name: needsAccount ? accountName : null,
+        account_name: needsAccount ? (accountName.trim() || null) : null,
         notes: notes || null,
         items: lines.map((l) => ({
           item_name: l.itemName,
@@ -155,10 +154,12 @@ export default function SwagSamplePage() {
           </div>
         </div>
 
-        {/* Account name (conditional) */}
+        {/* Account name (conditional, optional) */}
         {needsAccount && (
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Account Name *</label>
+            <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">
+              Account Name <span className="text-zinc-700">(optional)</span>
+            </label>
             <input
               type="text"
               value={accountName}

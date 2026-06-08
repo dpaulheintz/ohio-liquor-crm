@@ -23,13 +23,10 @@ let lineIdCounter = 1;
 export default function SpiritSamplePage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
-  const [accountName, setAccountName] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<SpiritLine[]>([{ id: lineIdCounter++, product: '', quantity: 1 }]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  const needsAccount = category === 'Prospecting Accounts';
 
   const updateLine = useCallback((id: number, field: keyof SpiritLine, value: string | number) => {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
@@ -43,8 +40,7 @@ export default function SpiritSamplePage() {
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
   }, []);
 
-  const canSubmit = name.trim() && category && lines.every((l) => l.product && l.quantity > 0)
-    && (!needsAccount || accountName.trim());
+  const canSubmit = name.trim() && category && lines.every((l) => l.product && l.quantity > 0);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -54,7 +50,7 @@ export default function SpiritSamplePage() {
         pull_type: 'spirits',
         person_name: name,
         category,
-        account_name: needsAccount ? accountName : null,
+        account_name: null,
         notes: notes || null,
         items: lines.map((l) => ({
           item_name: l.product,
@@ -74,7 +70,6 @@ export default function SpiritSamplePage() {
   function reset() {
     setName('');
     setCategory('');
-    setAccountName('');
     setNotes('');
     setLines([{ id: lineIdCounter++, product: '', quantity: 1 }]);
     setSubmitted(false);
@@ -144,20 +139,6 @@ export default function SpiritSamplePage() {
             ))}
           </div>
         </div>
-
-        {/* Account name (conditional) */}
-        {needsAccount && (
-          <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Account Name *</label>
-            <input
-              type="text"
-              value={accountName}
-              onChange={(e) => setAccountName(e.target.value)}
-              placeholder="Bar or restaurant name"
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#C5A572]/60"
-            />
-          </div>
-        )}
 
         {/* Spirit lines */}
         <div className="space-y-3">

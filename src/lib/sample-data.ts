@@ -11,21 +11,24 @@ export const SPIRIT_PRODUCTS = [
 ] as const;
 
 export const SPIRIT_CATEGORIES = [
-  'Events',
-  'Prospecting Accounts',
-  'Spirit Sends',
-  'Charity',
-  'Other',
+  'Internal Events',
+  'External Events',
+  'Donations',
+  'Kitchen',
+  'Personal Bar Stock',
+  'Gifts',
+  'Sales',
 ] as const;
 
 // ─── Swag data ────────────────────────────────────────────────────────────────
 
 export const SWAG_CATEGORIES = [
-  'Employee Personal',
-  'Wholesale Account Samples',
-  'Prospect Samples',
-  'Marketing Giveaways',
-  'Other',
+  'Influencers',
+  'Gifts',
+  'Donations',
+  'Internal Staff Personal Needs',
+  'Existing Accounts',
+  'New Accounts',
 ] as const;
 
 export type SwagSizeType = 'apparel' | 'jersey' | 'one-size';
