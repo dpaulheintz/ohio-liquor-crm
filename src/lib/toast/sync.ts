@@ -90,11 +90,24 @@ async function syncMetrics(
   const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
 
   let rows: MetricsRow[];
-  try {
-    rows = await fetchMetrics(restaurantIds, start, end);
-  } catch (err) {
-    throw new Error(`Metrics fetch failed: ${err instanceof Error ? err.message : err}`);
+  // Retry with backoff on 429 rate limit
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      rows = await fetchMetrics(restaurantIds, start, end);
+      break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('429') && attempt < 2) {
+        const waitSec = (attempt + 1) * 10;
+        console.warn(`Metrics 429 rate limited — waiting ${waitSec}s before retry ${attempt + 2}/3`);
+        await sleep(waitSec * 1000);
+        continue;
+      }
+      throw new Error(`Metrics fetch failed: ${msg}`);
+    }
   }
+  // @ts-expect-error rows is assigned in the loop above
+  if (!rows) return 0;
 
   if (!Array.isArray(rows) || rows.length === 0) return 0;
 
@@ -216,8 +229,8 @@ async function syncItemSales(
         else itemSalesCount++;
       }
 
-      // Rate limit
-      await sleep(150);
+      // Rate limit — 2s between days to avoid 429
+      await sleep(2000);
     }
   }
 
@@ -300,8 +313,11 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     errors: [],
   };
 
-  // Chunk into 7-day windows to stay within Vercel timeout (~60s).
-  const chunks = chunkDateRange(start, end, 7);
+  // Chunk size depends on step:
+  // - metrics: Analytics API handles multi-day natively, 7-day chunks fine
+  // - items: orders API is per-day + DB writes, keep chunks small (3 days)
+  const chunkSize = step === 'items' ? 3 : 7;
+  const chunks = chunkDateRange(start, end, chunkSize);
 
   for (const chunk of chunks) {
     console.log(`  Processing ${chunk.start} → ${chunk.end}...`);
@@ -333,7 +349,7 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
       }
     }
 
-    await sleep(500);
+    await sleep(3000); // 3s between chunks to avoid rate limits
   }
 
   // Write sync log
