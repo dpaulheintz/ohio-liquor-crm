@@ -52,6 +52,7 @@ interface KpiEntry {
   type: string;
   quantity: number;
   soldStatus: 'sold' | 'unsold';
+  displayType: string;
 }
 
 export default function NewVisitPage() {
@@ -139,8 +140,10 @@ function NewVisitForm() {
   }
 
   // ── KPI handlers ────────────────────────────────────────────────────────────
+  const hasDisplayKpi = kpis.some(k => k.type === 'Display');
+
   function addKpi() {
-    setKpis([...kpis, { type: '', quantity: 1, soldStatus: 'sold' }]);
+    setKpis([...kpis, { type: '', quantity: 1, soldStatus: 'sold', displayType: '' }]);
   }
 
   function removeKpi(index: number) {
@@ -149,7 +152,13 @@ function NewVisitForm() {
 
   function updateKpiType(index: number, type: string) {
     const updated = [...kpis];
-    updated[index] = { ...updated[index], type, soldStatus: 'sold' };
+    updated[index] = { ...updated[index], type, soldStatus: 'sold', displayType: '' };
+    setKpis(updated);
+  }
+
+  function updateKpiDisplayType(index: number, displayType: string) {
+    const updated = [...kpis];
+    updated[index] = { ...updated[index], displayType };
     setKpis(updated);
   }
 
@@ -261,7 +270,7 @@ function NewVisitForm() {
         accountId: resolvedAccountId,
         visitType,
         notes: notes || undefined,
-        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldStatus })) : undefined,
+        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldStatus, displayType: k.displayType || undefined })) : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: visitType === 'in_person' && photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -537,6 +546,18 @@ function NewVisitForm() {
                           className="w-16 text-center"
                         />
                       </div>
+                      {kpi.type === 'Display' && (
+                        <div className="flex rounded border border-border overflow-hidden text-xs">
+                          {(['Wood', 'Box', 'Shelves'] as const).map(dt => (
+                            <button
+                              key={dt}
+                              type="button"
+                              onClick={() => updateKpiDisplayType(i, dt)}
+                              className={`px-2 py-1 border-l first:border-l-0 border-border transition-colors ${kpi.displayType === dt ? 'bg-[#C5A572] text-black font-semibold' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                            >{dt}</button>
+                          ))}
+                        </div>
+                      )}
                       {(kpi.type === 'Menu' || kpi.type === 'Feature') && (
                         <div className="flex rounded border border-border overflow-hidden text-xs">
                           <button
@@ -565,6 +586,12 @@ function NewVisitForm() {
                   <Plus className="h-3.5 w-3.5" />
                   {kpis.length === 0 ? 'Add a KPI' : 'Add another KPI'}
                 </button>
+                {hasDisplayKpi && photos.length === 0 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+                    <Camera className="h-3 w-3 shrink-0" />
+                    Display KPIs require a photo to confirm the display is up.
+                  </p>
+                )}
               </div>
             )}
 

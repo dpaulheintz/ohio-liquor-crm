@@ -74,9 +74,10 @@ export async function getVisitsByAccount(accountId: string) {
 // ─── createVisit ──────────────────────────────────────────────────────────────
 
 const kpiEntrySchema = z.object({
-  type:       z.enum(KPI_OPTIONS),
-  quantity:   z.number().int().min(1).max(99).default(1),
-  soldStatus: z.enum(['sold', 'unsold']).default('sold'),
+  type:        z.enum(KPI_OPTIONS),
+  quantity:    z.number().int().min(1).max(99).default(1),
+  soldStatus:  z.enum(['sold', 'unsold']).default('sold'),
+  displayType: z.enum(['Wood', 'Box', 'Shelves']).optional(),
 });
 
 const visitSchema = z.object({
@@ -101,7 +102,7 @@ export async function createVisit(input: {
   accountId: string;
   visitType?: 'in_person' | 'phone_call';
   notes?: string;
-  kpis?: { type: string; quantity: number; soldStatus?: 'sold' | 'unsold' }[];
+  kpis?: { type: string; quantity: number; soldStatus?: 'sold' | 'unsold'; displayType?: string }[];
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
@@ -136,6 +137,7 @@ export async function createVisit(input: {
       kpi_type:     k.type,
       kpi_quantity: k.quantity,
       sold_status:  k.soldStatus ?? 'sold',
+      display_type: k.type === 'Display' ? (k.displayType ?? null) : null,
     }));
     const { error: kpiError } = await supabase.from('visit_kpis').insert(kpiRecords);
     if (kpiError) throw kpiError;
@@ -151,6 +153,31 @@ export async function createVisit(input: {
     }));
     const { error: photoError } = await supabase.from('visit_photos').insert(photoRecords);
     if (photoError) throw photoError;
+  }
+
+  // Auto-upsert agency_displays when a Display KPI with photo is logged
+  const displayKpi = parsed.kpis?.find(k => k.type === 'Display');
+  const hasPhotos  = parsed.photoUrls && parsed.photoUrls.length > 0;
+  if (parsed.visitType !== 'phone_call' && displayKpi && hasPhotos && displayKpi.displayType) {
+    try {
+      const { data: acct } = await supabase
+        .from('accounts')
+        .select('display_name')
+        .eq('id', parsed.accountId)
+        .single();
+      await supabase.from('agency_displays').upsert(
+        {
+          account_id:      parsed.accountId,
+          agency_name:     acct?.display_name ?? 'Unknown',
+          rep_id:          user.id,
+          display_type:    displayKpi.displayType,
+          first_confirmed: new Date().toISOString().slice(0, 10),
+        },
+        { onConflict: 'account_id', ignoreDuplicates: true }
+      );
+    } catch {
+      // non-fatal — display tracking is best-effort
+    }
   }
 
   // Auto-complete any pending assignment for this account/rep (non-fatal)
