@@ -116,8 +116,8 @@ export function AccountFormDialog({
       onOpenChange(false);
       onSuccess();
     } catch (err) {
+      void err;
       toast.error(isEditing ? 'Failed to update account' : 'Failed to create account');
-      console.error(err);
     } finally {
       setLoading(false);
     }

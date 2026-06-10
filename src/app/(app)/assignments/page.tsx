@@ -22,7 +22,7 @@ export default function MyAssignmentsPage() {
       const data = await getMyAssignments();
       setAssignments(data as unknown as Assignment[]);
     } catch (err) {
-      console.error('Failed to load assignments:', err);
+      void err;
       toast.error('Failed to load assignments');
     } finally {
       setLoading(false);
@@ -39,8 +39,8 @@ export default function MyAssignmentsPage() {
       toast.success('Marked as complete');
       fetchAssignments();
     } catch (err) {
+      void err;
       toast.error('Failed to update assignment');
-      console.error(err);
     }
   }
 

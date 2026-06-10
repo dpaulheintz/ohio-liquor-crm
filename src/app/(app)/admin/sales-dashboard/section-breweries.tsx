@@ -13,14 +13,9 @@ import {
   LabelList,
 } from 'recharts';
 import type { WholesaleFullRow, AccountGroupData } from '@/app/actions/sales-dashboard';
+import { fmtDollar, isHighBank } from './utils';
 
-// ─── Helpers (same logic as WholesaleLeaderboard) ─────────────────────────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function resolveGroup(
   wholesaler: string | null,
@@ -39,14 +34,6 @@ function resolveGroup(
     if (matched) return { groupName: group.group_name, color: group.color };
   }
   return null;
-}
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────

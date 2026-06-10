@@ -50,7 +50,7 @@ export default function TastingsPage() {
       setTastings(data as unknown as Tasting[]);
       setStats(s);
     } catch (err) {
-      console.error('Failed to load tastings:', err);
+      void err;
     } finally {
       setLoading(false);
     }

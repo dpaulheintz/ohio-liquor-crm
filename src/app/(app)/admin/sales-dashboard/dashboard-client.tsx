@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { SalesDashboardData, AccountGroupData, BailmentRow } from '@/app/actions/sales-dashboard';
 import { SectionRevenue } from './section-revenue';
 import { SectionWholesale } from './section-wholesale';
@@ -12,6 +12,7 @@ import { SectionBreweries } from './section-breweries';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
 import { HotAccounts, type HotAccount } from './hot-accounts';
+import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, isHighBank, resolveAccount } from './utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,51 +20,9 @@ type Channel = 'all' | 'retail' | 'wholesale';
 
 // ─── Brand families + colors ──────────────────────────────────────────────────
 
-const FAMILY_COLORS: Record<string, string> = {
-  Vodka: '#3b82f6',
-  '(614) Vodka': '#06b6d4',
-  Gin: '#22c55e',
-  'Whiskey War': '#C5A572',
-  Midnight: '#8b5cf6',
-  'Midnight (Discontinued)': '#7c3aed',
-  Bourbon: '#f97316',
-  RTD: '#ec4899',
-  Misc: '#a78bfa',
-  Unknown: '#6b7280',
-};
-const FAMILY_COLOR_DEFAULT = '#94a3b8';
-
 const ALL_FAMILIES = [
   'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD', 'Misc',
 ];
-
-// ─── Account-resolution helpers (mirrors section-wholesale.tsx) ───────────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
-
-function resolveAccount(
-  wholesaler: string | null,
-  dba: string | null,
-  groups: AccountGroupData[]
-): { key: string; displayName: string } {
-  const wl = (wholesaler ?? '').toLowerCase();
-  const dl = (dba ?? '').toLowerCase();
-  for (const group of groups) {
-    const hit = (text: string) =>
-      group.match_terms.some((term) => text.includes(term.toLowerCase()));
-    const matched =
-      group.match_columns === 'wholesaler' ? hit(wl) :
-      group.match_columns === 'dba'        ? hit(dl) :
-      hit(wl) || hit(dl);
-    if (matched) return { key: `group::${group.id}`, displayName: group.group_name };
-  }
-  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
-  return { key: `raw::${name}`, displayName: name };
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -230,11 +189,11 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
   const [channel, setChannel] = useState<Channel>('all');
 
-  function handleFamilyToggle(f: string) {
+  const handleFamilyToggle = useCallback((f: string) => {
     setSelectedFamilies((prev) =>
       prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
     );
-  }
+  }, []);
 
   // ── Derived: current year + max YTD month ────────────────────────────────
   const currentYear = useMemo(

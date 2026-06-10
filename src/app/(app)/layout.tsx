@@ -27,7 +27,7 @@ export default async function AppLayout({
     ]);
 
     if (profileRes.error) {
-      console.error('[AppLayout] profile fetch failed', profileRes.error);
+      // profile fetch failed — continue with null profile
     }
     profile = (profileRes.data as Profile | null) ?? null;
     isAdmin = adminRes.data === true || profile?.role === 'admin';

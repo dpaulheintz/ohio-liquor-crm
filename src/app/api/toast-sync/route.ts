@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, mode, locationFilter, startDate, endDate, results });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[toast-sync] Fatal error:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

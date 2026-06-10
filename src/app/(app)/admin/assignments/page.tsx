@@ -117,7 +117,7 @@ export default function AdminAssignmentsPage() {
       setAssignments(result.assignments as unknown as Assignment[]);
       setTotal(result.total);
     } catch (err) {
-      console.error('Failed to fetch assignments:', err);
+      void err;
       toast.error('Failed to load assignments');
     } finally {
       setLoading(false);
@@ -255,8 +255,8 @@ export default function AdminAssignmentsPage() {
       handleDialogOpenChange(false);
       fetchAssignments();
     } catch (err) {
+      void err;
       toast.error('Failed to create assignment');
-      console.error(err);
     } finally {
       setSaving(false);
     }
@@ -269,8 +269,8 @@ export default function AdminAssignmentsPage() {
       toast.success('Marked as complete');
       fetchAssignments();
     } catch (err) {
+      void err;
       toast.error('Failed to update assignment');
-      console.error(err);
     }
   }
 
@@ -280,8 +280,8 @@ export default function AdminAssignmentsPage() {
       toast.success('Assignment removed');
       fetchAssignments();
     } catch (err) {
+      void err;
       toast.error('Failed to delete assignment');
-      console.error(err);
     }
   }
 

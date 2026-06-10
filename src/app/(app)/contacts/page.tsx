@@ -34,7 +34,7 @@ export default function ContactsPage() {
       setContacts(result.contacts);
       setTotal(result.total);
     } catch (err) {
-      console.error('Failed to fetch contacts:', err);
+      void err;
     } finally {
       setLoading(false);
     }

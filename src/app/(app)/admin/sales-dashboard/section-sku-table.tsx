@@ -13,23 +13,7 @@ import {
 } from 'recharts';
 import type { SkuMonthlyRow } from '@/app/actions/sales-dashboard';
 import type { Channel } from './section-revenue';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FAMILY_COLORS: Record<string, string> = {
-  Vodka: '#3b82f6',
-  '(614) Vodka': '#06b6d4',
-  Gin: '#22c55e',
-  'Whiskey War': '#C5A572',
-  Midnight: '#8b5cf6',
-  'Midnight (Discontinued)': '#7c3aed',
-  Bourbon: '#f97316',
-  RTD: '#ec4899',
-  Misc: '#a78bfa',
-  Unknown: '#6b7280',
-};
-const FAMILY_COLOR_DEFAULT = '#94a3b8';
-const GOLD = '#C5A572';
+import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, GOLD, fmtDollar } from './utils';
 
 // Cycle of distinct chart colors for multi-SKU lines
 const LINE_COLORS = [
@@ -37,14 +21,6 @@ const LINE_COLORS = [
   '#8b5cf6', '#06b6d4', '#f97316', '#eab308',
   '#10b981', '#6366f1', '#f43f5e', '#84cc16',
 ];
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

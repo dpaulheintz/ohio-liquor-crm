@@ -139,7 +139,7 @@ export async function autoCompleteAssignmentsForVisit(accountId: string) {
     .eq('assigned_to', user.id)
     .eq('status', 'pending');
 
-  if (error) console.error('auto-complete assignments failed:', error);
+  void error; // Non-fatal: auto-complete is best-effort
   // Non-fatal: visit is already saved
 }
 

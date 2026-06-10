@@ -99,7 +99,7 @@ async function syncMetrics(
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('429') && attempt < 2) {
         const waitSec = (attempt + 1) * 10;
-        console.warn(`Metrics 429 rate limited — waiting ${waitSec}s before retry ${attempt + 2}/3`);
+        // 429 rate limited — waiting before retry
         await sleep(waitSec * 1000);
         continue;
       }
@@ -133,7 +133,7 @@ async function syncMetrics(
         },
         { onConflict: 'location_id,business_date' }
       );
-    if (error) console.error(`Metrics upsert error for ${row.businessDate}:`, error.message);
+    if (error) { /* upsert error — row skipped */ }
     else count++;
   }
 
@@ -225,7 +225,7 @@ async function syncItemSales(
             },
             { onConflict: 'location_id,menu_item_id,business_date' }
           );
-        if (error) console.error(`daily_item_sales upsert error for ${guid}:`, error.message);
+        if (error) { /* upsert error — row skipped */ }
         else itemSalesCount++;
       }
 
@@ -301,8 +301,6 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   }
 
   const step = opts.step ?? 'all';
-  console.log(`[Toast Sync] Mode: ${opts.mode}, step: ${step}, ${start} → ${end}, locations: ${locations.map(l => l.name).join(', ')}`);
-
   const result: SyncResult = {
     locations: locations.map((l) => l.name),
     dateRange: `${start} → ${end}`,
@@ -320,18 +318,12 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   const chunks = chunkDateRange(start, end, chunkSize);
 
   for (const chunk of chunks) {
-    console.log(`  Processing ${chunk.start} → ${chunk.end}...`);
-
     // 1. Metrics + labor (Analytics API — one call gets both)
     if (step === 'all' || step === 'metrics') {
       try {
-        const n = await syncMetrics(locations, chunk.start, chunk.end);
-        result.metricsRows += n;
-        console.log(`    Metrics: ${n} rows (includes labor)`);
+        result.metricsRows += await syncMetrics(locations, chunk.start, chunk.end);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`    Metrics error: ${msg}`);
-        result.errors.push(`Metrics ${chunk.start}: ${msg}`);
+        result.errors.push(`Metrics ${chunk.start}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
@@ -341,11 +333,8 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
         const { menuItems, itemSales } = await syncItemSales(locations, chunk.start, chunk.end);
         result.menuItems += menuItems;
         result.itemSalesRows += itemSales;
-        console.log(`    Items: ${menuItems} menu items, ${itemSales} daily_item_sales`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`    Items error: ${msg}`);
-        result.errors.push(`Items ${chunk.start}: ${msg}`);
+        result.errors.push(`Items ${chunk.start}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
@@ -364,6 +353,5 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     `${result.locations.join(', ')}: ${result.metricsRows} metrics, ${result.laborUpdates} labor, ${result.menuItems} menu, ${result.itemSalesRows} item sales${hasErrors ? ` (${result.errors.length} errors)` : ''}`
   );
 
-  console.log(`[Toast Sync] Done. ${totalRows} total rows. ${hasErrors ? `${result.errors.length} errors.` : 'Clean.'}`);
   return result;
 }

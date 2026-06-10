@@ -333,7 +333,7 @@ export async function fetchMenuItemSales(
     const msg = err instanceof Error ? err.message : String(err);
     // If groupBy not supported, fall back to orders API for item data
     if (msg.includes('groupBy') || msg.includes('400')) {
-      console.warn('Menu report groupBy not supported — falling back to orders API');
+      // groupBy not supported — falling back to orders API
       return fetchItemsFromOrders(restaurantIds, startDate, endDate);
     }
     throw err;

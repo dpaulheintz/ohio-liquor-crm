@@ -17,6 +17,7 @@ import {
   Bar,
 } from 'recharts';
 import type { SplitRow } from '@/app/actions/sales-dashboard';
+import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, fmtDollar, fmtBottles, KpiCard, ChartTip } from './utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -28,63 +29,6 @@ const LOCATION_COLORS: Record<HbLocation, string> = {
   Gahanna: '#f97316',
   Westerville: '#22c55e',
 };
-
-const FAMILY_COLORS: Record<string, string> = {
-  Vodka: '#3b82f6',
-  '(614) Vodka': '#06b6d4',
-  Gin: '#22c55e',
-  'Whiskey War': '#C5A572',
-  Midnight: '#8b5cf6',
-  'Midnight (Discontinued)': '#7c3aed',
-  Bourbon: '#f97316',
-  RTD: '#ec4899',
-  Unknown: '#6b7280',
-};
-const FAMILY_COLOR_DEFAULT = '#94a3b8';
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
-
-function fmtBottles(n: number): string {
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">{label}</span>
-      <span className="text-3xl font-serif font-bold text-white leading-none">{value}</span>
-      {sub && <span className="text-xs text-zinc-600">{sub}</span>}
-    </div>
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?: any[]; label?: string; fmt?: (v: number) => string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 border-b border-zinc-800 pb-1">{label}</p>}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {payload.map((p: any) => (
-        <p key={p.name} className="flex justify-between gap-3">
-          <span style={{ color: p.color ?? p.fill }} className="truncate">{p.name}</span>
-          <span className="font-mono font-semibold text-white">
-            {fmt ? fmt(p.value ?? 0) : (p.value ?? 0).toLocaleString()}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

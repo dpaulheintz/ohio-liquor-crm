@@ -21,7 +21,7 @@ export default function ApprovalsPage() {
       const data = await getPendingApprovalAccounts();
       setAccounts(data);
     } catch (err) {
-      console.error('Failed to fetch pending accounts:', err);
+      void err;
     } finally {
       setLoading(false);
     }

@@ -17,6 +17,7 @@ import {
   Legend,
 } from 'recharts';
 import type { SplitRow } from '@/app/actions/sales-dashboard';
+import { fmtDollar, fmtBottles, ChartTip } from './utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -28,40 +29,6 @@ const LOCATION_COLORS: Record<HbLocation, string> = {
   Gahanna: '#f97316',
   Westerville: '#22c55e',
 };
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
-
-function fmtBottles(n: number): string {
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?: any[]; label?: string; fmt?: (v: number) => string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 border-b border-zinc-800 pb-1">{label}</p>}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {payload.map((p: any) => (
-        <p key={p.name} className="flex justify-between gap-3">
-          <span style={{ color: p.color ?? p.fill }} className="truncate">{p.name}</span>
-          <span className="font-mono font-semibold text-white">
-            {fmt ? fmt(p.value ?? 0) : (p.value ?? 0).toLocaleString()}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

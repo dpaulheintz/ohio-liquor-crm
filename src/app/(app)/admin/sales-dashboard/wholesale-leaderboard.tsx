@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { WholesaleFullRow, AccountGroupData } from '@/app/actions/sales-dashboard';
+import { isHighBank } from './utils';
 import {
   ChevronUp,
   ChevronDown,
@@ -38,12 +39,6 @@ interface SkuOption {
 }
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
 
 function resolveAccount(
   wholesaler: string | null,

@@ -129,28 +129,26 @@ export async function getDashboardData(): Promise<DashboardData> {
   const kpisThisMonth = thisMonthVisits.filter((v) => v.kpi).length;
   const kpisLastMonth = lastMonthVisits.filter((v) => v.kpi).length;
 
-  // --- Daily Visits (last 7 days) ---
+  // --- Daily Visits (last 7 and 30 days) ---
+  // Pre-build a date→count Map once (O(n)) instead of filtering per day (O(n×37))
+  const visitsByDate = new Map<string, number>();
+  for (const v of allVisits) {
+    const d = format(parseISO(v.visited_at), 'yyyy-MM-dd');
+    visitsByDate.set(d, (visitsByDate.get(d) ?? 0) + 1);
+  }
+
   const dailyVisits7 = [];
   for (let i = 6; i >= 0; i--) {
     const day = subDays(now, i);
     const dayStr = format(day, 'yyyy-MM-dd');
-    const label = format(day, 'EEE');
-    const count = allVisits.filter(
-      (v) => format(parseISO(v.visited_at), 'yyyy-MM-dd') === dayStr
-    ).length;
-    dailyVisits7.push({ date: dayStr, label, visits: count });
+    dailyVisits7.push({ date: dayStr, label: format(day, 'EEE'), visits: visitsByDate.get(dayStr) ?? 0 });
   }
 
-  // --- Daily Visits (last 30 days) ---
   const dailyVisits30 = [];
   for (let i = 29; i >= 0; i--) {
     const day = subDays(now, i);
     const dayStr = format(day, 'yyyy-MM-dd');
-    const label = format(day, 'MMM d');
-    const count = allVisits.filter(
-      (v) => format(parseISO(v.visited_at), 'yyyy-MM-dd') === dayStr
-    ).length;
-    dailyVisits30.push({ date: dayStr, label, visits: count });
+    dailyVisits30.push({ date: dayStr, label: format(day, 'MMM d'), visits: visitsByDate.get(dayStr) ?? 0 });
   }
 
   // --- KPI Breakdown (this month) ---

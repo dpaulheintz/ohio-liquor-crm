@@ -197,8 +197,8 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
       onOpenChange(false);
       onSuccess();
     } catch (err) {
+      void err;
       toast.error('Failed to update visit');
-      console.error(err);
     } finally {
       setLoading(false);
     }

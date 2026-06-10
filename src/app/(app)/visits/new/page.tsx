@@ -278,7 +278,7 @@ function NewVisitForm() {
       toast.success(visitType === 'phone_call' ? 'Phone call logged' : 'Visit logged');
       router.push(presetAccountId ? `/accounts/${presetAccountId}` : `/accounts/${resolvedAccountId}`);
     } catch (err) {
-      console.error('Failed to log visit:', err);
+      void err;
       toast.error('Failed to log visit');
     } finally {
       setLoading(false);
