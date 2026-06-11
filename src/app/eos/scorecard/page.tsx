@@ -1,16 +1,24 @@
-export default function EosScorecardPage() {
+import { getMetrics, getEntries } from '@/lib/eos/scorecard';
+import { getWeekStarts } from '@/lib/eos/scorecard-utils';
+import ScorecardClient from './scorecard-client';
+
+export const dynamic = 'force-dynamic';
+
+export default async function EosScorecardPage() {
+  const weekStarts = getWeekStarts(13);
+  const [metrics, entries] = await Promise.all([
+    getMetrics(),
+    getEntries(weekStarts),
+  ]);
+
   return (
-    <div className="px-8 py-10 text-white">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl font-bold text-white">Scorecard</h1>
-          <p className="text-zinc-400 mt-1">Track weekly metrics against your goals</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-8 py-12 text-center">
-          <p className="text-4xl mb-4">📊</p>
-          <p className="text-zinc-300 font-medium">Scorecard coming soon</p>
-          <p className="text-zinc-600 text-sm mt-1">22 metrics seeded and ready to display</p>
-        </div>
+    <div className="px-6 py-8 text-white min-h-full">
+      <div className="max-w-full">
+        <ScorecardClient
+          initialMetrics={metrics}
+          initialEntries={entries}
+          weekStarts={weekStarts}
+        />
       </div>
     </div>
   );
