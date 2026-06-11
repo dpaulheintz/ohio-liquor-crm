@@ -8,6 +8,7 @@ export type Todo = {
   due_date: string | null;
   completed: boolean;
   completed_at: string | null;
+  created_from_meeting_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -25,11 +26,23 @@ export async function getTodos(): Promise<Todo[]> {
   return (data ?? []) as Todo[];
 }
 
+export async function getTodosByMeetingId(meetingId: string): Promise<Todo[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('eos_todos')
+    .select('*')
+    .eq('created_from_meeting_id', meetingId)
+    .order('created_at');
+  if (error) throw error;
+  return (data ?? []) as Todo[];
+}
+
 export async function createTodo(data: {
   title: string;
   owner_name?: string;
   owner_email?: string;
   due_date?: string;
+  created_from_meeting_id?: string;
 }): Promise<Todo> {
   const supabase = await createClient();
   const { data: result, error } = await supabase
