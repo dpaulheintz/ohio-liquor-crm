@@ -8,6 +8,10 @@ export const SPIRIT_PRODUCTS = [
   '614 Vodka',
   'Old Fashioned',
   'Midnight Manhattan',
+  'Double Oaked',
+  'Double Double Oaked',
+  'Cigar Cask',
+  'Barrel Select',
 ] as const;
 
 export const SPIRIT_CATEGORIES = [
