@@ -19,9 +19,11 @@ import {
   TrendingUp,
   UtensilsCrossed,
   Package,
+  Target,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
+import { isEosAdmin } from '@/lib/eos-auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -51,6 +53,7 @@ const adminItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, isAdmin } = useUser();
+  const showEos = isEosAdmin(profile?.email);
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -116,6 +119,25 @@ export function Sidebar() {
                 </Link>
               );
             })}
+          </>
+        )}
+        {showEos && (
+          <>
+            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              EOS
+            </div>
+            <Link
+              href="/eos"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                pathname.startsWith('/eos')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Target className="h-4 w-4" />
+              EOS
+            </Link>
           </>
         )}
       </nav>
