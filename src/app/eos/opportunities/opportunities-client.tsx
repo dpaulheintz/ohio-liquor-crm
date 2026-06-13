@@ -10,6 +10,8 @@ import {
   deleteOpportunityAction,
   type OpportunityFormData,
 } from './actions';
+import OwnerSelect from '@/components/eos/OwnerSelect';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | null };
@@ -116,15 +118,14 @@ function OppModal({
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner</label>
-              <input type="text" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputCls} placeholder="Name" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner Email</label>
-              <input type="email" value={form.owner_email} onChange={e => set('owner_email', e.target.value)} className={inputCls} placeholder="Optional" />
-            </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner</label>
+            <OwnerSelect
+              ownerName={form.owner_name}
+              ownerEmail={form.owner_email}
+              onChange={(name, email) => { set('owner_name', name); set('owner_email', email); }}
+              className={inputCls}
+            />
           </div>
           <div>
             <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Description</label>
@@ -147,6 +148,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
   const [filter, setFilter] = useState<StatusFilter>('open');
   const [showModal, setShowModal] = useState(false);
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
+  const [flashedSolvedIds, setFlashedSolvedIds] = useState<Set<string>>(new Set());
 
   const filtered = filter === 'all' ? opps : opps.filter(o => o.status === filter);
 
@@ -171,6 +173,22 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
     setOpps(prev => prev.map(o => o.id === id ? { ...o, status: status as Opportunity['status'] } : o));
     try { await updateOpportunityStatusAction(id, status); }
     catch { /* best effort */ }
+  }
+
+  async function handleMarkSolved(id: string) {
+    setOpps(prev => prev.map(o => o.id === id ? { ...o, status: 'solved' as const } : o));
+    setFlashedSolvedIds(prev => new Set(prev).add(id));
+    setTimeout(() => {
+      setFlashedSolvedIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }, 600);
+    try { await updateOpportunityStatusAction(id, 'solved'); }
+    catch { setOpps(prev => prev.map(o => o.id === id ? { ...o, status: 'open' as const } : o)); }
+  }
+
+  async function handleReopenOpp(id: string) {
+    setOpps(prev => prev.map(o => o.id === id ? { ...o, status: 'open' as const } : o));
+    try { await updateOpportunityStatusAction(id, 'open'); }
+    catch { setOpps(prev => prev.map(o => o.id === id ? { ...o, status: 'solved' as const } : o)); }
   }
 
   async function handleDelete(id: string) {
@@ -223,9 +241,30 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
           return (
             <div key={opp.id} className="rounded-xl border border-zinc-800 bg-[#111] px-4 py-3 hover:bg-zinc-800/40 transition-colors group/row">
               <div className="flex items-start gap-3">
-                {/* Priority dot */}
+                {/* Priority dot — click to solve/reopen */}
                 <div className="shrink-0 mt-1.5">
-                  <div className={cn('w-2 h-2 rounded-full', pri.dot)} title={pri.label} />
+                  {opp.status === 'solved' ? (
+                    <button
+                      onClick={() => handleReopenOpp(opp.id)}
+                      title="Re-open"
+                      className="w-4 h-4 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center text-white transition-all"
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleMarkSolved(opp.id)}
+                      title="Mark as solved"
+                      className={cn(
+                        'w-4 h-4 rounded-full transition-all hover:scale-125 hover:ring-2 hover:ring-green-500/50',
+                        flashedSolvedIds.has(opp.id)
+                          ? 'bg-green-400 scale-125 ring-2 ring-green-500/50'
+                          : pri.dot,
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* Main content */}
@@ -295,6 +334,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
 
       {showModal && <OppModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
       {editingOpp && <OppModal mode="edit" opp={editingOpp} onSave={handleUpdate} onClose={() => setEditingOpp(null)} />}
+      <SmartAddButton pageContext="opportunities" />
     </>
   );
 }

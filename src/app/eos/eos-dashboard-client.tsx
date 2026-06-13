@@ -13,6 +13,8 @@ import { evaluateGoal, formatOperator, formatValue } from '@/lib/eos/scorecard-u
 import { startMeetingAction } from './meetings/actions';
 import { createHeadlineAction } from './headlines/actions';
 import { createTodoAction, toggleTodoAction } from './todos/actions';
+import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -630,14 +632,19 @@ export default function EosDashboardClient({
                 placeholder="New to-do…"
                 className={cn(inputCls, 'flex-1 min-w-[160px]')}
               />
-              <input
-                type="text"
-                value={dashTodoOwner}
-                onChange={e => setDashTodoOwner(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleDashCreateTodo()}
-                placeholder="Owner"
-                className={cn(inputCls, 'w-28')}
-              />
+              <select
+                value={EOS_TEAM_MEMBERS.find(m => m.name === dashTodoOwner)?.email || ''}
+                onChange={e => {
+                  const m = EOS_TEAM_MEMBERS.find(m => m.email === e.target.value);
+                  setDashTodoOwner(m?.name ?? '');
+                }}
+                className={cn(inputCls, 'w-36')}
+              >
+                <option value="">— Owner —</option>
+                {EOS_TEAM_MEMBERS.map(m => (
+                  <option key={m.email} value={m.email}>{m.name}</option>
+                ))}
+              </select>
               <input
                 type="date"
                 value={dashTodoDue}
@@ -655,6 +662,8 @@ export default function EosDashboardClient({
           </div>
         );
       })()}
+
+      <SmartAddButton pageContext="dashboard" />
 
       {/* ── Start Meeting Modal ── */}
       {showStartModal && (

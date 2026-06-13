@@ -12,6 +12,7 @@ import {
 } from '@/lib/eos/scorecard-utils';
 import { saveEntry, addMetric, editMetric, removeMetric } from './actions';
 import MetricModal, { type MetricFormData } from '@/components/eos/MetricModal';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -502,6 +503,7 @@ export default function ScorecardClient({ initialMetrics, initialEntries, weekSt
           onClose={() => { setShowModal(false); setModalMetric(null); }}
         />
       )}
+      <SmartAddButton pageContext="scorecard" />
     </>
   );
 }

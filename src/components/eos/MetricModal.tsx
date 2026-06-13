@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Metric } from '@/lib/eos/scorecard';
+import OwnerSelect from '@/components/eos/OwnerSelect';
 
 export type MetricFormData = {
   title: string;
@@ -142,27 +143,14 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner Name</label>
-              <input
-                type="text"
-                value={form.owner_name}
-                onChange={e => set('owner_name', e.target.value)}
-                className={inputCls}
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner Email</label>
-              <input
-                type="email"
-                value={form.owner_email}
-                onChange={e => set('owner_email', e.target.value)}
-                className={inputCls}
-                placeholder="Optional"
-              />
-            </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner</label>
+            <OwnerSelect
+              ownerName={form.owner_name}
+              ownerEmail={form.owner_email}
+              onChange={(name, email) => { set('owner_name', name); set('owner_email', email); }}
+              className={inputCls}
+            />
           </div>
 
           <div className="flex gap-3 pt-1">

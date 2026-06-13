@@ -24,10 +24,13 @@ export function formatValue(value: string | null | undefined, type: string): str
     case 'currency': {
       const n = parseFloat(value);
       if (isNaN(n)) return value;
-      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    case 'percentage':
-      return value + '%';
+    case 'percentage': {
+      const n = parseFloat(value);
+      if (isNaN(n)) return value;
+      return parseFloat(n.toFixed(2)).toString() + '%';
+    }
     case 'decimal': {
       const n = parseFloat(value);
       if (isNaN(n)) return value;
@@ -87,7 +90,7 @@ export function calculateAverage(entries: EntryLike[], metricType: string): stri
   if (metricType === 'boolean') return '—';
   const nums = numericValues(entries);
   if (nums.length === 0) return '—';
-  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const avg = Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100;
   return formatValue(avg.toString(), metricType);
 }
 
@@ -97,7 +100,7 @@ export function calculateTotal(entries: EntryLike[], metricType: string): string
   }
   const nums = numericValues(entries);
   if (nums.length === 0) return '—';
-  const total = nums.reduce((a, b) => a + b, 0);
+  const total = Math.round(nums.reduce((a, b) => a + b, 0) * 100) / 100;
   return formatValue(total.toString(), metricType);
 }
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Meeting } from '@/lib/eos/meetings';
 import { startMeetingAction } from './actions';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = { initialMeetings: Meeting[] };
@@ -157,6 +158,7 @@ export default function MeetingsClient({ initialMeetings }: Props) {
           </div>
         </div>
       )}
+      <SmartAddButton pageContext="meetings" />
     </>
   );
 }

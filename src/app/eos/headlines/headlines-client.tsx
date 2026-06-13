@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import type { Headline } from '@/lib/eos/headlines';
 import { createHeadlineAction, updateHeadlineAction, deleteHeadlineAction, type HeadlineFormData } from './actions';
+import OwnerSelect from '@/components/eos/OwnerSelect';
+import SmartAddButton from '@/components/eos/SmartAddButton';
+import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 import { cn } from '@/lib/utils';
 
 type Props = { initialHeadlines: Headline[] };
@@ -97,7 +100,19 @@ function HeadlineModal({
 
           <div>
             <label className="text-xs font-medium text-zinc-400 mb-1.5 block">From</label>
-            <input type="text" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputCls} placeholder="Your name (optional)" />
+            <select
+              value={EOS_TEAM_MEMBERS.find(m => m.name === form.owner_name)?.email || ''}
+              onChange={e => {
+                const m = EOS_TEAM_MEMBERS.find(m => m.email === e.target.value);
+                set('owner_name', m?.name ?? '');
+              }}
+              className={inputCls}
+            >
+              <option value="">— Unassigned —</option>
+              {EOS_TEAM_MEMBERS.map(m => (
+                <option key={m.email} value={m.email}>{m.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex gap-3 pt-1">
@@ -219,6 +234,7 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
 
       {showModal && <HeadlineModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
       {editingHeadline && <HeadlineModal mode="edit" headline={editingHeadline} onSave={handleUpdate} onClose={() => setEditingHeadline(null)} />}
+      <SmartAddButton pageContext="headlines" />
     </>
   );
 }

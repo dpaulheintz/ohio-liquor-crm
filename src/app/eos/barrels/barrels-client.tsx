@@ -5,6 +5,7 @@ import type { BarrelWithMilestones } from '@/lib/eos/barrels';
 import { createBarrelAction, type BarrelFormData } from './actions';
 import BarrelModal from '@/components/eos/BarrelModal';
 import BarrelDetailPanel from '@/components/eos/BarrelDetailPanel';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = { initialBarrels: BarrelWithMilestones[] };
@@ -276,6 +277,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
           onClose={() => setShowAddModal(false)}
         />
       )}
+      <SmartAddButton pageContext="barrels" />
     </>
   );
 }

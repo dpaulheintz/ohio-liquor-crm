@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Todo } from '@/lib/eos/todos';
 import { createTodoAction, updateTodoAction, toggleTodoAction, deleteTodoAction, type TodoFormData } from './actions';
+import OwnerSelect from '@/components/eos/OwnerSelect';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
 type Props = { initialTodos: Todo[] };
@@ -88,7 +90,12 @@ function TodoFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Owner</label>
-              <input type="text" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} className={inputCls} placeholder="Name" />
+              <OwnerSelect
+                ownerName={form.owner_name}
+                ownerEmail={form.owner_email}
+                onChange={(name, email) => { set('owner_name', name); set('owner_email', email); }}
+                className={inputCls}
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Due Date</label>
@@ -304,6 +311,7 @@ export default function TodosClient({ initialTodos }: Props) {
       {editingTodo && (
         <TodoFormModal mode="edit" todo={editingTodo} onSave={handleUpdate} onClose={() => setEditingTodo(null)} />
       )}
+      <SmartAddButton pageContext="todos" />
     </>
   );
 }

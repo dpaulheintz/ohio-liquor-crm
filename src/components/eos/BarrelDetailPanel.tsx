@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Barrel, BarrelWithMilestones, Milestone } from '@/lib/eos/barrels';
+import OwnerSelect from '@/components/eos/OwnerSelect';
 import {
   updateBarrelAction,
   deleteBarrelAction,
@@ -240,27 +241,14 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
               </div>
 
               {/* Owner */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1.5 block">Owner</label>
-                  <input
-                    type="text"
-                    value={form.owner_name}
-                    onChange={e => setField('owner_name', e.target.value)}
-                    className={inputCls}
-                    placeholder="Name"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-500 mb-1.5 block">Owner Email</label>
-                  <input
-                    type="email"
-                    value={form.owner_email}
-                    onChange={e => setField('owner_email', e.target.value)}
-                    className={inputCls}
-                    placeholder="email"
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-medium text-zinc-500 mb-1.5 block">Owner</label>
+                <OwnerSelect
+                  ownerName={form.owner_name}
+                  ownerEmail={form.owner_email}
+                  onChange={(name, email) => { setField('owner_name', name); setField('owner_email', email); }}
+                  className={inputCls}
+                />
               </div>
 
               {/* Due date */}

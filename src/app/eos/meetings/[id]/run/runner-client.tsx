@@ -9,6 +9,7 @@ import type { Todo } from '@/lib/eos/todos';
 import type { Opportunity } from '@/lib/eos/opportunities';
 import type { Headline } from '@/lib/eos/headlines';
 import { formatValue, evaluateGoal, formatOperator } from '@/lib/eos/scorecard-utils';
+import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 import {
   saveSectionNoteAction,
   endMeetingAction,
@@ -558,13 +559,16 @@ export default function RunnerClient({
               className={cn(inputCls, 'flex-1 min-w-[200px]')}
               placeholder="Task…"
             />
-            <input
-              type="text"
+            <select
               value={newTodoOwner}
               onChange={e => setNewTodoOwner(e.target.value)}
-              className={cn(inputCls, 'w-32')}
-              placeholder="Owner"
-            />
+              className={cn(inputCls, 'w-36')}
+            >
+              <option value="">— Owner —</option>
+              {EOS_TEAM_MEMBERS.map(m => (
+                <option key={m.email} value={m.name}>{m.name}</option>
+              ))}
+            </select>
             <input
               type="date"
               value={newTodoDue}
@@ -621,7 +625,12 @@ export default function RunnerClient({
                 className={cn(inputCls, 'flex-1')}
                 placeholder="Action item…"
               />
-              <input type="text" value={newTodoOwner} onChange={e => setNewTodoOwner(e.target.value)} className={cn(inputCls, 'w-24')} placeholder="Owner" />
+              <select value={newTodoOwner} onChange={e => setNewTodoOwner(e.target.value)} className={cn(inputCls, 'w-36')}>
+                <option value="">— Owner —</option>
+                {EOS_TEAM_MEMBERS.map(m => (
+                  <option key={m.email} value={m.name}>{m.name}</option>
+                ))}
+              </select>
               <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors shrink-0">+ Add</button>
             </div>
           </div>

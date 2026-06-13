@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { isEosAdmin } from '@/lib/eos-auth';
-import EosFab from '@/components/eos/EosFab';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'EOS | High Bank' };
@@ -76,7 +75,6 @@ export default async function EosLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <main className="flex-1 overflow-y-auto bg-[#0a0a0a] relative">
         {children}
-        <EosFab />
       </main>
     </div>
   );
