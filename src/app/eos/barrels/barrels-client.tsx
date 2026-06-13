@@ -45,6 +45,9 @@ export default function BarrelsClient({ initialBarrels }: Props) {
   const [view, setView] = useState<'list' | 'board'>('list');
   const [selectedBarrel, setSelectedBarrel] = useState<BarrelWithMilestones | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [quarterFilter, setQuarterFilter] = useState('all');
+
+  const quarters = ['all', ...Array.from(new Set(barrels.map(b => b.quarter).filter(Boolean) as string[])).sort()];
 
   function openDetail(barrel: BarrelWithMilestones) {
     setSelectedBarrel(barrel);
@@ -66,8 +69,11 @@ export default function BarrelsClient({ initialBarrels }: Props) {
     setShowAddModal(false);
   }
 
-  const companyBarrels = barrels.filter(b => b.barrel_type === 'company');
-  const individualBarrels = barrels.filter(b => b.barrel_type === 'individual');
+  const filteredBarrels = quarterFilter === 'all'
+    ? barrels
+    : barrels.filter(b => b.quarter === quarterFilter);
+  const companyBarrels = filteredBarrels.filter(b => b.barrel_type === 'company');
+  const individualBarrels = filteredBarrels.filter(b => b.barrel_type === 'individual');
 
   return (
     <>
@@ -78,6 +84,18 @@ export default function BarrelsClient({ initialBarrels }: Props) {
           <p className="text-zinc-400 mt-1 text-sm">Quarterly rocks — big goals for the company and individuals</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Quarter filter */}
+          {quarters.length > 1 && (
+            <select
+              value={quarterFilter}
+              onChange={e => setQuarterFilter(e.target.value)}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 text-sm px-3 py-1.5 focus:outline-none focus:border-green-600 transition-colors"
+            >
+              {quarters.map(q => (
+                <option key={q} value={q}>{q === 'all' ? 'All Quarters' : q}</option>
+              ))}
+            </select>
+          )}
           {/* View toggle */}
           <div className="flex rounded-lg border border-zinc-700 overflow-hidden text-sm">
             {(['list', 'board'] as const).map(v => (
@@ -192,7 +210,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
       {view === 'board' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {BOARD_COLUMNS.map(({ status, label }) => {
-            const col = barrels.filter(b => b.status === status);
+            const col = filteredBarrels.filter(b => b.status === status);
             const cfg = STATUS_CONFIG[status];
             return (
               <div key={status} className="flex flex-col gap-3">

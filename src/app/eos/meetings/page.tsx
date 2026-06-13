@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getMeetings } from '@/lib/eos/meetings';
+
+export const metadata: Metadata = { title: 'Meetings | High Bank EOS' };
 import MeetingsClient from './meetings-client';
 
 export const dynamic = 'force-dynamic';

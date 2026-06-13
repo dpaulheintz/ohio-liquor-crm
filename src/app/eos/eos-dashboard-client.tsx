@@ -12,6 +12,7 @@ import type { Meeting, MeetingNote } from '@/lib/eos/meetings';
 import { evaluateGoal, formatOperator, formatValue } from '@/lib/eos/scorecard-utils';
 import { startMeetingAction } from './meetings/actions';
 import { createHeadlineAction } from './headlines/actions';
+import { createTodoAction, toggleTodoAction } from './todos/actions';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -100,6 +101,12 @@ export default function EosDashboardClient({
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<Headline['headline_type']>('good_news');
   const [addingHeadline, setAddingHeadline] = useState(false);
+  const [localTodos, setLocalTodos] = useState(todos);
+  const [togglingTodos, setTogglingTodos] = useState<Set<string>>(new Set());
+  const [dashTodoTitle, setDashTodoTitle] = useState('');
+  const [dashTodoOwner, setDashTodoOwner] = useState('');
+  const [dashTodoDue, setDashTodoDue] = useState('');
+  const [dashTodoAdding, setDashTodoAdding] = useState(false);
 
   // Build entry lookup
   const entryMap = new Map<string, string>();
@@ -131,7 +138,7 @@ export default function EosDashboardClient({
   ];
 
   // ── Todos ─────────────────────────────────────────────────────────
-  const incompleteTodos = todos.filter(t => !t.completed);
+  const incompleteTodos = localTodos.filter(t => !t.completed);
   const overdueTodos = incompleteTodos.filter(t => t.due_date && t.due_date < today);
 
   // ── Opportunities ─────────────────────────────────────────────────
@@ -157,6 +164,35 @@ export default function EosDashboardClient({
     } catch {
       alert('Failed to start meeting.');
       setStarting(false);
+    }
+  }
+
+  async function handleDashToggle(todo: Todo) {
+    const next = !todo.completed;
+    setTogglingTodos(prev => new Set(prev).add(todo.id));
+    setLocalTodos(prev => prev.map(t => t.id === todo.id ? { ...t, completed: next } : t));
+    try {
+      await toggleTodoAction(todo.id, next);
+    } catch {
+      setLocalTodos(prev => prev.map(t => t.id === todo.id ? { ...t, completed: todo.completed } : t));
+    } finally {
+      setTogglingTodos(prev => { const n = new Set(prev); n.delete(todo.id); return n; });
+    }
+  }
+
+  async function handleDashCreateTodo() {
+    if (!dashTodoTitle.trim()) return;
+    setDashTodoAdding(true);
+    try {
+      const created = await createTodoAction({ title: dashTodoTitle.trim(), owner_name: dashTodoOwner.trim(), owner_email: '', due_date: dashTodoDue });
+      setLocalTodos(prev => [...prev, created]);
+      setDashTodoTitle('');
+      setDashTodoOwner('');
+      setDashTodoDue('');
+    } catch {
+      alert('Failed to add to-do.');
+    } finally {
+      setDashTodoAdding(false);
     }
   }
 
@@ -513,6 +549,112 @@ export default function EosDashboardClient({
           )}
         </div>
       </div>
+
+      {/* ── Row 4: Open To-Dos ── */}
+      {(() => {
+        const sortedIncompleteTodos = [...incompleteTodos].sort((a, b) => {
+          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return a.due_date.localeCompare(b.due_date);
+        });
+        const displayedTodos = sortedIncompleteTodos.slice(0, 8);
+        const inputCls = 'rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500';
+        return (
+          <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-zinc-300">Open To-Dos</h3>
+              {incompleteTodos.length > 0 && (
+                <Link href="/eos/todos" className="text-xs text-green-500 hover:text-green-400 transition-colors">
+                  View all {incompleteTodos.length} →
+                </Link>
+              )}
+            </div>
+
+            {displayedTodos.length === 0 && incompleteTodos.length === 0 ? (
+              <p className="text-xs text-zinc-600 py-2 text-center">No open to-dos. Great work!</p>
+            ) : (
+              <div className="space-y-1">
+                {displayedTodos.map(todo => {
+                  const overdue = !todo.completed && todo.due_date && todo.due_date < today;
+                  const isToday = !todo.completed && todo.due_date === today;
+                  return (
+                    <div key={todo.id} className="flex items-center gap-3 py-2 border-b border-zinc-800/60 last:border-0">
+                      <button
+                        onClick={() => handleDashToggle(todo)}
+                        disabled={togglingTodos.has(todo.id)}
+                        className={cn(
+                          'shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors',
+                          todo.completed ? 'bg-green-700 border-green-700' : 'border-zinc-600 hover:border-green-500',
+                          togglingTodos.has(todo.id) && 'opacity-50',
+                        )}
+                      >
+                        {todo.completed && (
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                            <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                      <span className={cn('flex-1 text-xs truncate', todo.completed ? 'line-through text-zinc-600' : 'text-zinc-200')}>
+                        {todo.title}
+                      </span>
+                      {todo.owner_name && <span className="text-[10px] text-zinc-600 shrink-0 hidden sm:block">{todo.owner_name}</span>}
+                      {todo.due_date && (
+                        <span className={cn(
+                          'shrink-0 text-[10px] px-1.5 py-0.5 rounded',
+                          overdue ? 'bg-red-900/50 text-red-400 font-medium' :
+                          isToday ? 'bg-yellow-900/50 text-yellow-400' :
+                          'text-zinc-600',
+                        )}>
+                          {overdue ? 'Overdue' : isToday ? 'Today' : fmtShortDate(todo.due_date)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {incompleteTodos.length > 8 && (
+                  <Link href="/eos/todos" className="block text-center text-xs text-green-500 hover:text-green-400 pt-2 transition-colors">
+                    View all {incompleteTodos.length} to-dos →
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Inline add */}
+            <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={dashTodoTitle}
+                onChange={e => setDashTodoTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDashCreateTodo()}
+                placeholder="New to-do…"
+                className={cn(inputCls, 'flex-1 min-w-[160px]')}
+              />
+              <input
+                type="text"
+                value={dashTodoOwner}
+                onChange={e => setDashTodoOwner(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDashCreateTodo()}
+                placeholder="Owner"
+                className={cn(inputCls, 'w-28')}
+              />
+              <input
+                type="date"
+                value={dashTodoDue}
+                onChange={e => setDashTodoDue(e.target.value)}
+                className={cn(inputCls, 'w-36')}
+              />
+              <button
+                onClick={handleDashCreateTodo}
+                disabled={dashTodoAdding || !dashTodoTitle.trim()}
+                className="px-3 py-1.5 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] disabled:opacity-40 text-white text-xs font-medium transition-colors"
+              >
+                {dashTodoAdding ? '…' : '+ Add'}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Start Meeting Modal ── */}
       {showStartModal && (

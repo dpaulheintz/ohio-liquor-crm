@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getBarrels } from '@/lib/eos/barrels';
+
+export const metadata: Metadata = { title: 'Barrels | High Bank EOS' };
 import BarrelsClient from './barrels-client';
 
 export const dynamic = 'force-dynamic';

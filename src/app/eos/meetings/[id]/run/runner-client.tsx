@@ -49,6 +49,10 @@ const PRIORITY_DOT: Record<string, string> = {
   critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-yellow-500', low: 'bg-zinc-500',
 };
 
+const SECTION_MAP: Record<string, number> = {
+  segue: 0, scorecard: 1, barrels: 2, headlines: 3, todos: 4, ids: 5, conclude: 6,
+};
+
 type Props = {
   meeting: Meeting;
   initialNotes: MeetingNote[];
@@ -59,6 +63,8 @@ type Props = {
   todos: Todo[];
   opportunities: Opportunity[];
   headlines: Headline[];
+  initialSection?: string;
+  initialOpportunityId?: string;
 };
 
 function fmtElapsed(seconds: number): string {
@@ -90,11 +96,15 @@ export default function RunnerClient({
   todos: initialTodos,
   opportunities: initialOpportunities,
   headlines: initialHeadlines,
+  initialSection,
+  initialOpportunityId,
 }: Props) {
   const router = useRouter();
 
   // ── Navigation ──
-  const [currentSection, setCurrentSection] = useState(0);
+  const [currentSection, setCurrentSection] = useState(() =>
+    initialSection ? (SECTION_MAP[initialSection] ?? 0) : 0,
+  );
 
   // ── Timers ──
   const [elapsed, setElapsed] = useState(() =>
@@ -123,7 +133,7 @@ export default function RunnerClient({
   const [sharedHeadlines, setSharedHeadlines] = useState<Set<string>>(new Set());
   const [readHeadlines, setReadHeadlines] = useState<Set<string>>(new Set());
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
-  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(initialOpportunityId ?? null);
   const [showEndModal, setShowEndModal] = useState(false);
   const [rating, setRating] = useState(8);
   const [endNotes, setEndNotes] = useState('');

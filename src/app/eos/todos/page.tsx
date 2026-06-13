@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getTodos } from '@/lib/eos/todos';
+
+export const metadata: Metadata = { title: 'To-Dos | High Bank EOS' };
 import TodosClient from './todos-client';
 
 export const dynamic = 'force-dynamic';

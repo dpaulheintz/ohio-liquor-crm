@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { Todo } from '@/lib/eos/todos';
 import { createTodoAction, updateTodoAction, toggleTodoAction, deleteTodoAction, type TodoFormData } from './actions';
 import { cn } from '@/lib/utils';
@@ -255,6 +256,18 @@ export default function TodosClient({ initialTodos }: Props) {
                 )}>
                   {fmtDate(todo.due_date)}
                 </span>
+              )}
+
+              {/* Meeting source badge */}
+              {todo.created_from_meeting_id && (
+                <Link
+                  href={`/eos/meetings/${todo.created_from_meeting_id}`}
+                  onClick={e => e.stopPropagation()}
+                  className="shrink-0 text-[10px] bg-zinc-800 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 px-1.5 py-0.5 rounded font-medium transition-colors"
+                  title="Created in a Level 10 meeting"
+                >
+                  Meeting
+                </Link>
               )}
 
               {/* Actions */}

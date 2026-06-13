@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getMetrics, getEntries } from '@/lib/eos/scorecard';
+
+export const metadata: Metadata = { title: 'Scorecard | High Bank EOS' };
 import { getWeekStarts } from '@/lib/eos/scorecard-utils';
 import ScorecardClient from './scorecard-client';
 

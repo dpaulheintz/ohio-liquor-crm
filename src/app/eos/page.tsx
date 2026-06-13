@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getMetrics, getEntries } from '@/lib/eos/scorecard';
+
+export const metadata: Metadata = { title: 'EOS Dashboard | High Bank' };
 import { getWeekStarts } from '@/lib/eos/scorecard-utils';
 import { getBarrels } from '@/lib/eos/barrels';
 import { getTodos, getTodosByMeetingId } from '@/lib/eos/todos';

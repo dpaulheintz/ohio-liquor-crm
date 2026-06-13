@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { Opportunity } from '@/lib/eos/opportunities';
 import {
   createOpportunityAction,
@@ -11,7 +12,7 @@ import {
 } from './actions';
 import { cn } from '@/lib/utils';
 
-type Props = { initialOpportunities: Opportunity[] };
+type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | null };
 type StatusFilter = 'open' | 'in_progress' | 'solved' | 'all';
 
 const PRIORITY_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
@@ -141,7 +142,7 @@ function OppModal({
   );
 }
 
-export default function OpportunitiesClient({ initialOpportunities }: Props) {
+export default function OpportunitiesClient({ initialOpportunities, activeMeetingId }: Props) {
   const [opps, setOpps] = useState<Opportunity[]>(initialOpportunities);
   const [filter, setFilter] = useState<StatusFilter>('open');
   const [showModal, setShowModal] = useState(false);
@@ -258,7 +259,25 @@ export default function OpportunitiesClient({ initialOpportunities }: Props) {
                 </div>
 
                 {/* Actions */}
-                <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                  {opp.status !== 'solved' && (
+                    activeMeetingId ? (
+                      <Link
+                        href={`/eos/meetings/${activeMeetingId}/run?section=ids&opportunity=${opp.id}`}
+                        className="text-xs text-green-500 hover:text-green-400 px-1.5 py-1 transition-colors whitespace-nowrap"
+                        title="Discuss in current meeting"
+                      >
+                        Discuss in IDS →
+                      </Link>
+                    ) : (
+                      <span
+                        className="text-xs text-zinc-700 cursor-default px-1.5 py-1 whitespace-nowrap"
+                        title="Start a Level 10 meeting to use IDS"
+                      >
+                        Discuss in IDS →
+                      </span>
+                    )
+                  )}
                   <button onClick={() => setEditingOpp(opp)} className="text-zinc-600 hover:text-zinc-300 text-xs px-1.5 py-1 transition-colors">Edit</button>
                   <button onClick={() => handleDelete(opp.id)} className="text-zinc-700 hover:text-red-400 text-xs px-1.5 py-1 transition-colors">✕</button>
                 </div>

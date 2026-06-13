@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { getHeadlines } from '@/lib/eos/headlines';
+
+export const metadata: Metadata = { title: 'Headlines | High Bank EOS' };
 import HeadlinesClient from './headlines-client';
 
 export const dynamic = 'force-dynamic';

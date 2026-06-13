@@ -9,13 +9,17 @@ import { getHeadlines } from '@/lib/eos/headlines';
 import RunnerClient from './runner-client';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Level 10 Meeting | High Bank EOS' };
 
 export default async function MeetingRunnerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ section?: string; opportunity?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const meeting = await getMeeting(id);
   if (!meeting) redirect('/eos/meetings');
   if (meeting.ended_at) redirect(`/eos/meetings/${id}`);
@@ -43,6 +47,8 @@ export default async function MeetingRunnerPage({
       todos={todos}
       opportunities={opportunities}
       headlines={headlines}
+      initialSection={sp.section}
+      initialOpportunityId={sp.opportunity}
     />
   );
 }

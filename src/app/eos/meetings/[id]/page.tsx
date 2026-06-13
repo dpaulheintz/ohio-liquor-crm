@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getMeeting, getMeetingNotes } from '@/lib/eos/meetings';
+
+export const metadata: Metadata = { title: 'Meeting Summary | High Bank EOS' };
 import { getTodosByMeetingId } from '@/lib/eos/todos';
 import SummaryClient from './summary-client';
 

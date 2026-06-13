@@ -86,6 +86,19 @@ export async function endMeeting(
   if (error) throw error;
 }
 
+export async function getActiveMeeting(): Promise<{ id: string } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('eos_meetings')
+    .select('id')
+    .not('started_at', 'is', null)
+    .is('ended_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
+}
+
 export async function saveSectionNote(
   meetingId: string,
   section: string,
