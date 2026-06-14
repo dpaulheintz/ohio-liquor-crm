@@ -315,7 +315,6 @@ export async function fetchMenuItemSales(
   startDate: string,
   endDate: string
 ): Promise<MenuItemRow[]> {
-  // Try with MENU_ITEM groupBy first
   try {
     const body: ReportRequest = {
       startBusinessDate: toToastDate(startDate),
@@ -324,16 +323,18 @@ export async function fetchMenuItemSales(
       excludedRestaurantIds: [],
       groupBy: ['MENU_ITEM'],
     };
-    return await requestAndPollReport<MenuItemRow[]>(
+    const rows = await requestAndPollReport<MenuItemRow[]>(
       '/era/v1/menu',
       '/era/v1/menu',
       body
     );
+    // If Analytics returns data, use it. If empty, fall back to Standard API
+    // (item-level analytics may not be enabled for this account/restaurant).
+    if (Array.isArray(rows) && rows.length > 0) return rows;
+    return fetchItemsFromOrders(restaurantIds, startDate, endDate);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // If groupBy not supported, fall back to orders API for item data
-    if (msg.includes('groupBy') || msg.includes('400')) {
-      // groupBy not supported — falling back to orders API
+    if (msg.includes('groupBy') || msg.includes('400') || msg.includes('429')) {
       return fetchItemsFromOrders(restaurantIds, startDate, endDate);
     }
     throw err;
