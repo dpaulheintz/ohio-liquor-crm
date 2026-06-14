@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToastToken, toastGet, fetchMenuItemSales } from '@/lib/toast/client';
 
-const BASE = 'https://ws-api.toasttab.com';
-
 /**
  * GET /api/toast-debug?endpoint=/menus/v2/menus&restaurant=GUID
  * GET /api/toast-debug?type=menu&restaurant=GUID&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
- * GET /api/toast-debug?type=menu-raw&restaurant=GUID&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  *
  * Debug endpoint: makes a raw Toast API call and returns the response.
- * ?type=menu     — tests /era/v1/menu with groupBy:['MENU_ITEM'] via fetchMenuItemSales
- * ?type=menu-raw — shows the raw POST response and first poll body from /era/v1/menu
+ * ?type=menu  — tests item sales via Standard API orders (fetchMenuItemSales)
  */
 export async function GET(request: NextRequest) {
   const syncSecret = process.env.SYNC_SECRET;
@@ -25,7 +21,7 @@ export async function GET(request: NextRequest) {
   const startDate = sp.get('startDate') ?? '2024-01-01';
   const endDate = sp.get('endDate') ?? '2024-01-07';
 
-  // Menu item report test — uses Analytics /era/v1/menu with groupBy:['MENU_ITEM']
+  // Menu item test — fetches item sales via Standard API /orders/v2/ordersBulk
   if (type === 'menu') {
     try {
       const rows = await fetchMenuItemSales([restaurant], startDate, endDate);
@@ -37,64 +33,6 @@ export async function GET(request: NextRequest) {
         rowCount: rows.length,
         fields: rows.length > 0 ? Object.keys(rows[0]) : [],
         preview: rows.slice(0, 10),
-      });
-    } catch (err) {
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : String(err) },
-        { status: 500 }
-      );
-    }
-  }
-
-  // Raw menu report inspection — shows POST response and first poll body
-  if (type === 'menu-raw') {
-    try {
-      const token = await getToastToken();
-      const start = startDate.replace(/-/g, '');
-      const end = endDate.replace(/-/g, '');
-
-      const body = {
-        startBusinessDate: start,
-        endBusinessDate: end,
-        restaurantIds: [restaurant],
-        excludedRestaurantIds: [],
-        groupBy: ['MENU_ITEM'],
-      };
-
-      // POST to create the report
-      const postRes = await fetch(`${BASE}/era/v1/menu`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const postStatus = postRes.status;
-      const postBody = await postRes.text();
-
-      if (!postRes.ok) {
-        return NextResponse.json({ step: 'POST', postStatus, postBody });
-      }
-
-      // Parse GUID
-      const guidRaw = JSON.parse(postBody);
-      const guid = typeof guidRaw === 'string' ? guidRaw.replace(/"/g, '') : String(guidRaw);
-
-      // Single poll attempt (don't wait full 30s in a debug call)
-      await new Promise(r => setTimeout(r, 3000));
-      const pollRes = await fetch(`${BASE}/era/v1/menu/${guid}`, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      const pollStatus = pollRes.status;
-      const pollBody = await pollRes.text();
-      const pollPreview = pollBody.slice(0, 2000);
-
-      return NextResponse.json({
-        ok: true,
-        type: 'menu-raw',
-        request: body,
-        postStatus,
-        guid,
-        pollStatus,
-        pollPreview,
       });
     } catch (err) {
       return NextResponse.json(

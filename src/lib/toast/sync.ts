@@ -135,7 +135,7 @@ async function syncMetrics(
   return count;
 }
 
-// ─── Item sales → menu_items + daily_item_sales (Analytics API) ───────────────
+// ─── Item sales → menu_items + daily_item_sales (Standard API orders) ────────
 
 async function syncItemSales(
   locations: Location[],
@@ -146,22 +146,10 @@ async function syncItemSales(
   const restaurantIds = locations.map((l) => l.toast_guid);
   const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
 
-  let rows: MenuItemRow[];
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      rows = await fetchMenuItemSales(restaurantIds, start, end);
-      break;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('429') && attempt < 2) {
-        await sleep((attempt + 1) * 10 * 1000);
-        continue;
-      }
-      throw new Error(`Menu items fetch failed: ${msg}`);
-    }
-  }
-  // @ts-expect-error rows is assigned in the loop above
-  if (!rows || !Array.isArray(rows) || rows.length === 0) return { menuItems: 0, itemSales: 0 };
+  // fetchMenuItemSales → fetchItemsFromOrders (Standard API /orders/v2/ordersBulk)
+  // Per-day errors are swallowed internally; surface a top-level error only on total failure.
+  const rows = await fetchMenuItemSales(restaurantIds, start, end);
+  if (!Array.isArray(rows) || rows.length === 0) return { menuItems: 0, itemSales: 0 };
 
   // Step 1: Collect unique menu items per location
   const menuItemsByLocation = new Map<string, Map<string, string>>(); // locationId → (toastGuid → name)
@@ -303,19 +291,25 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     errors: [],
   };
 
-  // Both metrics and items now use the Analytics API — 30-day chunks for both
-  const chunks = chunkDateRange(start, end, 30);
-
-  for (const chunk of chunks) {
-    if (step === 'all' || step === 'metrics') {
+  // Metrics: single Analytics API call per chunk — 30-day windows are fine
+  if (step === 'all' || step === 'metrics') {
+    const metricsChunks = chunkDateRange(start, end, 30);
+    for (let i = 0; i < metricsChunks.length; i++) {
+      const chunk = metricsChunks[i];
       try {
         result.metricsRows += await syncMetrics(locations, chunk.start, chunk.end);
       } catch (err) {
         result.errors.push(`Metrics ${chunk.start}: ${err instanceof Error ? err.message : String(err)}`);
       }
+      if (i < metricsChunks.length - 1) await sleep(3000);
     }
+  }
 
-    if (step === 'all' || step === 'items') {
+  // Items: Standard API loops day-by-day — keep chunks at 7 days to stay within Vercel timeout
+  if (step === 'all' || step === 'items') {
+    const itemChunks = chunkDateRange(start, end, 7);
+    for (let i = 0; i < itemChunks.length; i++) {
+      const chunk = itemChunks[i];
       try {
         const { menuItems, itemSales } = await syncItemSales(locations, chunk.start, chunk.end);
         result.menuItems += menuItems;
@@ -323,9 +317,8 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
       } catch (err) {
         result.errors.push(`Items ${chunk.start}: ${err instanceof Error ? err.message : String(err)}`);
       }
+      if (i < itemChunks.length - 1) await sleep(2000);
     }
-
-    await sleep(3000); // 3s between chunks to avoid rate limits
   }
 
   const totalRows = result.metricsRows + result.laborUpdates + result.menuItems + result.itemSalesRows;

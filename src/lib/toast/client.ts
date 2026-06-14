@@ -409,8 +409,8 @@ async function fetchItemsFromOrders(
         });
       }
 
-      // Brief rate-limit pause
-      await new Promise(r => setTimeout(r, 200));
+      // Rate-limit pause between days (Standard API limit)
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
