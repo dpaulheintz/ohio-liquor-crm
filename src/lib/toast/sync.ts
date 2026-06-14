@@ -5,9 +5,8 @@
  *   POST to create report → poll GET until ready → parse results
  *
  * Three report types per location per date range:
- *   1. Metrics  → daily_sales (revenue, guests, checks)
- *   2. Labor    → daily_sales (labor_cost, labor_hours)
- *   3. Menu     → menu_items + daily_item_sales (item name, qty, revenue)
+ *   1. Metrics  → daily_sales (revenue, guests, checks, labor)
+ *   2. Menu     → menu_items + daily_item_sales (item name, qty, revenue)
  *
  * Two modes:
  *   - daily:    yesterday only
@@ -21,8 +20,9 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import {
   fetchMetrics,
-  toastGetStandard,
+  fetchMenuItemSales,
   type MetricsRow,
+  type MenuItemRow,
 } from './client';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -90,7 +90,6 @@ async function syncMetrics(
   const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
 
   let rows: MetricsRow[];
-  // Retry with backoff on 429 rate limit
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       rows = await fetchMetrics(restaurantIds, start, end);
@@ -98,9 +97,7 @@ async function syncMetrics(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('429') && attempt < 2) {
-        const waitSec = (attempt + 1) * 10;
-        // 429 rate limited — waiting before retry
-        await sleep(waitSec * 1000);
+        await sleep((attempt + 1) * 10 * 1000);
         continue;
       }
       throw new Error(`Metrics fetch failed: ${msg}`);
@@ -108,7 +105,6 @@ async function syncMetrics(
   }
   // @ts-expect-error rows is assigned in the loop above
   if (!rows) return 0;
-
   if (!Array.isArray(rows) || rows.length === 0) return 0;
 
   let count = 0;
@@ -126,7 +122,6 @@ async function syncMetrics(
           total_revenue: row.grossSalesAmount ?? 0,
           guest_count: row.guestCount ?? 0,
           check_count: row.ordersCount ?? row.closedOrderCount ?? 0,
-          // Labor from metrics (aggregated — may be overwritten by labor report)
           labor_cost: row.hourlyJobTotalPay ? parseFloat(row.hourlyJobTotalPay) : null,
           labor_hours: row.hourlyJobTotalHours ? parseFloat(row.hourlyJobTotalHours) : null,
           updated_at: new Date().toISOString(),
@@ -140,7 +135,7 @@ async function syncMetrics(
   return count;
 }
 
-// ─── Item sales → menu_items + daily_item_sales (via orders API) ──────────────
+// ─── Item sales → menu_items + daily_item_sales (Analytics API) ───────────────
 
 async function syncItemSales(
   locations: Location[],
@@ -148,92 +143,89 @@ async function syncItemSales(
   end: string
 ): Promise<{ menuItems: number; itemSales: number }> {
   const supabase = createAdminClient();
-  let menuItemCount = 0;
-  let itemSalesCount = 0;
+  const restaurantIds = locations.map((l) => l.toast_guid);
+  const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
 
-  // Generate date list
-  const dates = dateRange(start, end);
-
-  for (const location of locations) {
-    for (const dateStr of dates) {
-      const bizDate = dateStr.replace(/-/g, '');
-
-      // Fetch orders for this day from Standard API
-      let orders: { businessDate: number; checks: { totalAmount: number; selections: { item: { guid: string } | null; displayName: string; quantity: number; price: number; voided: boolean; deselected: boolean }[]; voided: boolean; deleted: boolean }[]; voided: boolean; deleted: boolean }[];
-      try {
-        orders = await toastGetStandard('/orders/v2/ordersBulk', location.toast_guid, { businessDate: bizDate });
-      } catch {
+  let rows: MenuItemRow[];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      rows = await fetchMenuItemSales(restaurantIds, start, end);
+      break;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('429') && attempt < 2) {
+        await sleep((attempt + 1) * 10 * 1000);
         continue;
       }
-      if (!Array.isArray(orders) || orders.length === 0) continue;
-
-      // Aggregate items
-      const dayItems = new Map<string, { name: string; qty: number; rev: number }>();
-      for (const order of orders) {
-        if (order.voided || order.deleted) continue;
-        for (const check of order.checks ?? []) {
-          if (check.voided || check.deleted) continue;
-          for (const sel of check.selections ?? []) {
-            if (sel.voided || sel.deselected) continue;
-            const guid = sel.item?.guid;
-            if (!guid) continue;
-            const e = dayItems.get(guid) ?? { name: sel.displayName ?? 'Unknown', qty: 0, rev: 0 };
-            e.qty += sel.quantity ?? 1;
-            e.rev += sel.price ?? 0;
-            dayItems.set(guid, e);
-          }
-        }
-      }
-
-      if (dayItems.size === 0) continue;
-
-      // Batch upsert menu_items (deduplicated)
-      const menuRows = [...dayItems.entries()].map(([guid, agg]) => ({
-        location_id: location.id,
-        toast_guid: guid,
-        name: agg.name,
-        updated_at: new Date().toISOString(),
-      }));
-
-      for (const row of menuRows) {
-        await supabase
-          .from('menu_items')
-          .upsert(row, { onConflict: 'location_id,toast_guid' });
-      }
-
-      menuItemCount += menuRows.length;
-
-      // Upsert daily_item_sales — individual lookups + upserts
-      for (const [guid, agg] of dayItems) {
-        const { data: mi } = await supabase
-          .from('menu_items')
-          .select('id')
-          .eq('location_id', location.id)
-          .eq('toast_guid', guid)
-          .maybeSingle();
-        if (!mi) continue;
-
-        const { error } = await supabase
-          .from('daily_item_sales')
-          .upsert(
-            {
-              location_id: location.id,
-              menu_item_id: mi.id,
-              business_date: dateStr,
-              quantity_sold: agg.qty,
-              gross_revenue: agg.rev,
-            },
-            { onConflict: 'location_id,menu_item_id,business_date' }
-          );
-        if (error) { /* upsert error — row skipped */ }
-        else itemSalesCount++;
-      }
-
-      // Rate limit — 2s between days to avoid 429
-      await sleep(2000);
+      throw new Error(`Menu items fetch failed: ${msg}`);
     }
   }
+  // @ts-expect-error rows is assigned in the loop above
+  if (!rows || !Array.isArray(rows) || rows.length === 0) return { menuItems: 0, itemSales: 0 };
 
+  // Step 1: Collect unique menu items per location
+  const menuItemsByLocation = new Map<string, Map<string, string>>(); // locationId → (toastGuid → name)
+  for (const row of rows) {
+    const locationId = guidToId.get(row.restaurantGuid);
+    if (!locationId || !row.menuItemGuid) continue;
+    if (!menuItemsByLocation.has(locationId)) {
+      menuItemsByLocation.set(locationId, new Map());
+    }
+    menuItemsByLocation.get(locationId)!.set(row.menuItemGuid, row.menuItemName ?? row.menuItemGuid);
+  }
+
+  // Step 2: Batch upsert menu_items per location
+  for (const [locationId, items] of menuItemsByLocation) {
+    const menuRows = [...items.entries()].map(([guid, name]) => ({
+      location_id: locationId,
+      toast_guid: guid,
+      name,
+      updated_at: new Date().toISOString(),
+    }));
+    await supabase.from('menu_items').upsert(menuRows, { onConflict: 'location_id,toast_guid' });
+  }
+
+  // Step 3: Fetch all menu_item ids for these locations in one query
+  const locationIds = [...menuItemsByLocation.keys()];
+  const { data: menuItemsData } = await supabase
+    .from('menu_items')
+    .select('id, location_id, toast_guid')
+    .in('location_id', locationIds);
+
+  // Build lookup: `${locationId}:${toastGuid}` → menu_item_id
+  const menuItemLookup = new Map<string, string>();
+  for (const mi of menuItemsData ?? []) {
+    menuItemLookup.set(`${mi.location_id}:${mi.toast_guid}`, mi.id);
+  }
+
+  // Step 4: Build batch of daily_item_sales rows
+  const salesRows = [];
+  for (const row of rows) {
+    const locationId = guidToId.get(row.restaurantGuid);
+    if (!locationId || !row.menuItemGuid) continue;
+    const menuItemId = menuItemLookup.get(`${locationId}:${row.menuItemGuid}`);
+    if (!menuItemId) continue;
+    salesRows.push({
+      location_id: locationId,
+      menu_item_id: menuItemId,
+      business_date: toIsoDate(row.businessDate),
+      quantity_sold: row.quantitySold,
+      gross_revenue: row.grossSalesAmount,
+    });
+  }
+
+  // Step 5: Batch upsert daily_item_sales in chunks of 500
+  let itemSalesCount = 0;
+  const BATCH = 500;
+  for (let i = 0; i < salesRows.length; i += BATCH) {
+    const batch = salesRows.slice(i, i + BATCH);
+    const { error } = await supabase
+      .from('daily_item_sales')
+      .upsert(batch, { onConflict: 'location_id,menu_item_id,business_date' });
+    if (!error) itemSalesCount += batch.length;
+  }
+
+  const menuItemCount = [...menuItemsByLocation.values()].reduce((sum, items) => sum + items.size, 0);
   return { menuItems: menuItemCount, itemSales: itemSalesCount };
 }
 
@@ -311,14 +303,10 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     errors: [],
   };
 
-  // Chunk size depends on step:
-  // - metrics: Analytics API handles multi-day natively, 7-day chunks fine
-  // - items: orders API is per-day + DB writes, keep chunks small (3 days)
-  const chunkSize = step === 'items' ? 3 : 7;
-  const chunks = chunkDateRange(start, end, chunkSize);
+  // Both metrics and items now use the Analytics API — 30-day chunks for both
+  const chunks = chunkDateRange(start, end, 30);
 
   for (const chunk of chunks) {
-    // 1. Metrics + labor (Analytics API — one call gets both)
     if (step === 'all' || step === 'metrics') {
       try {
         result.metricsRows += await syncMetrics(locations, chunk.start, chunk.end);
@@ -327,7 +315,6 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
       }
     }
 
-    // 2. Item sales (Standard API /orders/v2/ordersBulk — separate credentials)
     if (step === 'all' || step === 'items') {
       try {
         const { menuItems, itemSales } = await syncItemSales(locations, chunk.start, chunk.end);
@@ -341,7 +328,6 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     await sleep(3000); // 3s between chunks to avoid rate limits
   }
 
-  // Write sync log
   const totalRows = result.metricsRows + result.laborUpdates + result.menuItems + result.itemSalesRows;
   const hasErrors = result.errors.length > 0;
 
@@ -350,7 +336,7 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
     opts.mode,
     hasErrors ? 'partial' : 'success',
     totalRows,
-    `${result.locations.join(', ')}: ${result.metricsRows} metrics, ${result.laborUpdates} labor, ${result.menuItems} menu, ${result.itemSalesRows} item sales${hasErrors ? ` (${result.errors.length} errors)` : ''}`
+    `${result.locations.join(', ')}: ${result.metricsRows} metrics, ${result.menuItems} menu, ${result.itemSalesRows} item sales${hasErrors ? ` (${result.errors.length} errors)` : ''}`
   );
 
   return result;
