@@ -3,7 +3,9 @@ import { BottomNav } from '@/components/bottom-nav';
 import { TopBar } from '@/components/top-bar';
 import { UserProvider } from '@/components/user-context';
 import { createClient } from '@/lib/supabase/server';
+import { isEosOnly } from '@/lib/eos-auth';
 import { Profile } from '@/lib/types';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,10 @@ export default async function AppLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (user && isEosOnly(user.email)) {
+    redirect('/eos');
+  }
 
   let profile: Profile | null = null;
   let isAdmin = false;

@@ -19,9 +19,10 @@ type Props = {
   initialMetrics: Metric[];
   initialEntries: Entry[];
   weekStarts: string[];
+  isAdmin: boolean;
 };
 
-export default function ScorecardClient({ initialMetrics, initialEntries, weekStarts }: Props) {
+export default function ScorecardClient({ initialMetrics, initialEntries, weekStarts, isAdmin }: Props) {
   const [entryMap, setEntryMap] = useState<Map<string, string>>(() => {
     const map = new Map<string, string>();
     for (const e of initialEntries) {
@@ -269,12 +270,14 @@ export default function ScorecardClient({ initialMetrics, initialEntries, weekSt
           <h1 className="font-serif text-3xl font-bold text-white">Scorecard</h1>
           <p className="text-zinc-400 mt-1 text-sm">Weekly metrics — click any cell to edit</p>
         </div>
-        <button
-          onClick={() => { setModalMetric(null); setShowModal(true); }}
-          className="px-4 py-2 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] text-white text-sm font-medium transition-colors shrink-0"
-        >
-          + Add Metric
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setModalMetric(null); setShowModal(true); }}
+            className="px-4 py-2 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] text-white text-sm font-medium transition-colors shrink-0"
+          >
+            + Add Metric
+          </button>
+        )}
       </div>
 
       {/* New-week banner */}
@@ -413,38 +416,40 @@ export default function ScorecardClient({ initialMetrics, initialEntries, weekSt
                       >
                         {metric.title}
                       </span>
-                      <div data-menu className="relative shrink-0">
-                        <button
-                          data-menu
-                          onClick={e => {
-                            e.stopPropagation();
-                            setMenuMetricId(menuMetricId === metric.id ? null : metric.id);
-                          }}
-                          className="opacity-0 group-hover/row:opacity-100 text-zinc-600 hover:text-zinc-200 px-1 py-0.5 rounded transition-all text-base leading-none"
-                          title="Options"
-                        >
-                          ···
-                        </button>
-                        {menuMetricId === metric.id && (
-                          <div
+                      {isAdmin && (
+                        <div data-menu className="relative shrink-0">
+                          <button
                             data-menu
-                            className="absolute right-0 top-full mt-1 bg-[#1c1c1c] border border-zinc-700 rounded-xl shadow-2xl overflow-hidden w-28 z-50"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setMenuMetricId(menuMetricId === metric.id ? null : metric.id);
+                            }}
+                            className="opacity-0 group-hover/row:opacity-100 text-zinc-600 hover:text-zinc-200 px-1 py-0.5 rounded transition-all text-base leading-none"
+                            title="Options"
                           >
-                            <button
-                              onClick={() => openEditModal(metric)}
-                              className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700/60 transition-colors"
+                            ···
+                          </button>
+                          {menuMetricId === metric.id && (
+                            <div
+                              data-menu
+                              className="absolute right-0 top-full mt-1 bg-[#1c1c1c] border border-zinc-700 rounded-xl shadow-2xl overflow-hidden w-28 z-50"
                             >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(metric.id)}
-                              className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-zinc-700/60 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                              <button
+                                onClick={() => openEditModal(metric)}
+                                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700/60 transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(metric.id)}
+                                className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-zinc-700/60 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
 
@@ -503,7 +508,7 @@ export default function ScorecardClient({ initialMetrics, initialEntries, weekSt
           onClose={() => { setShowModal(false); setModalMetric(null); }}
         />
       )}
-      <SmartAddButton pageContext="scorecard" />
+      <SmartAddButton pageContext={isAdmin ? 'scorecard' : 'todos'} />
     </>
   );
 }

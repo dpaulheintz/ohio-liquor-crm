@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { isEosAdmin } from '@/lib/eos-auth';
+import { isEosUser, isEosAdmin } from '@/lib/eos-auth';
+import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'EOS | High Bank' };
@@ -11,7 +12,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || !isEosAdmin(user.email)) {
+  if (!user || !isEosUser(user.email)) {
     redirect('/');
   }
 
@@ -26,6 +27,11 @@ export default async function EosLayout({ children }: { children: React.ReactNod
     .maybeSingle();
 
   const activeMeetingId = activeMeeting?.id ?? null;
+  const email = user.email ?? '';
+  const admin = isEosAdmin(email);
+  const member = EOS_TEAM_MEMBERS.find(m => m.email === email.toLowerCase());
+  const displayName = member?.name ?? email;
+  const initials = member?.initials ?? email.slice(0, 2).toUpperCase();
 
   return (
     <div className="flex h-screen bg-[#0f1a14]">
@@ -60,15 +66,40 @@ export default async function EosLayout({ children }: { children: React.ReactNod
           />
         </nav>
 
-        {/* Back to CRM */}
-        <div className="border-t border-[#2a4a35] p-3">
-          <Link
-            href="/"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-[#7aad8e] hover:text-white hover:bg-[#2a4a35] transition-colors"
-          >
-            <span>←</span>
-            <span>Back to CRM</span>
-          </Link>
+        {/* User info + footer */}
+        <div className="border-t border-[#2a4a35] p-3 space-y-2">
+          {/* User card */}
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <div
+              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+              style={{ background: '#2a5a3a' }}
+            >
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-zinc-200 truncate">{displayName}</p>
+              {admin ? (
+                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5" style={{ background: '#1a4a2a', color: '#7aad8e' }}>
+                  Admin
+                </span>
+              ) : (
+                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5 bg-zinc-800 text-zinc-500">
+                  EOS User
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Back to CRM — admins only */}
+          {admin && (
+            <Link
+              href="/"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-[#7aad8e] hover:text-white hover:bg-[#2a4a35] transition-colors"
+            >
+              <span>←</span>
+              <span>Back to CRM</span>
+            </Link>
+          )}
         </div>
       </aside>
 

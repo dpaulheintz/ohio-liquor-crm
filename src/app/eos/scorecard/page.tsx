@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
 import { getMetrics, getEntries } from '@/lib/eos/scorecard';
-
-export const metadata: Metadata = { title: 'Scorecard | High Bank EOS' };
 import { getWeekStarts } from '@/lib/eos/scorecard-utils';
+import { createClient } from '@/lib/supabase/server';
+import { isEosAdmin } from '@/lib/eos-auth';
 import ScorecardClient from './scorecard-client';
 
+export const metadata: Metadata = { title: 'Scorecard | High Bank EOS' };
 export const dynamic = 'force-dynamic';
 
 export default async function EosScorecardPage() {
   const weekStarts = getWeekStarts(13);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   const [metrics, entries] = await Promise.all([
     getMetrics(),
     getEntries(weekStarts),
@@ -21,6 +25,7 @@ export default async function EosScorecardPage() {
           initialMetrics={metrics}
           initialEntries={entries}
           weekStarts={weekStarts}
+          isAdmin={isEosAdmin(user?.email)}
         />
       </div>
     </div>
