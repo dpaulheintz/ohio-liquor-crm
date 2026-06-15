@@ -7,16 +7,18 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
  * self-chains to the next chunk via EdgeRuntime.waitUntil + fetch.
  *
  * Invoke with no body to start from the beginning, or pass
- * { locationIndex, year, month } to resume from a specific point.
+ * { locationIndex, year, month, step? } to resume from a specific point.
+ * step: 'metrics' | 'items' | 'all' (default 'all')
  */
 
 const NEXT_API = 'https://ohio-liquor-crm-opal.vercel.app'
-const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville']
+const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21']
 
 interface State {
   locationIndex: number
   year: number
   month: number  // 1–12
+  step?: string  // 'metrics' | 'items' | 'all'
 }
 
 Deno.serve(async (req: Request) => {
@@ -27,9 +29,10 @@ Deno.serve(async (req: Request) => {
       locationIndex: body.locationIndex ?? 0,
       year: body.year ?? 2024,
       month: body.month ?? 1,
+      step: body.step ?? 'all',
     }
   } catch {
-    state = { locationIndex: 0, year: 2024, month: 1 }
+    state = { locationIndex: 0, year: 2024, month: 1, step: 'all' }
   }
 
   if (state.locationIndex >= LOCATIONS.length) {
@@ -44,13 +47,13 @@ Deno.serve(async (req: Request) => {
   const mm = String(state.month).padStart(2, '0')
   return Response.json({
     ok: true,
-    started: `${location} ${state.year}-${mm}`,
+    started: `${location} ${state.year}-${mm} (step=${state.step})`,
     state,
   })
 })
 
 async function processAndChain(state: State): Promise<void> {
-  const { locationIndex, year, month } = state
+  const { locationIndex, year, month, step = 'all' } = state
   const location = LOCATIONS[locationIndex]
   const today = new Date().toISOString().slice(0, 10)
 
@@ -66,6 +69,7 @@ async function processAndChain(state: State): Promise<void> {
     syncUrl.searchParams.set('location', location)
     syncUrl.searchParams.set('startDate', startDate)
     syncUrl.searchParams.set('endDate', endDate)
+    if (step !== 'all') syncUrl.searchParams.set('step', step)
 
     try {
       const res = await fetch(syncUrl.toString(), {
@@ -74,7 +78,7 @@ async function processAndChain(state: State): Promise<void> {
       const data = await res.json()
       const r = data.results ?? {}
       console.log(
-        `[backfill] ${location} ${year}-${mm}: ` +
+        `[backfill] ${location} ${year}-${mm} (${step}): ` +
         `metrics=${r.metricsRows ?? 0} items=${r.itemSalesRows ?? 0} ` +
         `menu=${r.menuItems ?? 0} errors=${JSON.stringify(r.errors ?? [])}`
       )
@@ -118,6 +122,7 @@ async function processAndChain(state: State): Promise<void> {
  */
 function advance(state: State, today: string): State | null {
   let { locationIndex, year, month } = state
+  const step = state.step ?? 'all'
 
   month++
   if (month > 12) {
@@ -127,11 +132,10 @@ function advance(state: State, today: string): State | null {
 
   const nextStart = `${year}-${String(month).padStart(2, '0')}-01`
   if (nextStart > today) {
-    // This location is fully caught up — move to the next one
     locationIndex++
     year = 2024
     month = 1
   }
 
-  return locationIndex >= LOCATIONS.length ? null : { locationIndex, year, month }
+  return locationIndex >= LOCATIONS.length ? null : { locationIndex, year, month, step }
 }
