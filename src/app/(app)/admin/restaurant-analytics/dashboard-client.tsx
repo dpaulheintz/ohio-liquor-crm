@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Section01Revenue } from './section-01-revenue';
+import type { Section01Data } from './section-01-revenue';
 import { Section02Scorecard } from './section-02-scorecard';
 import { Section03MenuMatrix } from './section-03-menu-matrix';
 import { Section04PrimeCost } from './section-04-prime-cost';
@@ -91,12 +92,13 @@ function SectionHeader({ num, title }: { num: string; title: string }) {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface RestaurantDashboardClientProps {
-  dataThrough: string | null;
+  section01Data: Section01Data;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardClientProps) {
+export function RestaurantDashboardClient({ section01Data }: RestaurantDashboardClientProps) {
+  const dataThrough = section01Data.dataThrough;
   // Date range state
   const [preset, setPreset] = useState<Preset>('custom');
   const [dateFrom, setDateFrom] = useState<string>(() => computeRange('custom').from);
@@ -239,7 +241,7 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
         {/* 01 — Revenue Overview (FIXED — does not reflow with date picker) */}
         <section>
           <SectionHeader num="01" title="Revenue Overview" />
-          <Section01Revenue dataThrough={dataThrough} />
+          <Section01Revenue data={section01Data} />
         </section>
 
         {/* 02 — Location Scorecard (reflows) */}
