@@ -12,6 +12,8 @@ export const SPIRIT_PRODUCTS = [
   'Double Double Oaked',
   'Cigar Cask',
   'Barrel Select',
+  'Midnight Cask',
+  'Barrel Select Gin',
 ] as const;
 
 export const SPIRIT_CATEGORIES = [
