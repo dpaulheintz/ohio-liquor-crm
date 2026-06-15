@@ -31,14 +31,17 @@ export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const syncSecret = process.env.SYNC_SECRET;
   const cronSecret = process.env.CRON_SECRET;
-  const hasSecret = syncSecret || cronSecret;
-  const authorized =
-    !hasSecret ||
-    (syncSecret && authHeader === `Bearer ${syncSecret}`) ||
-    (cronSecret && authHeader === `Bearer ${cronSecret}`);
 
-  if (!authorized) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Only enforce auth when SYNC_SECRET is explicitly configured.
+  // When set, accept either SYNC_SECRET (manual/backfill calls) or
+  // CRON_SECRET (Vercel cron — injected automatically by the platform).
+  if (syncSecret) {
+    const valid =
+      authHeader === `Bearer ${syncSecret}` ||
+      (cronSecret && authHeader === `Bearer ${cronSecret}`);
+    if (!valid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const sp = request.nextUrl.searchParams;
