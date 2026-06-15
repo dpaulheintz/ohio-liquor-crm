@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getMetrics, getEntries } from '@/lib/eos/scorecard';
 import { getWeekStarts } from '@/lib/eos/scorecard-utils';
 import { createClient } from '@/lib/supabase/server';
-import { isEosAdmin } from '@/lib/eos-auth';
+import { isEosUser } from '@/lib/eos-auth';
 import ScorecardClient from './scorecard-client';
 
 export const metadata: Metadata = { title: 'Scorecard | High Bank EOS' };
@@ -25,7 +25,7 @@ export default async function EosScorecardPage() {
           initialMetrics={metrics}
           initialEntries={entries}
           weekStarts={weekStarts}
-          isAdmin={isEosAdmin(user?.email)}
+          isAdmin={isEosUser(user?.email)}
         />
       </div>
     </div>
