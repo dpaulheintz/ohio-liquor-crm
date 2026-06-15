@@ -65,17 +65,32 @@ interface Location {
   id: string;
   name: string;
   toast_guid: string;
+  secondary_toast_guid: string | null;
 }
 
 async function getActiveLocations(): Promise<Location[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('locations')
-    .select('id, name, toast_guid')
+    .select('id, name, toast_guid, secondary_toast_guid')
     .eq('is_active', true)
     .not('toast_guid', 'is', null);
   if (error) throw new Error(`Failed to load locations: ${error.message}`);
   return (data ?? []) as Location[];
+}
+
+function buildGuidMap(locations: Location[]): { restaurantIds: string[]; guidToId: Map<string, string> } {
+  const restaurantIds: string[] = [];
+  const guidToId = new Map<string, string>();
+  for (const l of locations) {
+    restaurantIds.push(l.toast_guid);
+    guidToId.set(l.toast_guid, l.id);
+    if (l.secondary_toast_guid) {
+      restaurantIds.push(l.secondary_toast_guid);
+      guidToId.set(l.secondary_toast_guid, l.id);
+    }
+  }
+  return { restaurantIds, guidToId };
 }
 
 // ─── Metrics → daily_sales ────────────────────────────────────────────────────
@@ -86,8 +101,7 @@ async function syncMetrics(
   end: string
 ): Promise<number> {
   const supabase = createAdminClient();
-  const restaurantIds = locations.map((l) => l.toast_guid);
-  const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
+  const { restaurantIds, guidToId } = buildGuidMap(locations);
 
   let rows: MetricsRow[];
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -143,8 +157,7 @@ async function syncItemSales(
   end: string
 ): Promise<{ menuItems: number; itemSales: number }> {
   const supabase = createAdminClient();
-  const restaurantIds = locations.map((l) => l.toast_guid);
-  const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
+  const { restaurantIds, guidToId } = buildGuidMap(locations);
 
   // fetchMenuItemSales → fetchItemsFromOrders (Standard API /orders/v2/ordersBulk)
   // Per-day errors are swallowed internally; surface a top-level error only on total failure.

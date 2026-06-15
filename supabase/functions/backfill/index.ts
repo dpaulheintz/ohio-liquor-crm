@@ -11,7 +11,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
  */
 
 const NEXT_API = 'https://ohio-liquor-crm-opal.vercel.app'
-const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21']
+const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville']
 
 interface State {
   locationIndex: number
