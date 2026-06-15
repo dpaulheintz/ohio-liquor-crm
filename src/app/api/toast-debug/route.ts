@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToastToken, toastGet, fetchMenuItemSales } from '@/lib/toast/client';
+import { getToastToken, toastGet, fetchMenuItemSales, fetchMetrics } from '@/lib/toast/client';
 
 /**
  * GET /api/toast-debug?endpoint=/menus/v2/menus&restaurant=GUID
  * GET /api/toast-debug?type=menu&restaurant=GUID&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ * GET /api/toast-debug?type=metrics&restaurant=GUID&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  *
  * Debug endpoint: makes a raw Toast API call and returns the response.
- * ?type=menu  — tests item sales via Standard API orders (fetchMenuItemSales)
+ * ?type=menu    — tests item sales via Standard API orders (fetchMenuItemSales)
+ * ?type=metrics — tests Analytics API metrics report (POST+poll) for one GUID
  */
 export async function GET(request: NextRequest) {
   const syncSecret = process.env.SYNC_SECRET;
@@ -20,6 +22,26 @@ export async function GET(request: NextRequest) {
   const restaurant = sp.get('restaurant') ?? 'b5d9fdc1-ae0c-43d1-b7b8-ef097ff7b546'; // Grandview default
   const startDate = sp.get('startDate') ?? '2024-01-01';
   const endDate = sp.get('endDate') ?? '2024-01-07';
+
+  // Analytics metrics test — POST+poll /era/v1/metrics for one GUID
+  if (type === 'metrics') {
+    try {
+      const rows = await fetchMetrics([restaurant], startDate, endDate);
+      return NextResponse.json({
+        ok: true,
+        type: 'metrics',
+        restaurant,
+        dateRange: `${startDate} → ${endDate}`,
+        rowCount: rows.length,
+        rows,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : String(err) },
+        { status: 500 }
+      );
+    }
+  }
 
   // Menu item test — fetches item sales via Standard API /orders/v2/ordersBulk
   if (type === 'menu') {
