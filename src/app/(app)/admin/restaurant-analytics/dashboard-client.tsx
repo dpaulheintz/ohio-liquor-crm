@@ -12,7 +12,7 @@ import { Section07Insights } from './section-07-insights';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville'] as const;
+const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21'] as const;
 type LocationName = (typeof LOCATIONS)[number];
 
 type Preset =

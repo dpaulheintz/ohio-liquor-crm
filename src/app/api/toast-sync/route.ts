@@ -28,8 +28,14 @@ export async function POST(request: NextRequest) {
   // Verify authorization (skip if SYNC_SECRET is not configured)
   const authHeader = request.headers.get('authorization');
   const syncSecret = process.env.SYNC_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  const hasSecret = syncSecret || cronSecret;
+  const authorized =
+    !hasSecret ||
+    (syncSecret && authHeader === `Bearer ${syncSecret}`) ||
+    (cronSecret && authHeader === `Bearer ${cronSecret}`);
 
-  if (syncSecret && authHeader !== `Bearer ${syncSecret}`) {
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
