@@ -97,9 +97,9 @@ async function syncMetrics(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('429') && attempt < 2) {
-        // Back off significantly — 60s then 90s — the Analytics API rate limit
-        // window is wide enough that shorter waits don't recover
-        await sleep((attempt + 1) * 60 * 1000);
+        // 20s then 40s — long enough to clear the rate limit window without
+        // risking the serverless function's own execution timeout
+        await sleep((attempt + 1) * 20 * 1000);
         continue;
       }
       throw new Error(`Metrics fetch failed: ${msg}`);
@@ -296,7 +296,7 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
   // Metrics: single Analytics API call per chunk — 30-day windows are fine.
   // Backfill uses a longer inter-chunk pause to avoid the Toast 429 rate limit
   // when multiple location backfills might be running close together.
-  const metricsInterChunkMs = opts.mode === 'backfill' ? 15_000 : 3_000;
+  const metricsInterChunkMs = opts.mode === 'backfill' ? 6_000 : 3_000;
   if (step === 'all' || step === 'metrics') {
     const metricsChunks = chunkDateRange(start, end, 30);
     for (let i = 0; i < metricsChunks.length; i++) {
