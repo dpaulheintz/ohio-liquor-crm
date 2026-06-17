@@ -8,8 +8,10 @@ import type { BarrelWithMilestones } from '@/lib/eos/barrels';
 import type { Todo } from '@/lib/eos/todos';
 import type { Opportunity } from '@/lib/eos/opportunities';
 import type { Headline } from '@/lib/eos/headlines';
-import { formatValue, evaluateGoal, formatOperator } from '@/lib/eos/scorecard-utils';
 import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
+import ScorecardGrid from '@/components/eos/ScorecardGrid';
+import BarrelsListView from '@/components/eos/BarrelsListView';
+import SmartAddButton from '@/components/eos/SmartAddButton';
 import {
   saveSectionNoteAction,
   endMeetingAction,
@@ -18,32 +20,27 @@ import {
   flagForIDSAction,
   updateBarrelStatusInMeetingAction,
   addHeadlineInMeetingAction,
+  upsertPersonRatingAction,
+  createOpportunityInMeetingAction,
 } from '@/app/eos/meetings/actions';
 import { toggleTodoAction } from '@/app/eos/todos/actions';
 import { updateOpportunityStatusAction } from '@/app/eos/opportunities/actions';
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
-  { key: 'segue', name: 'Segue', time: 5 },
-  { key: 'scorecard', name: 'Scorecard Review', time: 5 },
-  { key: 'barrels', name: 'Barrel Review', time: 5 },
-  { key: 'headlines', name: 'Headlines', time: 5 },
-  { key: 'todos', name: 'To-Do Review', time: 5 },
-  { key: 'ids', name: 'IDS — Opportunities', time: 60 },
-  { key: 'conclude', name: 'Conclude', time: 5 },
+  { key: 'segue',     name: 'Segue',                time: 5  },
+  { key: 'scorecard', name: 'Scorecard Review',     time: 5  },
+  { key: 'barrels',   name: 'Barrel Review',        time: 5  },
+  { key: 'headlines', name: 'Headlines',            time: 5  },
+  { key: 'todos',     name: 'To-Do Review',         time: 5  },
+  { key: 'ids',       name: 'IDS — Opportunities',  time: 60 },
+  { key: 'conclude',  name: 'Conclude',             time: 5  },
 ];
 
-const BARREL_STATUS: Record<string, { label: string; bg: string; text: string }> = {
-  not_started: { label: 'Not Started', bg: 'bg-zinc-700', text: 'text-zinc-300' },
-  on_track:    { label: 'On Track',    bg: 'bg-blue-900/60', text: 'text-blue-300' },
-  off_track:   { label: 'Off Track',   bg: 'bg-red-900/60',  text: 'text-red-300' },
-  complete:    { label: 'Complete',    bg: 'bg-green-900/60', text: 'text-green-300' },
-};
-
 const HEADLINE_TYPES: Record<string, { label: string; dot: string }> = {
-  good_news:       { label: 'Good News',       dot: 'bg-yellow-500' },
-  customer_win:    { label: 'Customer Win',    dot: 'bg-green-500' },
-  employee_update: { label: 'Employee Update', dot: 'bg-blue-500' },
+  good_news:       { label: 'Good News',      dot: 'bg-yellow-500' },
+  customer_win:    { label: 'Customer Win',   dot: 'bg-green-500' },
+  employee_update: { label: 'Team Update',    dot: 'bg-blue-500' },
 };
 
 const PRIORITY_DOT: Record<string, string> = {
@@ -136,9 +133,11 @@ export default function RunnerClient({
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
   const [selectedOppId, setSelectedOppId] = useState<string | null>(initialOpportunityId ?? null);
   const [showEndModal, setShowEndModal] = useState(false);
-  const [rating, setRating] = useState(8);
   const [endNotes, setEndNotes] = useState('');
   const [ending, setEnding] = useState(false);
+
+  // ── Per-person ratings ──
+  const [personRatings, setPersonRatings] = useState<Record<string, number>>({});
 
   // ── Inline forms ──
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -147,11 +146,14 @@ export default function RunnerClient({
   const [newHeadlineTitle, setNewHeadlineTitle] = useState('');
   const [newHeadlineType, setNewHeadlineType] = useState('good_news');
 
-  // ── Scorecard data ──
-  const entryMap = new Map<string, string>();
-  for (const e of entries) {
-    if (e.value) entryMap.set(e.metric_id, e.value);
-  }
+  // ── IDS inline add opportunity ──
+  const [showAddOpp, setShowAddOpp] = useState(false);
+  const [newOppTitle, setNewOppTitle] = useState('');
+  const [newOppTerm, setNewOppTerm] = useState<'short' | 'long'>('short');
+  const [newOppPriority, setNewOppPriority] = useState('medium');
+  const [newOppOwner, setNewOppOwner] = useState('');
+  const [newOppOwnerEmail, setNewOppOwnerEmail] = useState('');
+  const [addingOpp, setAddingOpp] = useState(false);
 
   // ── Elapsed timer ──
   useEffect(() => {
@@ -179,11 +181,6 @@ export default function RunnerClient({
   const timerSeconds = sectionTimers[currentSection];
   const timerExpired = timerSeconds <= 0;
 
-  const onTrackCount = metrics.filter(m => {
-    const val = entryMap.get(m.id);
-    return val ? evaluateGoal(val, m.goal_operator, m.goal_value, m.metric_type) : false;
-  }).length;
-
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const recentHeadlines = headlines.filter(h => new Date(h.created_at) >= sevenDaysAgo);
@@ -201,8 +198,11 @@ export default function RunnerClient({
     .sort((a, b) => (priorityOrder[a.priority ?? ''] ?? 99) - (priorityOrder[b.priority ?? ''] ?? 99));
   const selectedOpp = opportunities.find(o => o.id === selectedOppId) ?? null;
 
-  const companyBarrels = barrels.filter(b => b.barrel_type === 'company');
-  const individualBarrels = barrels.filter(b => b.barrel_type === 'individual');
+  // ── Rating summary ──
+  const ratedCount = Object.keys(personRatings).length;
+  const avgRating = ratedCount > 0
+    ? Math.round((Object.values(personRatings).reduce((a, b) => a + b, 0) / ratedCount) * 10) / 10
+    : null;
 
   // ── Handlers ──
   function goTo(i: number) { if (i >= 0 && i < SECTIONS.length) { setCurrentSection(i); setPaused(false); } }
@@ -216,7 +216,7 @@ export default function RunnerClient({
   async function handleEndMeeting() {
     setEnding(true);
     try {
-      await endMeetingAction(meeting.id, rating, endNotes);
+      await endMeetingAction(meeting.id, endNotes);
       router.push(`/eos/meetings/${meeting.id}`);
     } catch {
       alert('Failed to end meeting.');
@@ -276,6 +276,30 @@ export default function RunnerClient({
     try { await updateOpportunityStatusAction(id, status); } catch { /* best effort */ }
   }
 
+  async function handlePersonRating(email: string, name: string, rating: number) {
+    setPersonRatings(prev => ({ ...prev, [email]: rating }));
+    try { await upsertPersonRatingAction(meeting.id, name, email, rating); } catch { /* best effort */ }
+  }
+
+  async function handleAddOpportunity() {
+    if (!newOppTitle.trim()) return;
+    setAddingOpp(true);
+    try {
+      const opp = await createOpportunityInMeetingAction({
+        title: newOppTitle,
+        term: newOppTerm,
+        priority: newOppPriority,
+        owner_name: newOppOwner,
+        owner_email: newOppOwnerEmail,
+      });
+      setOpportunities(prev => [opp, ...prev]);
+      setSelectedOppId(opp.id);
+      setNewOppTitle(''); setNewOppOwner(''); setNewOppOwnerEmail('');
+      setShowAddOpp(false);
+    } catch { alert('Failed to add opportunity.'); }
+    finally { setAddingOpp(false); }
+  }
+
   // ── Input styles ──
   const inputCls = 'rounded-lg bg-[#0a140c] border border-green-900/30 px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-green-600 placeholder:text-zinc-700 transition-colors';
 
@@ -283,13 +307,13 @@ export default function RunnerClient({
 
   function renderSectionContent() {
     switch (section.key) {
-      case 'segue': return renderSegue();
+      case 'segue':     return renderSegue();
       case 'scorecard': return renderScorecard();
-      case 'barrels': return renderBarrels();
+      case 'barrels':   return renderBarrels();
       case 'headlines': return renderHeadlines();
-      case 'todos': return renderTodos();
-      case 'ids': return renderIDS();
-      case 'conclude': return renderConclude();
+      case 'todos':     return renderTodos();
+      case 'ids':       return renderIDS();
+      case 'conclude':  return renderConclude();
       default: return null;
     }
   }
@@ -342,88 +366,27 @@ export default function RunnerClient({
 
   function renderScorecard() {
     return (
-      <div>
-        <div className="mb-4 rounded-xl bg-green-900/10 border border-green-900/30 px-4 py-3">
-          <span className="text-sm text-green-300 font-medium">{onTrackCount} of {metrics.length} metrics on track this week</span>
-          {currentWeek && <span className="text-xs text-green-700 ml-2">(week of {fmtShortDate(currentWeek)})</span>}
-        </div>
-        <div className="space-y-0.5">
-          {metrics.map(m => {
-            const val = entryMap.get(m.id);
-            const hasVal = !!val;
-            const met = hasVal ? evaluateGoal(val!, m.goal_operator, m.goal_value, m.metric_type) : false;
-            const flagTitle = `Scorecard: ${m.title}`;
-            return (
-              <div key={m.id} className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-green-900/10 group/row transition-colors">
-                <span className={cn('text-lg font-bold', met ? 'text-green-400' : 'text-red-400')}>{met ? '✓' : '✗'}</span>
-                <span className="flex-1 text-sm text-zinc-200 min-w-0 truncate">{m.title}</span>
-                <span className="text-sm tabular-nums text-zinc-400 shrink-0">{hasVal ? formatValue(val!, m.metric_type) : '—'}</span>
-                <span className="text-xs text-zinc-600 shrink-0">/ {formatOperator(m.goal_operator)} {formatValue(m.goal_value, m.metric_type)}</span>
-                {!met && !flagged.has(flagTitle) && (
-                  <button onClick={() => handleFlagForIDS(flagTitle)} className="opacity-0 group-hover/row:opacity-100 text-[11px] text-yellow-600 hover:text-yellow-400 transition-all whitespace-nowrap">
-                    Flag for IDS
-                  </button>
-                )}
-                {flagged.has(flagTitle) && <span className="text-[11px] text-yellow-700">Flagged</span>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  function renderBarrelGroup(label: string, items: BarrelWithMilestones[]) {
-    if (items.length === 0) return null;
-    return (
-      <div className="mb-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">{label}</h3>
-        <div className="space-y-1">
-          {items.map(b => {
-            const cfg = BARREL_STATUS[b.status] ?? BARREL_STATUS.not_started;
-            const total = b.milestones.length;
-            const done = b.milestones.filter(m => m.completed).length;
-            const flagTitle = `Barrel: ${b.title}`;
-            return (
-              <div key={b.id} className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-green-900/10 group/row transition-colors">
-                <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0', cfg.bg, cfg.text)}>
-                  {cfg.label}
-                </span>
-                <span className="flex-1 text-sm text-zinc-200 min-w-0 truncate">{b.title}</span>
-                {b.owner_name && <span className="text-xs text-zinc-500 shrink-0 hidden md:inline">{b.owner_name}</span>}
-                {total > 0 && <span className="text-xs text-zinc-600 shrink-0">{done}/{total}</span>}
-                <span className="text-xs text-zinc-600 shrink-0">{fmtShortDate(b.due_date)}</span>
-                <select
-                  value={b.status}
-                  onChange={e => handleBarrelStatus(b.id, e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                  className="text-[11px] bg-transparent border border-green-900/30 rounded px-1 py-0.5 text-zinc-400 focus:outline-none focus:border-green-600"
-                >
-                  {Object.entries(BARREL_STATUS).map(([v, c]) => (
-                    <option key={v} value={v}>{c.label}</option>
-                  ))}
-                </select>
-                {!flagged.has(flagTitle) && (
-                  <button onClick={() => handleFlagForIDS(flagTitle)} className="opacity-0 group-hover/row:opacity-100 text-[11px] text-yellow-600 hover:text-yellow-400 transition-all whitespace-nowrap">
-                    Flag
-                  </button>
-                )}
-                {flagged.has(flagTitle) && <span className="text-[11px] text-yellow-700">Flagged</span>}
-              </div>
-            );
-          })}
-        </div>
+      <div className="overflow-x-auto">
+        <ScorecardGrid
+          initialMetrics={metrics}
+          initialEntries={entries}
+          weekStarts={[currentWeek]}
+          isAdmin={false}
+          onFlagForIDS={handleFlagForIDS}
+          flaggedTitles={flagged}
+        />
       </div>
     );
   }
 
   function renderBarrels() {
     return (
-      <div>
-        {renderBarrelGroup('Company Barrels', companyBarrels)}
-        {renderBarrelGroup('Individual Barrels', individualBarrels)}
-        {barrels.length === 0 && <p className="text-sm text-zinc-600 text-center py-8">No barrels set for this quarter.</p>}
-      </div>
+      <BarrelsListView
+        barrels={barrels}
+        onStatusChange={handleBarrelStatus}
+        onFlagForIDS={handleFlagForIDS}
+        flaggedTitles={flagged}
+      />
     );
   }
 
@@ -463,7 +426,6 @@ export default function RunnerClient({
 
         {headlines.length === 0 && <p className="text-sm text-zinc-600 text-center py-4">No headlines yet.</p>}
 
-        {/* Inline add */}
         <div className="border-t border-green-900/20 pt-4">
           <h4 className="text-xs font-medium text-zinc-500 mb-2">Quick Add Headline</h4>
           <div className="flex gap-2 items-end">
@@ -498,7 +460,6 @@ export default function RunnerClient({
   function renderTodos() {
     return (
       <div className="space-y-6">
-        {/* Last week's todos */}
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Last Week&apos;s To-Dos</h3>
           {lastWeekTodos.length === 0 ? (
@@ -525,7 +486,6 @@ export default function RunnerClient({
           )}
         </div>
 
-        {/* Carry forward */}
         {overdueTodos.length > 0 && (
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Carry Forward</h3>
@@ -547,7 +507,6 @@ export default function RunnerClient({
           </div>
         )}
 
-        {/* Create new todo */}
         <div className="border-t border-green-900/20 pt-4">
           <h4 className="text-xs font-medium text-zinc-500 mb-2">Create New To-Do</h4>
           <div className="flex gap-2 items-end flex-wrap">
@@ -589,10 +548,77 @@ export default function RunnerClient({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         {/* Left: Issues list */}
         <div>
+          {/* ── Add Opportunity form ── */}
+          {showAddOpp ? (
+            <div className="mb-4 rounded-xl border border-green-900/30 bg-[#0a140c] p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-white">New Opportunity</h4>
+              <input
+                autoFocus
+                type="text"
+                value={newOppTitle}
+                onChange={e => setNewOppTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddOpportunity()}
+                className={cn(inputCls, 'w-full')}
+                placeholder="What's the issue or opportunity?"
+              />
+              <div className="flex gap-2 flex-wrap">
+                <div className="flex rounded-lg overflow-hidden border border-green-900/30">
+                  {(['short', 'long'] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setNewOppTerm(t)}
+                      className={cn('px-3 py-1.5 text-sm font-medium capitalize transition-colors',
+                        newOppTerm === t ? 'bg-green-800/40 text-green-200' : 'text-zinc-500 hover:text-zinc-300')}>
+                      {t}-term
+                    </button>
+                  ))}
+                </div>
+                <select value={newOppPriority} onChange={e => setNewOppPriority(e.target.value)} className={cn(inputCls, 'py-1.5')}>
+                  <option value="">— Priority —</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+                <select
+                  value={newOppOwner}
+                  onChange={e => {
+                    const m = EOS_TEAM_MEMBERS.find(m => m.name === e.target.value);
+                    setNewOppOwner(e.target.value);
+                    setNewOppOwnerEmail(m?.email ?? '');
+                  }}
+                  className={cn(inputCls, 'py-1.5')}
+                >
+                  <option value="">— Owner —</option>
+                  {EOS_TEAM_MEMBERS.map(m => <option key={m.email} value={m.name}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowAddOpp(false)} className="px-3 py-1.5 rounded-lg border border-green-900/30 text-zinc-400 text-sm hover:bg-green-900/10 transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddOpportunity}
+                  disabled={addingOpp || !newOppTitle.trim()}
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-green-800/40 hover:bg-green-800/60 disabled:opacity-50 text-green-200 text-sm font-medium transition-colors"
+                >
+                  {addingOpp ? 'Adding…' : 'Add Opportunity'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddOpp(true)}
+              className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-green-900/40 text-green-600 hover:border-green-700/60 hover:text-green-400 hover:bg-green-900/5 transition-all text-sm font-medium"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+                <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              Add Opportunity
+            </button>
+          )}
+
           <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
             Open Issues ({openOpps.length})
           </h3>
-          <div className="space-y-1 max-h-[50vh] overflow-y-auto">
+          <div className="space-y-1 max-h-[45vh] overflow-y-auto">
             {openOpps.map(opp => {
               const dot = PRIORITY_DOT[opp.priority ?? ''] ?? 'bg-zinc-500';
               return (
@@ -686,26 +712,55 @@ export default function RunnerClient({
   function renderConclude() {
     return (
       <div className="space-y-6">
-        {/* Rating */}
+        {/* Per-person ratings */}
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Rate This Meeting</h3>
-          <div className="flex gap-1.5">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-              <button
-                key={n}
-                onClick={() => setRating(n)}
-                className={cn(
-                  'w-10 h-10 rounded-xl text-sm font-bold transition-all',
-                  rating === n
-                    ? n >= 8 ? 'bg-green-600 text-white ring-2 ring-green-400/30'
-                      : n >= 6 ? 'bg-yellow-600 text-white ring-2 ring-yellow-400/30'
-                      : 'bg-red-600 text-white ring-2 ring-red-400/30'
-                    : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700',
-                )}
-              >
-                {n}
-              </button>
-            ))}
+          <h3 className="text-sm font-semibold text-white mb-1">Rate This Meeting</h3>
+          <p className="text-xs text-zinc-500 mb-4">Enter each attendee&apos;s rating.</p>
+          <div className="space-y-3">
+            {EOS_TEAM_MEMBERS.map(member => {
+              const selected = personRatings[member.email];
+              return (
+                <div key={member.email} className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-[#2a5a3a] flex items-center justify-center text-[11px] font-bold text-white">
+                    {member.initials}
+                  </div>
+                  {/* Name */}
+                  <span className="w-32 shrink-0 text-sm text-zinc-300 truncate">{member.name}</span>
+                  {/* Rating pills */}
+                  <div className="flex gap-1 flex-wrap">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => handlePersonRating(member.email, member.name, n)}
+                        className={cn(
+                          'w-8 h-8 rounded-lg text-xs font-bold transition-all',
+                          selected === n
+                            ? n >= 8 ? 'bg-green-600 text-white ring-2 ring-green-400/30'
+                              : n >= 6 ? 'bg-yellow-600 text-white ring-2 ring-yellow-400/30'
+                              : 'bg-red-600 text-white ring-2 ring-red-400/30'
+                            : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300',
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Live summary */}
+          <div className="mt-4 px-4 py-3 rounded-xl bg-green-900/10 border border-green-900/20">
+            {avgRating !== null ? (
+              <span className="text-sm text-green-300 font-medium">
+                Average: {avgRating} / 10
+                <span className="text-green-700 font-normal ml-2">({ratedCount} of {EOS_TEAM_MEMBERS.length} rated)</span>
+              </span>
+            ) : (
+              <span className="text-sm text-zinc-600">No ratings entered yet.</span>
+            )}
           </div>
         </div>
 
@@ -726,7 +781,7 @@ export default function RunnerClient({
 
         {/* Closing notes */}
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Closing Notes</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">What would have made it a 10?</h3>
           <textarea
             value={endNotes}
             onChange={e => setEndNotes(e.target.value)}
@@ -735,6 +790,14 @@ export default function RunnerClient({
             placeholder="Key takeaways, action items, or anything to capture…"
           />
         </div>
+
+        {/* End meeting button */}
+        <button
+          onClick={() => setShowEndModal(true)}
+          className="w-full py-3 rounded-xl bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-semibold transition-colors border border-green-900/30"
+        >
+          End Meeting &amp; Save
+        </button>
       </div>
     );
   }
@@ -823,8 +886,8 @@ export default function RunnerClient({
         </div>
       </div>
 
-      {/* ── Navigation ── */}
-      <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-green-900/20 flex items-center justify-between">
+      {/* ── Navigation (centered) ── */}
+      <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-green-900/20 flex items-center justify-center gap-6">
         <button
           onClick={goPrev}
           disabled={currentSection === 0}
@@ -837,47 +900,26 @@ export default function RunnerClient({
           onClick={goNext}
           className="px-4 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors"
         >
-          {currentSection === SECTIONS.length - 1 ? 'Finish Meeting →' : 'Next →'}
+          {currentSection === SECTIONS.length - 1 ? 'Finish →' : 'Next →'}
         </button>
       </div>
+
+      {/* ── SmartAddButton (above runner at z-[55]) ── */}
+      <SmartAddButton pageContext="meeting" className="z-[55]" />
 
       {/* ── End Meeting Modal ── */}
       {showEndModal && (
         <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#1a1a1a] border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 py-5">
-              <h2 className="text-lg font-semibold text-white mb-4">End Meeting</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-2 block">Rating</label>
-                  <div className="flex gap-1">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setRating(n)}
-                        className={cn(
-                          'w-8 h-8 rounded-lg text-xs font-bold transition-all',
-                          rating === n
-                            ? n >= 8 ? 'bg-green-600 text-white' : n >= 6 ? 'bg-yellow-600 text-white' : 'bg-red-600 text-white'
-                            : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700',
-                        )}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1.5 block">Notes</label>
-                  <textarea
-                    value={endNotes}
-                    onChange={e => setEndNotes(e.target.value)}
-                    className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-green-600 resize-none placeholder:text-zinc-600"
-                    rows={3}
-                    placeholder="Key takeaways…"
-                  />
-                </div>
-              </div>
+              <h2 className="text-lg font-semibold text-white mb-2">End Meeting</h2>
+              {avgRating !== null && (
+                <p className="text-sm text-zinc-400 mb-4">
+                  Meeting rating: <span className="font-semibold text-green-400">{avgRating}/10</span>
+                  <span className="text-zinc-600 ml-1">({ratedCount} rated)</span>
+                </p>
+              )}
+              <p className="text-sm text-zinc-500">This will save all notes and ratings, then close the meeting.</p>
             </div>
             <div className="flex gap-3 px-6 pb-5">
               <button onClick={() => setShowEndModal(false)} className="flex-1 py-2.5 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:bg-zinc-800 transition-colors">

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { Meeting, MeetingNote } from '@/lib/eos/meetings';
+import type { Meeting, MeetingNote, PersonRating } from '@/lib/eos/meetings';
 import type { Todo } from '@/lib/eos/todos';
 import { cn } from '@/lib/utils';
 
@@ -9,16 +9,17 @@ type Props = {
   meeting: Meeting;
   notes: MeetingNote[];
   meetingTodos: Todo[];
+  ratings: PersonRating[];
 };
 
 const SECTION_ORDER = [
-  { key: 'segue', label: 'Segue' },
+  { key: 'segue',     label: 'Segue' },
   { key: 'scorecard', label: 'Scorecard Review' },
-  { key: 'barrels', label: 'Barrel Review' },
+  { key: 'barrels',   label: 'Barrel Review' },
   { key: 'headlines', label: 'Headlines' },
-  { key: 'todos', label: 'To-Do Review' },
-  { key: 'ids', label: 'IDS — Opportunities' },
-  { key: 'conclude', label: 'Conclude' },
+  { key: 'todos',     label: 'To-Do Review' },
+  { key: 'ids',       label: 'IDS — Opportunities' },
+  { key: 'conclude',  label: 'Conclude' },
 ];
 
 function fmtDate(d: string | null) {
@@ -42,7 +43,7 @@ function ratingColor(r: number) {
   return 'text-red-400';
 }
 
-export default function SummaryClient({ meeting, notes, meetingTodos }: Props) {
+export default function SummaryClient({ meeting, notes, meetingTodos, ratings }: Props) {
   const noteMap = new Map(notes.map(n => [n.section, n.content ?? '']));
 
   return (
@@ -77,11 +78,32 @@ export default function SummaryClient({ meeting, notes, meetingTodos }: Props) {
         </div>
       </div>
 
+      {/* Per-person ratings */}
+      {ratings.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 print:text-gray-500 mb-2">
+            Individual Ratings
+          </h3>
+          <div className="rounded-xl border border-zinc-800 print:border-gray-300 bg-[#111] print:bg-gray-50 px-5 py-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {ratings.map(r => (
+                <div key={r.id} className="flex items-center gap-3">
+                  <span className="text-sm text-zinc-300 print:text-gray-700 flex-1">{r.person_name}</span>
+                  <span className={cn('text-sm font-semibold tabular-nums', ratingColor(r.rating))}>
+                    {r.rating}/10
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* General notes */}
       {meeting.notes && (
         <div className="mb-6">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 print:text-gray-500 mb-2">
-            General Notes
+            Closing Notes
           </h3>
           <div className="rounded-xl border border-zinc-800 print:border-gray-300 bg-[#111] print:bg-gray-50 px-5 py-4">
             <p className="text-sm text-zinc-300 print:text-gray-800 whitespace-pre-wrap">{meeting.notes}</p>
@@ -142,7 +164,7 @@ export default function SummaryClient({ meeting, notes, meetingTodos }: Props) {
         </div>
       )}
 
-      {!meeting.notes && notes.length === 0 && meetingTodos.length === 0 && (
+      {!meeting.notes && notes.length === 0 && meetingTodos.length === 0 && ratings.length === 0 && (
         <div className="rounded-xl border border-zinc-800 bg-[#111] px-8 py-12 text-center text-zinc-600 text-sm">
           No notes or to-dos were recorded during this meeting.
         </div>

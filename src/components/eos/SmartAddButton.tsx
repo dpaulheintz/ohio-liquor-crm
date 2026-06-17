@@ -13,7 +13,7 @@ import { createHeadlineAction } from '@/app/eos/headlines/actions';
 import { startMeetingAction } from '@/app/eos/meetings/actions';
 import { cn } from '@/lib/utils';
 
-export type PageContext = 'scorecard' | 'barrels' | 'todos' | 'opportunities' | 'headlines' | 'meetings' | 'dashboard';
+export type PageContext = 'scorecard' | 'barrels' | 'todos' | 'opportunities' | 'headlines' | 'meetings' | 'dashboard' | 'meeting';
 type ModalKey = 'metric' | 'barrel' | 'todo' | 'opp' | 'headline' | 'meeting';
 
 const PAGE_DEFAULTS: Record<PageContext, { label: string; modal: ModalKey }> = {
@@ -24,6 +24,7 @@ const PAGE_DEFAULTS: Record<PageContext, { label: string; modal: ModalKey }> = {
   headlines:     { label: 'New Headline',    modal: 'headline' },
   meetings:      { label: 'Start Meeting',   modal: 'meeting' },
   dashboard:     { label: 'New To-Do',       modal: 'todo' },
+  meeting:       { label: 'New Opportunity', modal: 'opp' },
 };
 
 const DROPDOWN_ACTIONS: { key: ModalKey; label: string }[] = [
@@ -236,13 +237,13 @@ function MeetingQuickModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-export default function SmartAddButton({ pageContext }: { pageContext: PageContext }) {
+export default function SmartAddButton({ pageContext, className }: { pageContext: PageContext; className?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalKey | null>(null);
 
-  if (/\/eos\/meetings\/[^/]+\/run/.test(pathname)) return null;
+  void pathname; // used elsewhere to decide context, not suppressing runner
 
   const pageDefault = PAGE_DEFAULTS[pageContext];
 
@@ -261,7 +262,7 @@ export default function SmartAddButton({ pageContext }: { pageContext: PageConte
         <div className="fixed inset-0 z-[44]" onClick={() => setDropdownOpen(false)} />
       )}
 
-      <div className="fixed bottom-6 right-6 z-[45]">
+      <div className={cn('fixed bottom-6 right-6 z-[45]', className)}>
         <div className="relative">
           {dropdownOpen && (
             <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a1a] border border-zinc-700 rounded-xl shadow-2xl overflow-hidden min-w-[180px]">

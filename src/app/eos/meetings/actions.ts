@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { startMeeting, endMeeting, saveSectionNote } from '@/lib/eos/meetings';
+import { startMeeting, endMeeting, saveSectionNote, upsertPersonRating } from '@/lib/eos/meetings';
 import { createTodo, updateTodo, type Todo } from '@/lib/eos/todos';
 import { createOpportunity, type Opportunity } from '@/lib/eos/opportunities';
 import { createHeadline, type Headline } from '@/lib/eos/headlines';
@@ -13,12 +13,17 @@ export async function startMeetingAction(): Promise<string> {
   return startMeeting('level_10', user?.email ?? '');
 }
 
-export async function endMeetingAction(
-  id: string,
-  rating: number | null,
-  notes: string,
+export async function endMeetingAction(id: string, notes: string): Promise<void> {
+  await endMeeting(id, notes);
+}
+
+export async function upsertPersonRatingAction(
+  meetingId: string,
+  personName: string,
+  personEmail: string,
+  rating: number,
 ): Promise<void> {
-  await endMeeting(id, rating, notes);
+  await upsertPersonRating(meetingId, personName, personEmail, rating);
 }
 
 export async function saveSectionNoteAction(
@@ -56,6 +61,23 @@ export async function flagForIDSAction(title: string): Promise<Opportunity> {
     term: 'short',
     status: 'open',
     priority: 'high',
+  });
+}
+
+export async function createOpportunityInMeetingAction(data: {
+  title: string;
+  term: string;
+  priority: string;
+  owner_name: string;
+  owner_email: string;
+}): Promise<Opportunity> {
+  return createOpportunity({
+    title: data.title.trim(),
+    term: data.term,
+    status: 'open',
+    priority: data.priority || undefined,
+    owner_name: data.owner_name.trim() || undefined,
+    owner_email: data.owner_email.trim() || undefined,
   });
 }
 

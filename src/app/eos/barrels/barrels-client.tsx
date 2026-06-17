@@ -5,6 +5,7 @@ import type { BarrelWithMilestones } from '@/lib/eos/barrels';
 import { createBarrelAction, type BarrelFormData } from './actions';
 import BarrelModal from '@/components/eos/BarrelModal';
 import BarrelDetailPanel from '@/components/eos/BarrelDetailPanel';
+import BarrelsListView from '@/components/eos/BarrelsListView';
 import SmartAddButton from '@/components/eos/SmartAddButton';
 import { cn } from '@/lib/utils';
 
@@ -26,15 +27,6 @@ const BOARD_COLUMNS: { status: Status; label: string }[] = [
   { status: 'complete',    label: 'Complete' },
 ];
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status as Status] ?? STATUS_CONFIG.not_started;
-  return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', cfg.bg, cfg.text)}>
-      {cfg.label}
-    </span>
-  );
-}
-
 function fmtDate(d: string | null) {
   if (!d) return '';
   const [y, m, day] = d.split('-').map(Number);
@@ -49,10 +41,6 @@ export default function BarrelsClient({ initialBarrels }: Props) {
   const [quarterFilter, setQuarterFilter] = useState('all');
 
   const quarters = ['all', ...Array.from(new Set(barrels.map(b => b.quarter).filter(Boolean) as string[])).sort()];
-
-  function openDetail(barrel: BarrelWithMilestones) {
-    setSelectedBarrel(barrel);
-  }
 
   function handleUpdate(updated: BarrelWithMilestones) {
     setBarrels(prev => prev.map(b => b.id === updated.id ? updated : b));
@@ -73,8 +61,6 @@ export default function BarrelsClient({ initialBarrels }: Props) {
   const filteredBarrels = quarterFilter === 'all'
     ? barrels
     : barrels.filter(b => b.quarter === quarterFilter);
-  const companyBarrels = filteredBarrels.filter(b => b.barrel_type === 'company');
-  const individualBarrels = filteredBarrels.filter(b => b.barrel_type === 'individual');
 
   return (
     <>
@@ -85,7 +71,6 @@ export default function BarrelsClient({ initialBarrels }: Props) {
           <p className="text-zinc-400 mt-1 text-sm">Quarterly rocks — big goals for the company and individuals</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Quarter filter */}
           {quarters.length > 1 && (
             <select
               value={quarterFilter}
@@ -97,7 +82,6 @@ export default function BarrelsClient({ initialBarrels }: Props) {
               ))}
             </select>
           )}
-          {/* View toggle */}
           <div className="flex rounded-lg border border-zinc-700 overflow-hidden text-sm">
             {(['list', 'board'] as const).map(v => (
               <button
@@ -123,88 +107,10 @@ export default function BarrelsClient({ initialBarrels }: Props) {
 
       {/* LIST VIEW */}
       {view === 'list' && (
-        <div className="space-y-8">
-          {[
-            { label: 'Company Barrels', items: companyBarrels },
-            { label: 'Individual Barrels', items: individualBarrels },
-          ].map(({ label, items }) => (
-            <div key={label}>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">{label}</h2>
-              {items.length === 0 ? (
-                <div className="rounded-xl border border-zinc-800 bg-[#111] px-6 py-8 text-center text-zinc-600 text-sm">
-                  No {label.toLowerCase()} yet.
-                </div>
-              ) : (
-                <div className="rounded-xl border border-zinc-800 overflow-hidden">
-                  {items.map((barrel, idx) => {
-                    const completedMs = barrel.milestones.filter(m => m.completed).length;
-                    const totalMs = barrel.milestones.length;
-                    const progress = totalMs > 0 ? completedMs / totalMs : 0;
-
-                    return (
-                      <div
-                        key={barrel.id}
-                        onClick={() => openDetail(barrel)}
-                        className={cn(
-                          'flex items-center gap-4 px-4 py-3 cursor-pointer',
-                          'group/row hover:bg-zinc-800/50 transition-colors',
-                          idx < items.length - 1 && 'border-b border-zinc-800',
-                          idx % 2 === 0 ? 'bg-[#111]' : 'bg-[#141414]',
-                        )}
-                      >
-                        {/* Status badge */}
-                        <div className="shrink-0">
-                          <StatusBadge status={barrel.status} />
-                        </div>
-
-                        {/* Title */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-100 truncate">{barrel.title}</p>
-                          {barrel.quarter && (
-                            <p className="text-xs text-zinc-600">{barrel.quarter}</p>
-                          )}
-                        </div>
-
-                        {/* Milestone progress */}
-                        <div className="shrink-0 hidden sm:flex items-center gap-2">
-                          {totalMs > 0 ? (
-                            <>
-                              <span className="text-xs text-zinc-500">{completedMs}/{totalMs}</span>
-                              <div className="w-16 h-1 rounded-full bg-zinc-800 overflow-hidden">
-                                <div
-                                  className="h-1 rounded-full bg-green-600 transition-all"
-                                  style={{ width: `${progress * 100}%` }}
-                                />
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-xs text-zinc-700">—</span>
-                          )}
-                        </div>
-
-                        {/* Owner */}
-                        <div className="shrink-0 hidden md:block text-right">
-                          <p className="text-xs text-zinc-400">{barrel.owner_name ?? '—'}</p>
-                        </div>
-
-                        {/* Due date */}
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs text-zinc-500">{fmtDate(barrel.due_date)}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {barrels.length === 0 && (
-            <div className="rounded-xl border border-zinc-800 bg-[#111] px-8 py-16 text-center">
-              <p className="text-zinc-500 text-sm">No barrels yet. Click &ldquo;+ Add Barrel&rdquo; to create your first quarterly rock.</p>
-            </div>
-          )}
-        </div>
+        <BarrelsListView
+          barrels={filteredBarrels}
+          onBarrelClick={barrel => setSelectedBarrel(barrel)}
+        />
       )}
 
       {/* BOARD VIEW */}
@@ -227,7 +133,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
                     return (
                       <div
                         key={barrel.id}
-                        onClick={() => openDetail(barrel)}
+                        onClick={() => setSelectedBarrel(barrel)}
                         className="rounded-xl border border-zinc-800 bg-[#111] px-4 py-3 cursor-pointer hover:bg-zinc-800/60 transition-colors"
                       >
                         <p className="text-sm font-medium text-zinc-100 mb-2">{barrel.title}</p>
@@ -261,6 +167,12 @@ export default function BarrelsClient({ initialBarrels }: Props) {
         </div>
       )}
 
+      {barrels.length === 0 && (
+        <div className="rounded-xl border border-zinc-800 bg-[#111] px-8 py-16 text-center">
+          <p className="text-zinc-500 text-sm">No barrels yet. Click &ldquo;+ Add Barrel&rdquo; to create your first quarterly rock.</p>
+        </div>
+      )}
+
       {/* Detail Panel */}
       <BarrelDetailPanel
         barrel={selectedBarrel}
@@ -269,7 +181,6 @@ export default function BarrelsClient({ initialBarrels }: Props) {
         onDelete={handleDelete}
       />
 
-      {/* Add Modal */}
       {showAddModal && (
         <BarrelModal
           mode="create"

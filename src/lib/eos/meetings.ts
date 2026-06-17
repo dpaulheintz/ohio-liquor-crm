@@ -19,6 +19,15 @@ export type MeetingNote = {
   created_at: string;
 };
 
+export type PersonRating = {
+  id: string;
+  meeting_id: string;
+  person_name: string;
+  person_email: string;
+  rating: number;
+  created_at: string;
+};
+
 export async function getMeetings(): Promise<Meeting[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -54,6 +63,40 @@ export async function getMeetingNotes(meetingId: string): Promise<MeetingNote[]>
   return (data ?? []) as MeetingNote[];
 }
 
+export async function getMeetingRatings(meetingId: string): Promise<PersonRating[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('eos_meeting_ratings')
+    .select('*')
+    .eq('meeting_id', meetingId)
+    .order('person_name');
+  if (error) throw error;
+  return (data ?? []) as PersonRating[];
+}
+
+export async function getAverageRating(meetingId: string): Promise<number | null> {
+  const ratings = await getMeetingRatings(meetingId);
+  if (ratings.length === 0) return null;
+  const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+  return Math.round((sum / ratings.length) * 10) / 10;
+}
+
+export async function upsertPersonRating(
+  meetingId: string,
+  personName: string,
+  personEmail: string,
+  rating: number,
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('eos_meeting_ratings')
+    .upsert(
+      { meeting_id: meetingId, person_name: personName, person_email: personEmail, rating },
+      { onConflict: 'meeting_id,person_email' },
+    );
+  if (error) throw error;
+}
+
 export async function startMeeting(type: string, createdBy: string): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -69,17 +112,14 @@ export async function startMeeting(type: string, createdBy: string): Promise<str
   return data.id;
 }
 
-export async function endMeeting(
-  id: string,
-  rating: number | null,
-  notes: string | null,
-): Promise<void> {
+export async function endMeeting(id: string, notes: string | null): Promise<void> {
+  const avgRating = await getAverageRating(id);
   const supabase = await createClient();
   const { error } = await supabase
     .from('eos_meetings')
     .update({
       ended_at: new Date().toISOString(),
-      rating,
+      rating: avgRating,
       notes: notes?.trim() || null,
     })
     .eq('id', id);
