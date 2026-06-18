@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function EosHeadlinesPage() {
   const headlines = await getHeadlines();
   return (
-    <div className="px-6 py-8 text-white min-h-full">
+    <div className="px-6 py-8 text-[#F5ECD7] min-h-full">
       <div className="max-w-3xl mx-auto">
         <HeadlinesClient initialHeadlines={headlines} />
       </div>

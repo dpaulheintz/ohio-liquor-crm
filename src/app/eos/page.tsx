@@ -34,7 +34,7 @@ export default async function EosDashboardPage() {
     : [[], []];
 
   return (
-    <div className="px-6 py-8 text-white min-h-full">
+    <div className="px-6 py-8 text-[#F5ECD7] min-h-full">
       <EosDashboardClient
         metrics={metrics}
         entries={entries}
