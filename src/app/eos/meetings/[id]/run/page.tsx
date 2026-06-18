@@ -24,7 +24,7 @@ export default async function MeetingRunnerPage({
   if (!meeting) redirect('/eos/meetings');
   if (meeting.ended_at) redirect(`/eos/meetings/${id}`);
 
-  const weekStarts = getWeekStarts(1);
+  const weekStarts = getWeekStarts(13);
   const [notes, metrics, entries, barrels, todos, opportunities, headlines] =
     await Promise.all([
       getMeetingNotes(id),
@@ -42,7 +42,7 @@ export default async function MeetingRunnerPage({
       initialNotes={notes}
       metrics={metrics}
       entries={entries}
-      currentWeek={weekStarts[0] ?? ''}
+      weekStarts={weekStarts}
       barrels={barrels}
       todos={todos}
       opportunities={opportunities}

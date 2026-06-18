@@ -56,7 +56,7 @@ type Props = {
   initialNotes: MeetingNote[];
   metrics: Metric[];
   entries: Entry[];
-  currentWeek: string;
+  weekStarts: string[];
   barrels: BarrelWithMilestones[];
   todos: Todo[];
   opportunities: Opportunity[];
@@ -89,7 +89,7 @@ export default function RunnerClient({
   initialNotes,
   metrics,
   entries,
-  currentWeek,
+  weekStarts,
   barrels: initialBarrels,
   todos: initialTodos,
   opportunities: initialOpportunities,
@@ -370,7 +370,7 @@ export default function RunnerClient({
         <ScorecardGrid
           initialMetrics={metrics}
           initialEntries={entries}
-          weekStarts={[currentWeek]}
+          weekStarts={weekStarts}
           isAdmin={false}
           onFlagForIDS={handleFlagForIDS}
           flaggedTitles={flagged}
