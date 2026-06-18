@@ -24,7 +24,7 @@ export default async function MeetingSummaryPage({
   ]);
 
   return (
-    <div className="px-6 py-8 text-white min-h-full">
+    <div className="px-6 py-8 text-[#F5ECD7] min-h-full">
       <div className="max-w-3xl mx-auto">
         <SummaryClient meeting={meeting} notes={notes} meetingTodos={meetingTodos} ratings={ratings} />
       </div>

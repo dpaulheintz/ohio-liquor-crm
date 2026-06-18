@@ -31,16 +31,16 @@ type Props = {
 };
 
 const BARREL_STATUS_CONFIG: Record<string, { label: string; cls: string; dotCls: string }> = {
-  complete:    { label: 'Complete',    cls: 'bg-green-900/50 text-green-400',  dotCls: 'bg-green-500' },
-  on_track:    { label: 'On Track',    cls: 'bg-blue-900/50 text-blue-400',    dotCls: 'bg-blue-500' },
-  off_track:   { label: 'Off Track',   cls: 'bg-red-900/50 text-red-400',      dotCls: 'bg-red-500' },
-  not_started: { label: 'Not Started', cls: 'bg-zinc-800 text-zinc-500',       dotCls: 'bg-zinc-600' },
+  complete:    { label: 'Complete',    cls: 'bg-[#C9963A] text-[#0E0B07] font-semibold',  dotCls: 'bg-[#C9963A]' },
+  on_track:    { label: 'On Track',    cls: 'bg-[#0F2E2B] text-[#5B9E94]',    dotCls: 'bg-[#5B9E94]' },
+  off_track:   { label: 'Off Track',   cls: 'bg-[#2E0F0F] text-[#C0392B]',      dotCls: 'bg-[#C0392B]' },
+  not_started: { label: 'Not Started', cls: 'bg-[#2A1F14] text-[#B8A99A]',       dotCls: 'bg-[#6B5A4A]' },
 };
 
 const HEADLINE_TYPE_CONFIG: Record<string, { label: string; cls: string }> = {
-  good_news:       { label: 'Good News',    cls: 'bg-yellow-900/50 text-yellow-400' },
-  customer_win:    { label: 'Customer Win', cls: 'bg-green-900/50 text-green-400' },
-  employee_update: { label: 'Team Update',  cls: 'bg-blue-900/50 text-blue-400' },
+  good_news:       { label: 'Good News',    cls: 'bg-[#2E1E08] text-[#D4821A]' },
+  customer_win:    { label: 'Customer Win', cls: 'bg-[#0F2E2B] text-[#5B9E94]' },
+  employee_update: { label: 'Team Update',  cls: 'bg-[#0F2E2B] text-[#5B9E94]' },
 };
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -75,9 +75,9 @@ function fmtDuration(start: string | null, end: string | null): string {
 }
 
 function ratingColor(r: number): string {
-  if (r >= 8) return 'text-green-400';
-  if (r >= 6) return 'text-yellow-400';
-  return 'text-red-400';
+  if (r >= 8) return 'text-[#5B9E94]';
+  if (r >= 6) return 'text-[#D4821A]';
+  return 'text-[#C0392B]';
 }
 
 function todayStr(): string {
@@ -125,7 +125,7 @@ export default function EosDashboardClient({
     return val ? evaluateGoal(val, m.goal_operator, m.goal_value, m.metric_type) : false;
   }).length;
   const scoreHealthColor =
-    onTrackCount >= 16 ? 'text-green-400' : onTrackCount >= 10 ? 'text-yellow-400' : 'text-red-400';
+    onTrackCount >= 16 ? 'text-[#5B9E94]' : onTrackCount >= 10 ? 'text-[#D4821A]' : 'text-[#C0392B]';
 
   // ── Barrels ───────────────────────────────────────────────────────
   const barrelCounts = {
@@ -217,16 +217,16 @@ export default function EosDashboardClient({
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-white">High Bank EOS</h1>
-          <p className="text-zinc-400 mt-1 text-sm">
+          <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>High Bank EOS</h1>
+          <p className="text-[#B8A99A] mt-1 text-sm">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            <span className="mx-2 text-zinc-700">·</span>
+            <span className="mx-2 text-[#6B5A4A]">·</span>
             Your weekly operating system
           </p>
         </div>
         <button
           onClick={() => setShowStartModal(true)}
-          className="px-5 py-2.5 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] text-white text-sm font-semibold transition-colors flex items-center gap-2 shrink-0"
+          className="px-5 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-semibold transition-colors flex items-center gap-2 shrink-0"
         >
           <span>▶</span> Start Level 10
         </button>
@@ -235,54 +235,54 @@ export default function EosDashboardClient({
       {/* ── Row 1: Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Scorecard health */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Scorecard Health</p>
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-5 py-4 flex flex-col gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A]">Scorecard Health</p>
           <p className={cn('text-3xl font-bold', scoreHealthColor)}>
-            {onTrackCount}<span className="text-lg font-normal text-zinc-600"> / {metrics.length}</span>
+            {onTrackCount}<span className="text-lg font-normal text-[#6B5A4A]"> / {metrics.length}</span>
           </p>
-          <p className="text-xs text-zinc-500">metrics on track this week</p>
-          <Link href="/eos/scorecard" className="text-xs text-green-500 hover:text-green-400 mt-auto pt-2 transition-colors">
+          <p className="text-xs text-[#B8A99A]">metrics on track this week</p>
+          <Link href="/eos/scorecard" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
             View Scorecard →
           </Link>
         </div>
 
         {/* Barrels */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Barrels</p>
-          <p className="text-3xl font-bold text-white">{barrels.length}</p>
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-5 py-4 flex flex-col gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A]">Barrels</p>
+          <p className="text-3xl font-bold text-[#F5ECD7]">{barrels.length}</p>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mt-0.5">
-            <span className="text-green-400">{barrelCounts.complete} complete</span>
-            <span className="text-blue-400">{barrelCounts.on_track} on track</span>
-            <span className="text-red-400">{barrelCounts.off_track} off track</span>
-            <span className="text-zinc-500">{barrelCounts.not_started} not started</span>
+            <span className="text-[#C9963A]">{barrelCounts.complete} complete</span>
+            <span className="text-[#5B9E94]">{barrelCounts.on_track} on track</span>
+            <span className="text-[#C0392B]">{barrelCounts.off_track} off track</span>
+            <span className="text-[#B8A99A]">{barrelCounts.not_started} not started</span>
           </div>
-          <Link href="/eos/barrels" className="text-xs text-green-500 hover:text-green-400 mt-auto pt-2 transition-colors">
+          <Link href="/eos/barrels" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
             View Barrels →
           </Link>
         </div>
 
         {/* Open To-Dos */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Open To-Dos</p>
-          <p className="text-3xl font-bold text-white">{incompleteTodos.length}</p>
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-5 py-4 flex flex-col gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A]">Open To-Dos</p>
+          <p className="text-3xl font-bold text-[#F5ECD7]">{incompleteTodos.length}</p>
           {overdueTodos.length > 0 ? (
-            <p className="text-xs text-red-400 font-medium">{overdueTodos.length} overdue</p>
+            <p className="text-xs text-[#C0392B] font-medium">{overdueTodos.length} overdue</p>
           ) : (
-            <p className="text-xs text-zinc-600">none overdue</p>
+            <p className="text-xs text-[#6B5A4A]">none overdue</p>
           )}
-          <Link href="/eos/todos" className="text-xs text-green-500 hover:text-green-400 mt-auto pt-2 transition-colors">
+          <Link href="/eos/todos" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
             View To-Dos →
           </Link>
         </div>
 
         {/* Open Opportunities */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Open Opportunities</p>
-          <p className="text-3xl font-bold text-white">{openOpps.length}</p>
-          <p className="text-xs text-zinc-500">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-5 py-4 flex flex-col gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A]">Open Opportunities</p>
+          <p className="text-3xl font-bold text-[#F5ECD7]">{openOpps.length}</p>
+          <p className="text-xs text-[#B8A99A]">
             {shortOpps} short-term · {longOpps} long-term
           </p>
-          <Link href="/eos/opportunities" className="text-xs text-green-500 hover:text-green-400 mt-auto pt-2 transition-colors">
+          <Link href="/eos/opportunities" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
             View Opportunities →
           </Link>
         </div>
@@ -291,35 +291,35 @@ export default function EosDashboardClient({
       {/* ── Row 2: Scorecard Snapshot + Headlines ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
         {/* Scorecard Snapshot */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-300">Scorecard Snapshot</h3>
-            <Link href="/eos/scorecard" className="text-xs text-green-500 hover:text-green-400 transition-colors">
+            <h3 className="text-sm font-semibold text-[#F5ECD7]">Scorecard Snapshot</h3>
+            <Link href="/eos/scorecard" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
               View full scorecard →
             </Link>
           </div>
 
           {metrics.length === 0 ? (
-            <p className="text-xs text-zinc-600 py-4 text-center">No metrics yet.</p>
+            <p className="text-xs text-[#6B5A4A] py-4 text-center">No metrics yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left pb-2 pr-3 font-medium text-zinc-500 w-full">Metric</th>
-                    <th className="text-right pb-2 px-2 font-medium text-zinc-500 whitespace-nowrap">Goal</th>
+                  <tr className="border-b border-[#3D2E1E]">
+                    <th className="text-left pb-2 pr-3 font-medium text-[#B8A99A] w-full">Metric</th>
+                    <th className="text-right pb-2 px-2 font-medium text-[#B8A99A] whitespace-nowrap">Goal</th>
                     {weekStarts.map(ws => (
-                      <th key={ws} className="text-center pb-2 px-1.5 font-medium text-zinc-500 whitespace-nowrap w-10">
+                      <th key={ws} className="text-center pb-2 px-1.5 font-medium text-[#B8A99A] whitespace-nowrap w-10">
                         {shortWeekLabel(ws)}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900">
+                <tbody className="divide-y divide-[#3D2E1E]">
                   {metrics.map(m => (
-                    <tr key={m.id} className="hover:bg-zinc-900/40">
-                      <td className="py-1.5 pr-3 text-zinc-300 truncate max-w-[180px]">{m.title}</td>
-                      <td className="py-1.5 px-2 text-right text-zinc-500 whitespace-nowrap">
+                    <tr key={m.id} className="hover:bg-[#2A1F14]/40">
+                      <td className="py-1.5 pr-3 text-[#F5ECD7] truncate max-w-[180px]">{m.title}</td>
+                      <td className="py-1.5 px-2 text-right text-[#B8A99A] whitespace-nowrap">
                         {formatOperator(m.goal_operator)} {formatValue(m.goal_value, m.metric_type)}
                       </td>
                       {weekStarts.map((ws, i) => {
@@ -329,10 +329,10 @@ export default function EosDashboardClient({
                           <td key={ws} className="py-1.5 px-1.5 text-center">
                             <span className={cn(
                               'inline-block w-2.5 h-2.5 rounded-full',
-                              met === true ? 'bg-green-500' :
-                              met === false ? 'bg-red-500' :
-                              'bg-zinc-700',
-                              i === 0 && 'ring-1 ring-offset-1 ring-offset-[#111] ring-zinc-600',
+                              met === true ? 'bg-[#5B9E94]' :
+                              met === false ? 'bg-[#C0392B]' :
+                              'bg-[#3D2E1E]',
+                              i === 0 && 'ring-1 ring-offset-1 ring-offset-[#111] ring-[#3D2E1E]',
                             )} title={val ? `${val}` : 'No entry'} />
                           </td>
                         );
@@ -346,26 +346,26 @@ export default function EosDashboardClient({
         </div>
 
         {/* This Week's Headlines */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-5 flex flex-col">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-300">This Week&apos;s Headlines</h3>
-            <Link href="/eos/headlines" className="text-xs text-green-500 hover:text-green-400 transition-colors">
+            <h3 className="text-sm font-semibold text-[#F5ECD7]">This Week&apos;s Headlines</h3>
+            <Link href="/eos/headlines" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
               View all →
             </Link>
           </div>
 
           <div className="flex-1 space-y-2">
             {thisWeekHeadlines.length === 0 ? (
-              <p className="text-xs text-zinc-600 py-2">No headlines this week yet.</p>
+              <p className="text-xs text-[#6B5A4A] py-2">No headlines this week yet.</p>
             ) : (
               thisWeekHeadlines.map(h => {
                 const cfg = HEADLINE_TYPE_CONFIG[h.headline_type] ?? HEADLINE_TYPE_CONFIG.good_news;
                 return (
-                  <div key={h.id} className="flex items-start gap-2.5 py-1.5 border-b border-zinc-800/60 last:border-0">
+                  <div key={h.id} className="flex items-start gap-2.5 py-1.5 border-b border-[#3D2E1E]/60 last:border-0">
                     <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none mt-0.5', cfg.cls)}>
                       {cfg.label}
                     </span>
-                    <span className="text-xs text-zinc-300 leading-snug">{h.title}</span>
+                    <span className="text-xs text-[#F5ECD7] leading-snug">{h.title}</span>
                   </div>
                 );
               })
@@ -373,7 +373,7 @@ export default function EosDashboardClient({
           </div>
 
           {/* Inline add */}
-          <div className="mt-4 pt-4 border-t border-zinc-800">
+          <div className="mt-4 pt-4 border-t border-[#3D2E1E]">
             <div className="flex gap-1.5 mb-2">
               {(['good_news', 'customer_win', 'employee_update'] as const).map(type => {
                 const cfg = HEADLINE_TYPE_CONFIG[type];
@@ -383,7 +383,7 @@ export default function EosDashboardClient({
                     onClick={() => setNewType(type)}
                     className={cn(
                       'rounded px-2 py-1 text-[10px] font-semibold transition-colors',
-                      newType === type ? cfg.cls : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300',
+                      newType === type ? cfg.cls : 'bg-[#2A1F14] text-[#B8A99A] hover:text-[#F5ECD7]',
                     )}
                   >
                     {cfg.label}
@@ -398,12 +398,12 @@ export default function EosDashboardClient({
                 onChange={e => setNewTitle(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddHeadline()}
                 placeholder="Share good news…"
-                className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
+                className="flex-1 rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-1.5 text-xs text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#3D2E1E]"
               />
               <button
                 onClick={handleAddHeadline}
                 disabled={addingHeadline || !newTitle.trim()}
-                className="px-3 py-1.5 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] disabled:opacity-40 text-white text-xs font-medium transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-40 text-[#0E0B07] text-xs font-semibold transition-colors"
               >
                 {addingHeadline ? '…' : '+ Add'}
               </button>
@@ -415,18 +415,18 @@ export default function EosDashboardClient({
       {/* ── Row 3: Barrels Progress + Recent Meeting ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
         {/* Barrels Progress */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-300">Barrels Progress</h3>
-            <Link href="/eos/barrels" className="text-xs text-green-500 hover:text-green-400 transition-colors">
+            <h3 className="text-sm font-semibold text-[#F5ECD7]">Barrels Progress</h3>
+            <Link href="/eos/barrels" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
               View all barrels →
             </Link>
           </div>
 
           {sortedBarrels.length === 0 ? (
-            <p className="text-xs text-zinc-600 py-4 text-center">No barrels yet.</p>
+            <p className="text-xs text-[#6B5A4A] py-4 text-center">No barrels yet.</p>
           ) : (
-            <div className="space-y-0 divide-y divide-zinc-800/60">
+            <div className="space-y-0 divide-y divide-[#3D2E1E]/60">
               {sortedBarrels.map(barrel => {
                 const total = barrel.milestones.length;
                 const done = barrel.milestones.filter(ms => ms.completed).length;
@@ -436,23 +436,23 @@ export default function EosDashboardClient({
                     <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap', cfg.cls)}>
                       {cfg.label}
                     </span>
-                    <span className="flex-1 text-xs text-zinc-200 truncate">{barrel.title}</span>
+                    <span className="flex-1 text-xs text-[#F5ECD7] truncate">{barrel.title}</span>
                     {barrel.owner_name && (
-                      <span className="text-[10px] text-zinc-600 shrink-0 hidden sm:block">{barrel.owner_name}</span>
+                      <span className="text-[10px] text-[#6B5A4A] shrink-0 hidden sm:block">{barrel.owner_name}</span>
                     )}
                     {total > 0 && (
                       <div className="shrink-0 flex items-center gap-1.5">
-                        <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="w-16 h-1.5 bg-[#2A1F14] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-green-600 rounded-full"
+                            className="h-full bg-[#C9963A] rounded-full"
                             style={{ width: `${(done / total) * 100}%` }}
                           />
                         </div>
-                        <span className="text-[10px] text-zinc-500">{done}/{total}</span>
+                        <span className="text-[10px] text-[#B8A99A]">{done}/{total}</span>
                       </div>
                     )}
                     {barrel.due_date && (
-                      <span className="text-[10px] text-zinc-600 shrink-0 hidden md:block">
+                      <span className="text-[10px] text-[#6B5A4A] shrink-0 hidden md:block">
                         {fmtShortDate(barrel.due_date)}
                       </span>
                     )}
@@ -464,11 +464,11 @@ export default function EosDashboardClient({
         </div>
 
         {/* Recent Meeting */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-zinc-300">Recent Meeting</h3>
+            <h3 className="text-sm font-semibold text-[#F5ECD7]">Recent Meeting</h3>
             {recentMeeting && (
-              <Link href={`/eos/meetings/${recentMeeting.id}`} className="text-xs text-green-500 hover:text-green-400 transition-colors">
+              <Link href={`/eos/meetings/${recentMeeting.id}`} className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
                 View summary →
               </Link>
             )}
@@ -478,8 +478,8 @@ export default function EosDashboardClient({
             <div className="space-y-4">
               {/* Meeting meta */}
               <div className="space-y-1">
-                <p className="text-xs text-zinc-300">{fmtFullDate(recentMeeting.started_at)}</p>
-                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <p className="text-xs text-[#F5ECD7]">{fmtFullDate(recentMeeting.started_at)}</p>
+                <div className="flex items-center gap-3 text-xs text-[#B8A99A]">
                   <span>{fmtDuration(recentMeeting.started_at, recentMeeting.ended_at)}</span>
                   {recentMeeting.rating && (
                     <span className={cn('font-semibold', ratingColor(recentMeeting.rating))}>
@@ -492,7 +492,7 @@ export default function EosDashboardClient({
               {/* Todos from meeting */}
               {recentMeetingTodos.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6B5A4A] mb-1.5">
                     To-Dos Created
                   </p>
                   <div className="space-y-1">
@@ -500,7 +500,7 @@ export default function EosDashboardClient({
                       <div key={t.id} className="flex items-start gap-2">
                         <div className={cn(
                           'mt-0.5 w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center',
-                          t.completed ? 'bg-green-700 border-green-700' : 'border-zinc-600',
+                          t.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E]',
                         )}>
                           {t.completed && (
                             <svg className="w-2 h-2" viewBox="0 0 10 10" fill="none">
@@ -510,14 +510,14 @@ export default function EosDashboardClient({
                         </div>
                         <span className={cn(
                           'text-xs leading-snug',
-                          t.completed ? 'line-through text-zinc-600' : 'text-zinc-300',
+                          t.completed ? 'line-through text-[#6B5A4A]' : 'text-[#F5ECD7]',
                         )}>
                           {t.title}
                         </span>
                       </div>
                     ))}
                     {recentMeetingTodos.length > 3 && (
-                      <p className="text-[10px] text-zinc-600 pl-5">
+                      <p className="text-[10px] text-[#6B5A4A] pl-5">
                         +{recentMeetingTodos.length - 3} more…
                       </p>
                     )}
@@ -528,10 +528,10 @@ export default function EosDashboardClient({
               {/* Conclude notes preview */}
               {concludeNote && (
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6B5A4A] mb-1">
                     Conclude Notes
                   </p>
-                  <p className="text-xs text-zinc-400 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-[#B8A99A] leading-relaxed line-clamp-3">
                     {concludeNote}
                   </p>
                 </div>
@@ -539,11 +539,11 @@ export default function EosDashboardClient({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-              <p className="text-sm text-zinc-500">No meetings yet.</p>
-              <p className="text-xs text-zinc-600">Start your first Level 10 Meeting to see the recap here.</p>
+              <p className="text-sm text-[#B8A99A]">No meetings yet.</p>
+              <p className="text-xs text-[#6B5A4A]">Start your first Level 10 Meeting to see the recap here.</p>
               <button
                 onClick={() => setShowStartModal(true)}
-                className="mt-1 px-4 py-2 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] text-white text-xs font-medium transition-colors"
+                className="mt-1 px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-xs font-medium transition-colors"
               >
                 ▶ Start Level 10
               </button>
@@ -561,33 +561,33 @@ export default function EosDashboardClient({
           return a.due_date.localeCompare(b.due_date);
         });
         const displayedTodos = sortedIncompleteTodos.slice(0, 8);
-        const inputCls = 'rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500';
+        const inputCls = 'rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-1.5 text-xs text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#3D2E1E]';
         return (
-          <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
+          <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-zinc-300">Open To-Dos</h3>
+              <h3 className="text-sm font-semibold text-[#F5ECD7]">Open To-Dos</h3>
               {incompleteTodos.length > 0 && (
-                <Link href="/eos/todos" className="text-xs text-green-500 hover:text-green-400 transition-colors">
+                <Link href="/eos/todos" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
                   View all {incompleteTodos.length} →
                 </Link>
               )}
             </div>
 
             {displayedTodos.length === 0 && incompleteTodos.length === 0 ? (
-              <p className="text-xs text-zinc-600 py-2 text-center">No open to-dos. Great work!</p>
+              <p className="text-xs text-[#6B5A4A] py-2 text-center">No open to-dos. Great work!</p>
             ) : (
               <div className="space-y-1">
                 {displayedTodos.map(todo => {
                   const overdue = !todo.completed && todo.due_date && todo.due_date < today;
                   const isToday = !todo.completed && todo.due_date === today;
                   return (
-                    <div key={todo.id} className="flex items-center gap-3 py-2 border-b border-zinc-800/60 last:border-0">
+                    <div key={todo.id} className="flex items-center gap-3 py-2 border-b border-[#3D2E1E]/60 last:border-0">
                       <button
                         onClick={() => handleDashToggle(todo)}
                         disabled={togglingTodos.has(todo.id)}
                         className={cn(
                           'shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors',
-                          todo.completed ? 'bg-green-700 border-green-700' : 'border-zinc-600 hover:border-green-500',
+                          todo.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E] hover:border-[#C9963A]',
                           togglingTodos.has(todo.id) && 'opacity-50',
                         )}
                       >
@@ -597,16 +597,16 @@ export default function EosDashboardClient({
                           </svg>
                         )}
                       </button>
-                      <span className={cn('flex-1 text-xs truncate', todo.completed ? 'line-through text-zinc-600' : 'text-zinc-200')}>
+                      <span className={cn('flex-1 text-xs truncate', todo.completed ? 'line-through text-[#6B5A4A]' : 'text-[#F5ECD7]')}>
                         {todo.title}
                       </span>
-                      {todo.owner_name && <span className="text-[10px] text-zinc-600 shrink-0 hidden sm:block">{todo.owner_name}</span>}
+                      {todo.owner_name && <span className="text-[10px] text-[#6B5A4A] shrink-0 hidden sm:block">{todo.owner_name}</span>}
                       {todo.due_date && (
                         <span className={cn(
                           'shrink-0 text-[10px] px-1.5 py-0.5 rounded',
-                          overdue ? 'bg-red-900/50 text-red-400 font-medium' :
-                          isToday ? 'bg-yellow-900/50 text-yellow-400' :
-                          'text-zinc-600',
+                          overdue ? 'bg-[#2E0F0F] text-[#C0392B] font-medium' :
+                          isToday ? 'bg-[#2E1E08] text-[#D4821A]' :
+                          'text-[#6B5A4A]',
                         )}>
                           {overdue ? 'Overdue' : isToday ? 'Today' : fmtShortDate(todo.due_date)}
                         </span>
@@ -615,7 +615,7 @@ export default function EosDashboardClient({
                   );
                 })}
                 {incompleteTodos.length > 8 && (
-                  <Link href="/eos/todos" className="block text-center text-xs text-green-500 hover:text-green-400 pt-2 transition-colors">
+                  <Link href="/eos/todos" className="block text-center text-xs text-[#C9963A] hover:text-[#E8B86D] pt-2 transition-colors">
                     View all {incompleteTodos.length} to-dos →
                   </Link>
                 )}
@@ -623,7 +623,7 @@ export default function EosDashboardClient({
             )}
 
             {/* Inline add */}
-            <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap gap-2">
+            <div className="mt-4 pt-4 border-t border-[#3D2E1E] flex flex-wrap gap-2">
               <input
                 type="text"
                 value={dashTodoTitle}
@@ -654,7 +654,7 @@ export default function EosDashboardClient({
               <button
                 onClick={handleDashCreateTodo}
                 disabled={dashTodoAdding || !dashTodoTitle.trim()}
-                className="px-3 py-1.5 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] disabled:opacity-40 text-white text-xs font-medium transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-40 text-[#0E0B07] text-xs font-semibold transition-colors"
               >
                 {dashTodoAdding ? '…' : '+ Add'}
               </button>
@@ -667,24 +667,24 @@ export default function EosDashboardClient({
 
       {/* ── Start Meeting Modal ── */}
       {showStartModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 py-5 text-center">
               <div className="text-3xl mb-3">▶</div>
-              <h2 className="text-lg font-semibold text-white mb-2">Start a New Level 10 Meeting?</h2>
-              <p className="text-sm text-zinc-400">This will create a new meeting record and open the live runner.</p>
+              <h2 className="text-lg font-semibold text-[#F5ECD7] mb-2">Start a New Level 10 Meeting?</h2>
+              <p className="text-sm text-[#B8A99A]">This will create a new meeting record and open the live runner.</p>
             </div>
             <div className="flex gap-3 px-6 pb-5">
               <button
                 onClick={() => setShowStartModal(false)}
-                className="flex-1 py-2.5 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:bg-zinc-800 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStart}
                 disabled={starting}
-                className="flex-1 py-2.5 rounded-lg bg-[#2a5a3a] hover:bg-[#3a6a4a] disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors"
               >
                 {starting ? 'Starting…' : 'Start Meeting'}
               </button>

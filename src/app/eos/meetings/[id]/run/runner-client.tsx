@@ -38,13 +38,13 @@ const SECTIONS = [
 ];
 
 const HEADLINE_TYPES: Record<string, { label: string; dot: string }> = {
-  good_news:       { label: 'Good News',      dot: 'bg-yellow-500' },
-  customer_win:    { label: 'Customer Win',   dot: 'bg-green-500' },
-  employee_update: { label: 'Team Update',    dot: 'bg-blue-500' },
+  good_news:       { label: 'Good News',      dot: 'bg-[#D4821A]' },
+  customer_win:    { label: 'Customer Win',   dot: 'bg-[#5B9E94]' },
+  employee_update: { label: 'Team Update',    dot: 'bg-[#5B9E94]' },
 };
 
 const PRIORITY_DOT: Record<string, string> = {
-  critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-yellow-500', low: 'bg-zinc-500',
+  critical: 'bg-[#C0392B]', high: 'bg-[#C0392B]', medium: 'bg-[#D4821A]', low: 'bg-[#6B5A4A]',
 };
 
 const SECTION_MAP: Record<string, number> = {
@@ -301,7 +301,7 @@ export default function RunnerClient({
   }
 
   // ── Input styles ──
-  const inputCls = 'rounded-lg bg-[#0a140c] border border-green-900/30 px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-green-600 placeholder:text-zinc-700 transition-colors';
+  const inputCls = 'rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] placeholder:text-[#6B5A4A] transition-colors';
 
   // ═══ SECTION RENDERERS ═══════════════════════════════════════════════════════
 
@@ -321,14 +321,14 @@ export default function RunnerClient({
   function renderSegue() {
     return (
       <div className="space-y-6">
-        <div className="rounded-xl bg-green-900/10 border border-green-900/30 p-5">
-          <p className="text-green-300 text-sm leading-relaxed">
+        <div className="rounded-xl bg-[#0F2E2B] border border-[#3D2E1E] p-5">
+          <p className="text-[#5B9E94] text-sm leading-relaxed">
             Each person shares one <strong>personal win</strong> and one <strong>professional win</strong> from the past week.
           </p>
         </div>
         {headlines.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Today&apos;s Headlines</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-3">Today&apos;s Headlines</h3>
             {Object.entries(HEADLINE_TYPES).map(([type, cfg]) => {
               const items = headlines.filter(h => h.headline_type === type);
               if (items.length === 0) return null;
@@ -336,10 +336,10 @@ export default function RunnerClient({
                 <div key={type} className="mb-3">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <div className={cn('w-2 h-2 rounded-full', cfg.dot)} />
-                    <span className="text-xs text-zinc-500 font-medium">{cfg.label}</span>
+                    <span className="text-xs text-[#B8A99A] font-medium">{cfg.label}</span>
                   </div>
                   {items.map(h => (
-                    <label key={h.id} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-green-900/10 cursor-pointer transition-colors">
+                    <label key={h.id} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-[#0F2E2B] cursor-pointer transition-colors">
                       <input
                         type="checkbox"
                         checked={sharedHeadlines.has(h.id)}
@@ -348,9 +348,9 @@ export default function RunnerClient({
                           n.has(h.id) ? n.delete(h.id) : n.add(h.id);
                           return n;
                         })}
-                        className="accent-green-600"
+                        className="accent-[#C9963A]"
                       />
-                      <span className={cn('text-sm', sharedHeadlines.has(h.id) ? 'text-zinc-500 line-through' : 'text-zinc-300')}>
+                      <span className={cn('text-sm', sharedHeadlines.has(h.id) ? 'text-[#B8A99A] line-through' : 'text-[#F5ECD7]')}>
                         {h.title}
                       </span>
                     </label>
@@ -394,7 +394,7 @@ export default function RunnerClient({
     return (
       <div className="space-y-5">
         {showAllHeadlines && headlines.length > 0 && (
-          <div className="rounded-xl bg-yellow-900/10 border border-yellow-900/30 px-4 py-2.5 text-sm text-yellow-400">
+          <div className="rounded-xl bg-[#2E1E08] border border-[#3D2E1E] px-4 py-2.5 text-sm text-[#D4821A]">
             Showing all headlines — none added this week.
           </div>
         )}
@@ -406,28 +406,28 @@ export default function RunnerClient({
             <div key={type}>
               <div className="flex items-center gap-1.5 mb-2">
                 <div className={cn('w-2 h-2 rounded-full', cfg.dot)} />
-                <span className="text-xs font-medium text-zinc-500">{cfg.label}</span>
+                <span className="text-xs font-medium text-[#B8A99A]">{cfg.label}</span>
               </div>
               {items.map(h => (
-                <label key={h.id} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-green-900/10 cursor-pointer transition-colors">
+                <label key={h.id} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-[#0F2E2B] cursor-pointer transition-colors">
                   <input
                     type="checkbox"
                     checked={readHeadlines.has(h.id)}
                     onChange={() => setReadHeadlines(prev => { const n = new Set(prev); n.has(h.id) ? n.delete(h.id) : n.add(h.id); return n; })}
-                    className="accent-green-600"
+                    className="accent-[#C9963A]"
                   />
-                  <span className={cn('text-sm flex-1', readHeadlines.has(h.id) ? 'text-zinc-600 line-through' : 'text-zinc-300')}>{h.title}</span>
-                  {h.owner_name && <span className="text-xs text-zinc-600">{h.owner_name}</span>}
+                  <span className={cn('text-sm flex-1', readHeadlines.has(h.id) ? 'text-[#6B5A4A] line-through' : 'text-[#F5ECD7]')}>{h.title}</span>
+                  {h.owner_name && <span className="text-xs text-[#6B5A4A]">{h.owner_name}</span>}
                 </label>
               ))}
             </div>
           );
         })}
 
-        {headlines.length === 0 && <p className="text-sm text-zinc-600 text-center py-4">No headlines yet.</p>}
+        {headlines.length === 0 && <p className="text-sm text-[#6B5A4A] text-center py-4">No headlines yet.</p>}
 
-        <div className="border-t border-green-900/20 pt-4">
-          <h4 className="text-xs font-medium text-zinc-500 mb-2">Quick Add Headline</h4>
+        <div className="border-t border-[#3D2E1E] pt-4">
+          <h4 className="text-xs font-medium text-[#B8A99A] mb-2">Quick Add Headline</h4>
           <div className="flex gap-2 items-end">
             <div className="flex-1">
               <input
@@ -448,7 +448,7 @@ export default function RunnerClient({
               <option value="customer_win">Customer Win</option>
               <option value="employee_update">Team Update</option>
             </select>
-            <button onClick={handleAddHeadline} className="px-3 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors shrink-0">
+            <button onClick={handleAddHeadline} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">
               + Add
             </button>
           </div>
@@ -461,24 +461,24 @@ export default function RunnerClient({
     return (
       <div className="space-y-6">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Last Week&apos;s To-Dos</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-2">Last Week&apos;s To-Dos</h3>
           {lastWeekTodos.length === 0 ? (
-            <p className="text-sm text-zinc-600 py-2">No to-dos from the past week.</p>
+            <p className="text-sm text-[#6B5A4A] py-2">No to-dos from the past week.</p>
           ) : (
             <div className="space-y-1">
               {lastWeekTodos.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-green-900/10 transition-colors">
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#0F2E2B] transition-colors">
                   <button
                     onClick={() => handleToggleTodo(t.id, !t.completed)}
                     className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-                      t.completed ? 'bg-green-700 border-green-700' : 'border-zinc-600 hover:border-green-500')}
+                      t.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E] hover:border-[#C9963A]')}
                   >
                     {t.completed && <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </button>
-                  <span className={cn('flex-1 text-sm', t.completed ? 'line-through text-zinc-600' : 'text-zinc-200')}>{t.title}</span>
-                  {t.owner_name && <span className="text-xs text-zinc-600 shrink-0">{t.owner_name}</span>}
+                  <span className={cn('flex-1 text-sm', t.completed ? 'line-through text-[#6B5A4A]' : 'text-[#F5ECD7]')}>{t.title}</span>
+                  {t.owner_name && <span className="text-xs text-[#6B5A4A] shrink-0">{t.owner_name}</span>}
                   {!t.completed && t.due_date && t.due_date < todayStr && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900/50 text-red-400 font-medium shrink-0">Overdue</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2E0F0F] text-[#C0392B] font-medium shrink-0">Overdue</span>
                   )}
                 </div>
               ))}
@@ -488,16 +488,16 @@ export default function RunnerClient({
 
         {overdueTodos.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Carry Forward</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-2">Carry Forward</h3>
             <div className="space-y-1">
               {overdueTodos.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-900/5 border border-red-900/20">
-                  <span className="flex-1 text-sm text-zinc-300">{t.title}</span>
-                  {t.owner_name && <span className="text-xs text-zinc-600 shrink-0">{t.owner_name}</span>}
-                  <span className="text-xs text-red-500 shrink-0">{fmtShortDate(t.due_date)}</span>
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#2E0F0F] border border-[#3D2E1E]">
+                  <span className="flex-1 text-sm text-[#F5ECD7]">{t.title}</span>
+                  {t.owner_name && <span className="text-xs text-[#6B5A4A] shrink-0">{t.owner_name}</span>}
+                  <span className="text-xs text-[#C0392B] shrink-0">{fmtShortDate(t.due_date)}</span>
                   <button
                     onClick={() => handleCarryForward(t.id)}
-                    className="text-[11px] px-2 py-1 rounded bg-green-800/40 hover:bg-green-800/60 text-green-300 font-medium transition-colors shrink-0"
+                    className="text-[11px] px-2 py-1 rounded bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] font-medium transition-colors shrink-0"
                   >
                     Carry Forward +7d
                   </button>
@@ -507,8 +507,8 @@ export default function RunnerClient({
           </div>
         )}
 
-        <div className="border-t border-green-900/20 pt-4">
-          <h4 className="text-xs font-medium text-zinc-500 mb-2">Create New To-Do</h4>
+        <div className="border-t border-[#3D2E1E] pt-4">
+          <h4 className="text-xs font-medium text-[#B8A99A] mb-2">Create New To-Do</h4>
           <div className="flex gap-2 items-end flex-wrap">
             <input
               type="text"
@@ -534,7 +534,7 @@ export default function RunnerClient({
               onChange={e => setNewTodoDue(e.target.value)}
               className={cn(inputCls, 'w-36')}
             />
-            <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors shrink-0">
+            <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">
               + Add
             </button>
           </div>
@@ -550,8 +550,8 @@ export default function RunnerClient({
         <div>
           {/* ── Add Opportunity form ── */}
           {showAddOpp ? (
-            <div className="mb-4 rounded-xl border border-green-900/30 bg-[#0a140c] p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-white">New Opportunity</h4>
+            <div className="mb-4 rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-[#F5ECD7]">New Opportunity</h4>
               <input
                 autoFocus
                 type="text"
@@ -562,11 +562,11 @@ export default function RunnerClient({
                 placeholder="What's the issue or opportunity?"
               />
               <div className="flex gap-2 flex-wrap">
-                <div className="flex rounded-lg overflow-hidden border border-green-900/30">
+                <div className="flex rounded-lg overflow-hidden border border-[#3D2E1E]">
                   {(['short', 'long'] as const).map(t => (
                     <button key={t} type="button" onClick={() => setNewOppTerm(t)}
                       className={cn('px-3 py-1.5 text-sm font-medium capitalize transition-colors',
-                        newOppTerm === t ? 'bg-green-800/40 text-green-200' : 'text-zinc-500 hover:text-zinc-300')}>
+                        newOppTerm === t ? 'bg-[#C9963A] text-[#0E0B07]' : 'text-[#B8A99A] hover:text-[#F5ECD7]')}>
                       {t}-term
                     </button>
                   ))}
@@ -591,13 +591,13 @@ export default function RunnerClient({
                 </select>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setShowAddOpp(false)} className="px-3 py-1.5 rounded-lg border border-green-900/30 text-zinc-400 text-sm hover:bg-green-900/10 transition-colors">
+                <button onClick={() => setShowAddOpp(false)} className="px-3 py-1.5 rounded-lg border border-[#3D2E1E] text-[#B8A99A] text-sm hover:bg-[#0F2E2B] transition-colors">
                   Cancel
                 </button>
                 <button
                   onClick={handleAddOpportunity}
                   disabled={addingOpp || !newOppTitle.trim()}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-green-800/40 hover:bg-green-800/60 disabled:opacity-50 text-green-200 text-sm font-medium transition-colors"
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-medium transition-colors"
                 >
                   {addingOpp ? 'Adding…' : 'Add Opportunity'}
                 </button>
@@ -606,7 +606,7 @@ export default function RunnerClient({
           ) : (
             <button
               onClick={() => setShowAddOpp(true)}
-              className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-green-900/40 text-green-600 hover:border-green-700/60 hover:text-green-400 hover:bg-green-900/5 transition-all text-sm font-medium"
+              className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[#3D2E1E] text-[#C9963A] hover:border-[#C9963A]/60 hover:text-[#5B9E94] hover:bg-[#0F2E2B] transition-all text-sm font-medium"
             >
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -615,33 +615,33 @@ export default function RunnerClient({
             </button>
           )}
 
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-3">
             Open Issues ({openOpps.length})
           </h3>
           <div className="space-y-1 max-h-[45vh] overflow-y-auto">
             {openOpps.map(opp => {
-              const dot = PRIORITY_DOT[opp.priority ?? ''] ?? 'bg-zinc-500';
+              const dot = PRIORITY_DOT[opp.priority ?? ''] ?? 'bg-[#6B5A4A]';
               return (
                 <button
                   key={opp.id}
                   onClick={() => setSelectedOppId(opp.id === selectedOppId ? null : opp.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors',
-                    selectedOppId === opp.id ? 'bg-green-900/20 ring-1 ring-green-700/50' : 'hover:bg-green-900/10',
+                    selectedOppId === opp.id ? 'bg-[#0F2E2B] ring-1 ring-[#C9963A]/50' : 'hover:bg-[#0F2E2B]',
                   )}
                 >
                   <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
-                  <span className="flex-1 text-sm text-zinc-200 min-w-0 truncate">{opp.title}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-zinc-600 shrink-0">{opp.term}-term</span>
+                  <span className="flex-1 text-sm text-[#F5ECD7] min-w-0 truncate">{opp.title}</span>
+                  <span className="text-[10px] uppercase tracking-wider text-[#6B5A4A] shrink-0">{opp.term}-term</span>
                 </button>
               );
             })}
-            {openOpps.length === 0 && <p className="text-sm text-zinc-600 text-center py-4">No open issues.</p>}
+            {openOpps.length === 0 && <p className="text-sm text-[#6B5A4A] text-center py-4">No open issues.</p>}
           </div>
 
           {/* Quick add todo from IDS */}
-          <div className="mt-4 border-t border-green-900/20 pt-4">
-            <h4 className="text-xs font-medium text-zinc-500 mb-2">Create To-Do from Discussion</h4>
+          <div className="mt-4 border-t border-[#3D2E1E] pt-4">
+            <h4 className="text-xs font-medium text-[#B8A99A] mb-2">Create To-Do from Discussion</h4>
             <div className="flex gap-2 items-end">
               <input
                 type="text"
@@ -657,24 +657,24 @@ export default function RunnerClient({
                   <option key={m.email} value={m.name}>{m.name}</option>
                 ))}
               </select>
-              <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors shrink-0">+ Add</button>
+              <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">+ Add</button>
             </div>
           </div>
         </div>
 
         {/* Right: Discussion panel */}
-        <div className="rounded-xl border border-green-900/30 bg-[#0a140c] p-5">
+        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           {selectedOpp ? (
             <div className="space-y-4">
-              <h3 className="text-base font-semibold text-white">{selectedOpp.title}</h3>
-              {selectedOpp.description && <p className="text-sm text-zinc-400 leading-relaxed">{selectedOpp.description}</p>}
-              <div className="flex items-center gap-3 text-xs text-zinc-500">
+              <h3 className="text-base font-semibold text-[#F5ECD7]">{selectedOpp.title}</h3>
+              {selectedOpp.description && <p className="text-sm text-[#B8A99A] leading-relaxed">{selectedOpp.description}</p>}
+              <div className="flex items-center gap-3 text-xs text-[#B8A99A]">
                 {selectedOpp.owner_name && <span>{selectedOpp.owner_name}</span>}
                 <span className="uppercase">{selectedOpp.priority ?? 'medium'} priority</span>
                 <span>{selectedOpp.term}-term</span>
               </div>
-              <div className="border-t border-green-900/20 pt-3 space-y-2">
-                <p className="text-xs font-medium text-zinc-500">Change Status</p>
+              <div className="border-t border-[#3D2E1E] pt-3 space-y-2">
+                <p className="text-xs font-medium text-[#B8A99A]">Change Status</p>
                 <div className="flex gap-2 flex-wrap">
                   {[
                     { value: 'open', label: 'Open' },
@@ -688,8 +688,8 @@ export default function RunnerClient({
                       className={cn(
                         'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
                         selectedOpp.status === s.value
-                          ? 'bg-green-800/40 border-green-700/50 text-green-300'
-                          : 'border-green-900/30 text-zinc-400 hover:bg-green-900/20',
+                          ? 'bg-[#C9963A] border-[#C9963A] text-[#0E0B07]'
+                          : 'border-[#3D2E1E] text-[#B8A99A] hover:bg-[#2A1F14]',
                       )}
                     >
                       {s.label}
@@ -700,8 +700,8 @@ export default function RunnerClient({
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-zinc-600 text-sm">Select an issue to discuss.</p>
-              <p className="text-zinc-700 text-xs mt-1">Identify → Discuss → Solve</p>
+              <p className="text-[#6B5A4A] text-sm">Select an issue to discuss.</p>
+              <p className="text-[#6B5A4A] text-xs mt-1">Identify → Discuss → Solve</p>
             </div>
           )}
         </div>
@@ -714,19 +714,19 @@ export default function RunnerClient({
       <div className="space-y-6">
         {/* Per-person ratings */}
         <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Rate This Meeting</h3>
-          <p className="text-xs text-zinc-500 mb-4">Enter each attendee&apos;s rating.</p>
+          <h3 className="text-sm font-semibold text-[#F5ECD7] mb-1">Rate This Meeting</h3>
+          <p className="text-xs text-[#B8A99A] mb-4">Enter each attendee&apos;s rating.</p>
           <div className="space-y-3">
             {EOS_TEAM_MEMBERS.map(member => {
               const selected = personRatings[member.email];
               return (
                 <div key={member.email} className="flex items-center gap-3">
                   {/* Avatar */}
-                  <div className="shrink-0 w-8 h-8 rounded-full bg-[#2a5a3a] flex items-center justify-center text-[11px] font-bold text-white">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-[#C9963A] flex items-center justify-center text-[11px] font-bold text-[#0E0B07]">
                     {member.initials}
                   </div>
                   {/* Name */}
-                  <span className="w-32 shrink-0 text-sm text-zinc-300 truncate">{member.name}</span>
+                  <span className="w-32 shrink-0 text-sm text-[#F5ECD7] truncate">{member.name}</span>
                   {/* Rating pills */}
                   <div className="flex gap-1 flex-wrap">
                     {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
@@ -736,10 +736,8 @@ export default function RunnerClient({
                         className={cn(
                           'w-8 h-8 rounded-lg text-xs font-bold transition-all',
                           selected === n
-                            ? n >= 8 ? 'bg-green-600 text-white ring-2 ring-green-400/30'
-                              : n >= 6 ? 'bg-yellow-600 text-white ring-2 ring-yellow-400/30'
-                              : 'bg-red-600 text-white ring-2 ring-red-400/30'
-                            : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300',
+                            ? 'bg-[#C9963A] text-[#0E0B07] font-bold ring-2 ring-[#C9963A]/30'
+                            : 'bg-[#2A1F14] text-[#B8A99A] hover:bg-[#3D2E1E] hover:text-[#F5ECD7]',
                         )}
                       >
                         {n}
@@ -752,14 +750,14 @@ export default function RunnerClient({
           </div>
 
           {/* Live summary */}
-          <div className="mt-4 px-4 py-3 rounded-xl bg-green-900/10 border border-green-900/20">
+          <div className="mt-4 px-4 py-3 rounded-xl bg-[#0F2E2B] border border-[#3D2E1E]">
             {avgRating !== null ? (
-              <span className="text-sm text-green-300 font-medium">
+              <span className="text-sm text-[#5B9E94] font-medium">
                 Average: {avgRating} / 10
-                <span className="text-green-700 font-normal ml-2">({ratedCount} of {EOS_TEAM_MEMBERS.length} rated)</span>
+                <span className="text-[#8B6520] font-normal ml-2">({ratedCount} of {EOS_TEAM_MEMBERS.length} rated)</span>
               </span>
             ) : (
-              <span className="text-sm text-zinc-600">No ratings entered yet.</span>
+              <span className="text-sm text-[#6B5A4A]">No ratings entered yet.</span>
             )}
           </div>
         </div>
@@ -767,12 +765,12 @@ export default function RunnerClient({
         {/* Todos created this meeting */}
         {meetingTodos.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">To-Dos Created This Meeting ({meetingTodos.length})</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-2">To-Dos Created This Meeting ({meetingTodos.length})</h3>
             <div className="space-y-1">
               {meetingTodos.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-green-900/10 border border-green-900/20">
-                  <span className="text-sm text-zinc-200 flex-1">{t.title}</span>
-                  {t.owner_name && <span className="text-xs text-zinc-500">{t.owner_name}</span>}
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#0F2E2B] border border-[#3D2E1E]">
+                  <span className="text-sm text-[#F5ECD7] flex-1">{t.title}</span>
+                  {t.owner_name && <span className="text-xs text-[#B8A99A]">{t.owner_name}</span>}
                 </div>
               ))}
             </div>
@@ -781,7 +779,7 @@ export default function RunnerClient({
 
         {/* Closing notes */}
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">What would have made it a 10?</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-2">What would have made it a 10?</h3>
           <textarea
             value={endNotes}
             onChange={e => setEndNotes(e.target.value)}
@@ -794,7 +792,8 @@ export default function RunnerClient({
         {/* End meeting button */}
         <button
           onClick={() => setShowEndModal(true)}
-          className="w-full py-3 rounded-xl bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-semibold transition-colors border border-green-900/30"
+          className="w-full py-3 rounded-xl text-sm font-bold transition-opacity hover:opacity-90"
+          style={{ background: 'linear-gradient(90deg, #8B6520 0%, #C9963A 100%)', color: '#0E0B07' }}
         >
           End Meeting &amp; Save
         </button>
@@ -805,22 +804,22 @@ export default function RunnerClient({
   // ═══ MAIN RENDER ═════════════════════════════════════════════════════════════
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d1a0f] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#0E0B07] flex flex-col overflow-hidden">
       {/* ── Top bar ── */}
-      <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-green-900/30 bg-[#0a140c]">
+      <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#3D2E1E] bg-[#1C1510]">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <span className="font-serif text-base sm:text-lg font-bold text-green-200 truncate">High Bank Distillery</span>
-          <span className="text-green-800 hidden sm:inline">—</span>
-          <span className="text-sm text-green-500 font-medium hidden sm:inline">Level 10 Meeting</span>
+          <span className="font-serif text-base sm:text-lg font-bold text-[#F5ECD7] truncate" style={{ letterSpacing: '-0.01em' }}>High Bank Distillery</span>
+          <span className="text-[#8B6520] hidden sm:inline">—</span>
+          <span className="text-sm text-[#C9963A] font-medium hidden sm:inline">Level 10 Meeting</span>
         </div>
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <span className="text-xs sm:text-sm text-green-700 hidden md:inline">
+          <span className="text-xs sm:text-sm text-[#8B6520] hidden md:inline">
             {new Date(meeting.started_at!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
-          <span className="font-mono text-green-300 text-base sm:text-lg tabular-nums">{fmtElapsed(elapsed)}</span>
+          <span className="font-mono text-[#C9963A] text-base sm:text-lg tabular-nums">{fmtElapsed(elapsed)}</span>
           <button
             onClick={() => setShowEndModal(true)}
-            className="px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/60 text-red-300 text-sm font-medium transition-colors border border-red-800/40"
+            className="px-3 py-1.5 rounded-lg bg-[#2E0F0F] hover:bg-[#2E0F0F] text-[#C0392B] text-sm font-medium transition-colors border border-[#3D2E1E]"
           >
             End Meeting
           </button>
@@ -828,22 +827,22 @@ export default function RunnerClient({
       </div>
 
       {/* ── Progress bar ── */}
-      <div className="shrink-0 flex items-center justify-center gap-1 sm:gap-2 py-2.5 border-b border-green-900/20 px-4 overflow-x-auto">
+      <div className="shrink-0 flex items-center justify-center gap-1 sm:gap-2 py-2.5 border-b border-[#3D2E1E] px-4 overflow-x-auto">
         {SECTIONS.map((s, i) => (
           <button key={s.key} onClick={() => goTo(i)} className="flex items-center gap-1 sm:gap-1.5 group shrink-0" title={s.name}>
             <div className={cn(
               'w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all',
-              i < currentSection ? 'bg-green-600'
-                : i === currentSection ? 'bg-green-400 ring-2 ring-green-400/30 animate-pulse'
-                : 'bg-zinc-700 group-hover:bg-zinc-600',
+              i < currentSection ? 'bg-[#C9963A]'
+                : i === currentSection ? 'bg-[#C9963A] ring-2 ring-[#C9963A]/30 animate-pulse'
+                : 'bg-[#3D2E1E] group-hover:bg-[#6B5A4A]',
             )} />
             <span className={cn(
               'text-[11px] hidden lg:inline transition-colors whitespace-nowrap',
-              i === currentSection ? 'text-green-300 font-medium' : 'text-zinc-600 group-hover:text-zinc-400',
+              i === currentSection ? 'text-[#C9963A] font-medium' : 'text-[#6B5A4A] group-hover:text-[#B8A99A]',
             )}>
               {s.name}
             </span>
-            {i < SECTIONS.length - 1 && <div className="w-3 sm:w-4 h-px bg-zinc-800 hidden sm:block" />}
+            {i < SECTIONS.length - 1 && <div className="w-3 sm:w-4 h-px bg-[#2A1F14] hidden sm:block" />}
           </button>
         ))}
       </div>
@@ -851,16 +850,16 @@ export default function RunnerClient({
       {/* ── Section header ── */}
       <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg sm:text-xl font-serif font-bold text-white">{section.name}</h2>
-          <p className="text-xs text-green-700 mt-0.5">{section.time} min suggested</p>
+          <h2 className="text-lg sm:text-xl font-serif font-bold text-[#F5ECD7]">{section.name}</h2>
+          <p className="text-xs text-[#8B6520] mt-0.5">{section.time} min suggested</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => setPaused(!paused)} className="text-xs text-green-600 hover:text-green-400 transition-colors">
+          <button onClick={() => setPaused(!paused)} className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
             {paused ? '▶ Resume' : '⏸ Pause'}
           </button>
           <div className={cn(
             'font-mono text-xl sm:text-2xl font-bold tabular-nums',
-            timerExpired ? 'text-red-400 animate-pulse' : 'text-green-300',
+            timerExpired ? 'text-[#C0392B] animate-pulse' : 'text-[#C9963A]',
           )}>
             {fmtTimer(timerSeconds)}
           </div>
@@ -887,18 +886,18 @@ export default function RunnerClient({
       </div>
 
       {/* ── Navigation (centered) ── */}
-      <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-green-900/20 flex items-center justify-center gap-6">
+      <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-[#3D2E1E] flex items-center justify-center gap-6">
         <button
           onClick={goPrev}
           disabled={currentSection === 0}
-          className="px-4 py-2 rounded-lg border border-green-900/30 text-green-400 text-sm font-medium hover:bg-green-900/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="px-4 py-2 rounded-lg border border-[#3D2E1E] text-[#B8A99A] text-sm font-medium hover:bg-[#2A1F14] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           ← Previous
         </button>
-        <span className="text-xs text-zinc-600">{currentSection + 1} / {SECTIONS.length}</span>
+        <span className="text-xs text-[#6B5A4A]">{currentSection + 1} / {SECTIONS.length}</span>
         <button
           onClick={goNext}
-          className="px-4 py-2 rounded-lg bg-green-800/40 hover:bg-green-800/60 text-green-200 text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-semibold transition-colors"
         >
           {currentSection === SECTIONS.length - 1 ? 'Finish →' : 'Next →'}
         </button>
@@ -909,23 +908,23 @@ export default function RunnerClient({
 
       {/* ── End Meeting Modal ── */}
       {showEndModal && (
-        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1a] border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="fixed inset-0 z-[60] bg-[#0E0B07]/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 py-5">
-              <h2 className="text-lg font-semibold text-white mb-2">End Meeting</h2>
+              <h2 className="text-lg font-semibold text-[#F5ECD7] mb-2">End Meeting</h2>
               {avgRating !== null && (
-                <p className="text-sm text-zinc-400 mb-4">
-                  Meeting rating: <span className="font-semibold text-green-400">{avgRating}/10</span>
-                  <span className="text-zinc-600 ml-1">({ratedCount} rated)</span>
+                <p className="text-sm text-[#B8A99A] mb-4">
+                  Meeting rating: <span className="font-semibold text-[#5B9E94]">{avgRating}/10</span>
+                  <span className="text-[#6B5A4A] ml-1">({ratedCount} rated)</span>
                 </p>
               )}
-              <p className="text-sm text-zinc-500">This will save all notes and ratings, then close the meeting.</p>
+              <p className="text-sm text-[#B8A99A]">This will save all notes and ratings, then close the meeting.</p>
             </div>
             <div className="flex gap-3 px-6 pb-5">
-              <button onClick={() => setShowEndModal(false)} className="flex-1 py-2.5 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:bg-zinc-800 transition-colors">
+              <button onClick={() => setShowEndModal(false)} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">
                 Cancel
               </button>
-              <button onClick={handleEndMeeting} disabled={ending} className="flex-1 py-2.5 rounded-lg bg-red-800 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium transition-colors">
+              <button onClick={handleEndMeeting} disabled={ending} className="flex-1 py-2.5 rounded-lg bg-[#C0392B] hover:bg-[#a93226] disabled:opacity-50 text-[#F5ECD7] text-sm font-medium transition-colors">
                 {ending ? 'Ending…' : 'End Meeting'}
               </button>
             </div>
