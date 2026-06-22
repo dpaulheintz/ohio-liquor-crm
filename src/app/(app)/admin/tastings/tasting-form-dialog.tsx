@@ -23,6 +23,7 @@ import { createTasting, updateTasting } from '@/app/actions/tastings';
 import { searchAccounts } from '@/app/actions/accounts';
 import type { Tasting, TastingStatus } from '@/lib/types';
 import { addHours, deriveStatus, statusConfig } from './tasting-utils';
+import { cn } from '@/lib/utils';
 import { Plus, Trash2 } from 'lucide-react';
 
 type AgencyOption = {
@@ -50,6 +51,67 @@ function emptyRow(): BulkRow {
     startTime: '',
     endTime: '',
   };
+}
+
+interface AgencyPickerProps {
+  selected: AgencyOption | null;
+  onClear: () => void;
+  searchVal: string;
+  onSearchChange: (v: string) => void;
+  results: AgencyOption[];
+  onResultPick: (a: AgencyOption) => void;
+}
+
+function AgencyPicker({ selected, onClear, searchVal, onSearchChange, results, onResultPick }: AgencyPickerProps) {
+  if (selected) {
+    return (
+      <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/30">
+        <div>
+          <p className="font-medium text-sm">{selected.display_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {selected.agency_id && `#${selected.agency_id} · `}
+            {selected.city}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClear}>
+          Change
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <Input
+        placeholder="Search by name, ID, or city…"
+        value={searchVal}
+        onChange={(e) => onSearchChange(e.target.value)}
+        autoComplete="off"
+      />
+      {results.length > 0 && (
+        <div className={cn(
+          'absolute top-full left-0 right-0 z-10 mt-1 rounded-md border bg-background shadow-lg',
+          'overflow-hidden max-h-48 overflow-y-auto'
+        )}>
+          {results.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => onResultPick(r)}
+            >
+              <span className="font-medium">{r.display_name}</span>
+              {r.agency_id && (
+                <span className="ml-1.5 text-muted-foreground text-xs">#{r.agency_id}</span>
+              )}
+              {r.city && (
+                <span className="ml-1.5 text-muted-foreground text-xs">{r.city}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface TastingFormDialogProps {
@@ -262,74 +324,6 @@ export function TastingFormDialog({
       setStatus(deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson));
     }
   }, [staffCategory, staffPerson, isEdit]);
-
-  // ---- Unified agency picker sub-component ----
-  function AgencyPicker({
-    selected,
-    onClear,
-    searchVal,
-    onSearchChange,
-    results,
-    onResultPick,
-  }: {
-    selected: AgencyOption | null;
-    onClear: () => void;
-    searchVal: string;
-    onSearchChange: (v: string) => void;
-    results: AgencyOption[];
-    onResultPick: (a: AgencyOption) => void;
-  }) {
-    if (selected) {
-      return (
-        <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/30">
-          <div>
-            <p className="font-medium text-sm">{selected.display_name}</p>
-            <p className="text-xs text-muted-foreground">
-              {selected.agency_id && `#${selected.agency_id} · `}
-              {selected.city}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClear}>
-            Change
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div className="relative">
-        <Input
-          placeholder="Search by name, ID, or city…"
-          value={searchVal}
-          onChange={(e) => onSearchChange(e.target.value)}
-          autoComplete="off"
-        />
-        {results.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-10 mt-1 rounded-md border bg-background shadow-lg overflow-hidden max-h-48 overflow-y-auto">
-            {results.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                onClick={() => onResultPick(r)}
-              >
-                <span className="font-medium">{r.display_name}</span>
-                {r.agency_id && (
-                  <span className="ml-1.5 text-muted-foreground text-xs">
-                    #{r.agency_id}
-                  </span>
-                )}
-                {r.city && (
-                  <span className="ml-1.5 text-muted-foreground text-xs">
-                    {r.city}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
