@@ -16,7 +16,7 @@ interface VisitCardProps {
 
 // ─── KPI colours (matches KPI dashboard) ─────────────────────────────────────
 const KPI_COLORS: Record<string, string> = {
-  Display: '#C5A572',
+  Display: '#C8102E',
   Menu:    '#60a5fa',
   Feature: '#34d399',
   Event:   '#f472b6',

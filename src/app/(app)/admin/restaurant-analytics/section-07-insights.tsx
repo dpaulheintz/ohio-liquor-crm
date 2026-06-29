@@ -29,31 +29,31 @@ export function Section07Insights(_props: Section07InsightsProps) {
         {INSIGHT_SLOTS.map(({ icon, label, hint }) => (
           <div
             key={label}
-            className="rounded-xl border border-zinc-800 bg-[#111] px-4 py-4 flex flex-col gap-2"
+            className="rounded-xl border border bg-card px-4 py-4 flex flex-col gap-2"
           >
             <span className="text-2xl leading-none">{icon}</span>
-            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               {label}
             </span>
-            <span className="text-base font-serif font-bold text-zinc-700 leading-snug">—</span>
-            <span className="text-[10px] text-zinc-700 leading-relaxed">{hint}</span>
+            <span className="text-base font-serif font-bold text-muted-foreground leading-snug">—</span>
+            <span className="text-[10px] text-muted-foreground leading-relaxed">{hint}</span>
           </div>
         ))}
       </div>
 
       {/* Narrative / summary block */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-5">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-5">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           Weekly Narrative
         </h3>
-        <div className="rounded-lg border border-dashed border-zinc-800 px-5 py-6 flex flex-col items-center justify-center text-center gap-2 min-h-[80px]">
-          <p className="text-xs text-zinc-700 max-w-md leading-relaxed">
+        <div className="rounded-lg border border-dashed border px-5 py-6 flex flex-col items-center justify-center text-center gap-2 min-h-[80px]">
+          <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
             Auto-generated weekly summary will appear here once data is synced.
             This panel will highlight standout performance, anomalies, and
             actionable callouts across all three locations.
           </p>
         </div>
-        <p className="mt-3 text-center text-[10px] text-zinc-700 uppercase tracking-widest">
+        <p className="mt-3 text-center text-[10px] text-muted-foreground uppercase tracking-widest">
           No data — connect Toast sync + optional AI narrative to populate
         </p>
       </div>

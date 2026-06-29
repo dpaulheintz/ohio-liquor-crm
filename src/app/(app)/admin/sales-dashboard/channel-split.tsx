@@ -76,34 +76,34 @@ function SplitTooltip({ active, payload, label }: any) {
   const pt = payload[0]?.payload as FamilyPoint | ProductPoint;
   if (!pt) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#1a1a1a] p-3 shadow-xl text-xs min-w-[210px]">
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] p-3 shadow-xl text-xs min-w-[210px]">
       <p className="font-semibold text-white mb-2.5 leading-tight">{label}</p>
       <div className="space-y-1.5">
         <div className="flex justify-between gap-6">
           <span style={{ color: RETAIL_COLOR }}>Retail</span>
-          <span className="font-mono text-zinc-200">
+          <span className="font-mono text-white/90">
             {fmtBtl(pt.retail_btl)} btl{' '}
-            <span className="text-zinc-500">({Math.round(pt.retail_pct)}%)</span>
+            <span className="text-white/50">({Math.round(pt.retail_pct)}%)</span>
           </span>
         </div>
         <div className="flex justify-between gap-6">
           <span style={{ color: '#94a3b8' }}>Wholesale</span>
-          <span className="font-mono text-zinc-200">
+          <span className="font-mono text-white/90">
             {fmtBtl(pt.wholesale_btl)} btl{' '}
-            <span className="text-zinc-500">({Math.round(pt.wholesale_pct)}%)</span>
+            <span className="text-white/50">({Math.round(pt.wholesale_pct)}%)</span>
           </span>
         </div>
         {'hb_wholesale_btl' in pt && (pt as FamilyPoint).hb_wholesale_btl > 0 && (
-          <div className="flex justify-between gap-6 pt-1.5 border-t border-zinc-800">
-            <span className="text-zinc-500">HB Wholesale</span>
-            <span className="font-mono text-[#C5A572]/70">
+          <div className="flex justify-between gap-6 pt-1.5 border-t border-zinc-700">
+            <span className="text-white/50">HB Wholesale</span>
+            <span className="font-mono text-primary/70">
               {fmtBtl((pt as FamilyPoint).hb_wholesale_btl)} btl
             </span>
           </div>
         )}
-        <div className="flex justify-between gap-6 pt-1.5 border-t border-zinc-800">
-          <span className="text-zinc-500">Total</span>
-          <span className="font-mono text-zinc-300 font-medium">{fmtBtl(pt.total_btl)} btl</span>
+        <div className="flex justify-between gap-6 pt-1.5 border-t border-zinc-700">
+          <span className="text-white/50">Total</span>
+          <span className="font-mono text-white font-medium">{fmtBtl(pt.total_btl)} btl</span>
         </div>
       </div>
     </div>
@@ -256,7 +256,7 @@ export function ChannelSplit({
 
   if (filtered.length === 0) {
     return (
-      <p className="py-8 text-center text-zinc-600 text-sm">
+      <p className="py-8 text-center text-muted-foreground text-sm">
         No data for selected filters.
       </p>
     );
@@ -267,12 +267,12 @@ export function ChannelSplit({
       {/* Row 1: Family split chart + HB donut */}
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
         {/* ── Brand Family Split ───────────────────────────────────────────── */}
-        <div className="rounded-xl border border-zinc-800 bg-[#0f0f0f] p-4">
+        <div className="rounded-xl border border bg-card p-4">
           {/* Header + legend */}
           <div className="flex items-start justify-between mb-4 gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-white">Brand Family Split</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <h3 className="text-sm font-semibold text-foreground">Brand Family Split</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 % Retail vs Wholesale by bottles · click a bar to drill down
               </p>
             </div>
@@ -282,14 +282,14 @@ export function ChannelSplit({
                   className="w-3 h-3 rounded-sm inline-block shrink-0"
                   style={{ background: RETAIL_COLOR }}
                 />
-                <span className="text-zinc-400">Retail</span>
+                <span className="text-muted-foreground">Retail</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span
                   className="w-3 h-3 rounded-sm inline-block shrink-0"
                   style={{ background: WHOLESALE_COLOR }}
                 />
-                <span className="text-zinc-400">Wholesale</span>
+                <span className="text-muted-foreground">Wholesale</span>
               </span>
             </div>
           </div>
@@ -362,7 +362,7 @@ export function ChannelSplit({
                   formatter={(v: number) =>
                     v >= 10 ? `${Math.round(v)}%` : ''
                   }
-                  style={{ fill: '#111', fontSize: 10, fontWeight: 700 }}
+                  style={{ fill: '#1A1A1A', fontSize: 10, fontWeight: 700 }}
                 />
               </Bar>
 
@@ -399,7 +399,7 @@ export function ChannelSplit({
 
           {/* Hint */}
           {!selectedFamily && familyData.length > 0 && (
-            <p className="mt-3 text-center text-[10px] text-zinc-700 flex items-center justify-center gap-1">
+            <p className="mt-3 text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1">
               <ChevronRight className="h-3 w-3" />
               Click a bar to see the product breakdown
             </p>
@@ -407,14 +407,14 @@ export function ChannelSplit({
         </div>
 
         {/* ── HB Agency Breakout ───────────────────────────────────────────── */}
-        <div className="rounded-xl border border-zinc-800 bg-[#0f0f0f] p-4 flex flex-col">
+        <div className="rounded-xl border border bg-card p-4 flex flex-col">
           <div className="mb-3">
-            <h3 className="text-sm font-semibold text-white">HB Agency Breakout</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Retail channel by location</p>
+            <h3 className="text-sm font-semibold text-foreground">HB Agency Breakout</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Retail channel by location</p>
           </div>
 
           {hbSlices.length === 0 ? (
-            <p className="flex-1 flex items-center justify-center text-zinc-600 text-sm">
+            <p className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
               No HB retail data.
             </p>
           ) : (
@@ -457,10 +457,10 @@ export function ChannelSplit({
                 {/* Center label */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-white leading-none">
+                    <p className="text-lg font-bold text-foreground leading-none">
                       {fmtBtl(hbStats.totalRetail)}
                     </p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">btl retail</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">btl retail</p>
                   </div>
                 </div>
               </div>
@@ -477,8 +477,8 @@ export function ChannelSplit({
                       key={slice.name}
                       className={`flex items-center justify-between text-xs px-2 py-1 rounded-md transition-colors cursor-default ${
                         hoveredSlice === slice.name
-                          ? 'bg-zinc-800'
-                          : 'hover:bg-zinc-900/50'
+                          ? 'bg-muted'
+                          : 'hover:bg-white/50'
                       }`}
                       onMouseEnter={() => setHoveredSlice(slice.name)}
                       onMouseLeave={() => setHoveredSlice(null)}
@@ -488,13 +488,13 @@ export function ChannelSplit({
                           className="shrink-0 w-2.5 h-2.5 rounded-full"
                           style={{ backgroundColor: slice.color }}
                         />
-                        <span className="text-zinc-300 truncate">{slice.name}</span>
+                        <span className="text-foreground truncate">{slice.name}</span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 tabular-nums ml-3">
-                        <span className="text-zinc-500">
+                        <span className="text-muted-foreground">
                           {fmtBtl(slice.value)} btl
                         </span>
-                        <span className="text-zinc-200 font-medium w-7 text-right">
+                        <span className="text-foreground font-medium w-7 text-right">
                           {pct}%
                         </span>
                       </div>
@@ -503,26 +503,26 @@ export function ChannelSplit({
                 })}
 
                 {/* HB vs External summary row */}
-                <div className="pt-2 mt-1 border-t border-zinc-800 grid grid-cols-2 gap-2 text-xs">
-                  <div className="text-center rounded-lg bg-zinc-900 py-1.5 px-2">
-                    <p className="text-[#C5A572] font-bold">
+                <div className="pt-2 mt-1 border-t border grid grid-cols-2 gap-2 text-xs">
+                  <div className="text-center rounded-lg bg-white py-1.5 px-2">
+                    <p className="text-primary font-bold">
                       {fmtBtl(hbStats.hbRetailTotal)}
                     </p>
-                    <p className="text-zinc-600 text-[10px]">HB Retail</p>
+                    <p className="text-muted-foreground text-[10px]">HB Retail</p>
                   </div>
-                  <div className="text-center rounded-lg bg-zinc-900 py-1.5 px-2">
-                    <p className="text-zinc-300 font-bold">
+                  <div className="text-center rounded-lg bg-white py-1.5 px-2">
+                    <p className="text-foreground font-bold">
                       {fmtBtl(hbStats.externalRetail)}
                     </p>
-                    <p className="text-zinc-600 text-[10px]">External</p>
+                    <p className="text-muted-foreground text-[10px]">External</p>
                   </div>
                 </div>
 
                 {/* HB wholesale badge (if any) */}
                 {hbStats.hbWholesale > 0 && (
-                  <div className="flex items-center justify-between text-[10px] text-zinc-700 px-2 pt-1">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground px-2 pt-1">
                     <span>HB wholesale (included in totals)</span>
-                    <span className="font-mono text-[#C5A572]/50">
+                    <span className="font-mono text-primary/50">
                       {fmtBtl(hbStats.hbWholesale)} btl
                     </span>
                   </div>
@@ -535,27 +535,27 @@ export function ChannelSplit({
 
       {/* Row 2: Product drill-down (shown when a family is selected) */}
       {selectedFamily && (
-        <div className="rounded-xl border border-[#C5A572]/25 bg-[#0f0f0f] p-4">
+        <div className="rounded-xl border border-primary/25 bg-card p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white">
-                <span className="text-[#C5A572]">{selectedFamily}</span> — Product
+              <h3 className="text-sm font-semibold text-foreground">
+                <span className="text-primary">{selectedFamily}</span> — Product
                 Split
               </h3>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 % Retail vs Wholesale by bottles per product
               </p>
             </div>
             <button
               onClick={() => setSelectedFamily(null)}
-              className="rounded p-1 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+              className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {productData.length === 0 ? (
-            <p className="py-6 text-center text-zinc-600 text-sm">
+            <p className="py-6 text-center text-muted-foreground text-sm">
               No product data.
             </p>
           ) : (
@@ -592,7 +592,7 @@ export function ChannelSplit({
                     formatter={(v: number) =>
                       v >= 10 ? `${Math.round(v)}%` : ''
                     }
-                    style={{ fill: '#111', fontSize: 10, fontWeight: 700 }}
+                    style={{ fill: '#1A1A1A', fontSize: 10, fontWeight: 700 }}
                   />
                 </Bar>
                 <Bar

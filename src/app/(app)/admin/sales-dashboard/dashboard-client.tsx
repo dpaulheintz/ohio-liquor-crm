@@ -55,11 +55,11 @@ function SectionHeader({ number, title, subtitle }: SectionHeaderProps) {
         </span>
       )}
       <div className="flex-1 min-w-0">
-        <h2 className="text-xl font-serif font-semibold text-white tracking-wide leading-none">
+        <h2 className="text-xl font-serif font-semibold text-foreground tracking-wide leading-none">
           {title}
         </h2>
         {subtitle && (
-          <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
       </div>
       <div className="h-px flex-1 bg-gradient-to-r from-[#C5A572]/40 to-transparent max-w-[200px] mb-1" />
@@ -86,37 +86,37 @@ function FilterBar({
   selectedFamilies, onFamilyToggle, channel, onChannel, maxMonth,
 }: FilterBarProps) {
   return (
-    <div className="sticky top-0 z-30 border-b border-[#C5A572]/15 bg-[#0a0a0a]/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
+    <div className="sticky top-0 z-30 border-b border-primary/15 bg-background/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
       {/* Date range */}
       <div className="flex items-center gap-2 text-xs shrink-0">
-        <span className="text-zinc-500 uppercase tracking-wider">Range</span>
+        <span className="text-muted-foreground uppercase tracking-wider">Range</span>
         <input
           type="month"
           value={dateFrom}
           max={dateTo}
           onChange={(e) => onDateFrom(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
         />
-        <span className="text-zinc-600">→</span>
+        <span className="text-muted-foreground">→</span>
         <input
           type="month"
           value={dateTo}
           min={dateFrom}
           max={maxMonth}
           onChange={(e) => onDateTo(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
         />
       </div>
 
       {/* Brand family toggles */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider">Family</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">Family</span>
         <button
           onClick={() => ALL_FAMILIES.forEach(f => selectedFamilies.includes(f) && onFamilyToggle(f))}
           className={`rounded px-2 py-0.5 text-xs transition-colors ${
             selectedFamilies.length === 0
-              ? 'bg-[#C5A572] text-black font-semibold'
-              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              ? 'bg-primary text-black font-semibold'
+              : 'bg-muted text-muted-foreground hover:bg-muted'
           }`}
         >
           All
@@ -145,15 +145,15 @@ function FilterBar({
       </div>
 
       {/* Channel toggle */}
-      <div className="flex items-center gap-1 rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
+      <div className="flex items-center gap-1 rounded-lg bg-white border border p-0.5">
         {(['all', 'retail', 'wholesale'] as Channel[]).map((c) => (
           <button
             key={c}
             onClick={() => onChannel(c)}
             className={`rounded px-3 py-1 text-xs capitalize transition-colors ${
               channel === c
-                ? 'bg-[#C5A572] text-black font-semibold'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-primary text-black font-semibold'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {c}
@@ -306,7 +306,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-[#0a0a0a] min-h-full text-white">
+    <div className="bg-background min-h-full text-foreground">
       <FilterBar
         dateFrom={dateFrom}
         dateTo={dateTo}
@@ -450,7 +450,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
         {/* ── Wholesale Account Leaderboard ────────────────────────────────── */}
         <section>
           <SectionHeader title="Wholesale Account Leaderboard" subtitle="Ranked accounts with group rollup, HB badge, and per-SKU view" />
-          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
+          <div className="rounded-xl border border bg-card p-5">
             <WholesaleLeaderboard
               wholesaleFull={wholesaleFull}
               accountGroups={accountGroups}

@@ -64,7 +64,7 @@ function fmtBtl(n: number): string {
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   if (data.length < 2 || data.every((v) => v === 0)) {
-    return <span className="w-16 inline-block text-center text-zinc-700 text-xs">—</span>;
+    return <span className="w-16 inline-block text-center text-muted-foreground text-xs">—</span>;
   }
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
@@ -128,8 +128,8 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(col)}
-      className={`px-3 py-2.5 text-xs font-medium cursor-pointer select-none whitespace-nowrap transition-colors hover:text-zinc-200 ${
-        active ? 'text-[#C5A572]' : 'text-zinc-500'
+      className={`px-3 py-2.5 text-xs font-medium cursor-pointer select-none whitespace-nowrap transition-colors hover:text-foreground ${
+        active ? 'text-primary' : 'text-muted-foreground'
       }`}
     >
       <span
@@ -470,21 +470,21 @@ export function SkuLeaderboard({
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-zinc-500 uppercase tracking-wider">Rank by</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Rank by</span>
           {(['bottles', 'dollars'] as const).map((r) => (
             <button
               key={r}
               onClick={() => handleRankBy(r)}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 rankBy === r
-                  ? 'bg-[#C5A572] text-black'
-                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted'
               }`}
             >
               {r === 'bottles' ? 'Bottles Sold' : 'Revenue'}
             </button>
           ))}
-          <span className="text-xs text-zinc-600 pl-1">
+          <span className="text-xs text-muted-foreground pl-1">
             {sorted.length} SKU{sorted.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -492,14 +492,14 @@ export function SkuLeaderboard({
         <div className="flex gap-2">
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors border border-zinc-700"
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-muted text-foreground hover:bg-muted transition-colors border border"
           >
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </button>
           <button
             onClick={exportPdf}
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors border border-zinc-700"
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-muted text-foreground hover:bg-muted transition-colors border border"
           >
             <FileText className="h-3.5 w-3.5" />
             Export PDF
@@ -508,11 +508,11 @@ export function SkuLeaderboard({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border">
         <table className="w-full text-sm border-collapse min-w-[900px]">
           <thead>
-            <tr className="bg-[#0d0d0d] border-b border-zinc-800">
-              <th className="px-3 py-2.5 text-xs font-medium text-zinc-600 w-9 text-center select-none">
+            <tr className="bg-muted border-b border">
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground w-9 text-center select-none">
                 #
               </th>
               <SortTh
@@ -584,7 +584,7 @@ export function SkuLeaderboard({
                 onSort={handleSort}
                 align="right"
               />
-              <th className="px-3 py-2.5 text-xs font-medium text-zinc-600 text-center whitespace-nowrap select-none">
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-center whitespace-nowrap select-none">
                 12mo Trend
               </th>
             </tr>
@@ -595,7 +595,7 @@ export function SkuLeaderboard({
               <tr>
                 <td
                   colSpan={11}
-                  className="py-10 text-center text-zinc-600 text-sm"
+                  className="py-10 text-center text-muted-foreground text-sm"
                 >
                   No SKU data for selected filters.
                 </td>
@@ -605,16 +605,16 @@ export function SkuLeaderboard({
                 {sorted.map((row, i) => (
                   <tr
                     key={row.brand_code}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-900/40 transition-colors"
+                    className="border-b border/50 hover:bg-white/40 transition-colors"
                   >
                     {/* Rank */}
-                    <td className="px-3 py-2.5 text-xs font-mono text-zinc-600 text-center">
+                    <td className="px-3 py-2.5 text-xs font-mono text-muted-foreground text-center">
                       {i + 1}
                     </td>
 
                     {/* SKU name */}
                     <td className="px-3 py-2.5">
-                      <span className="text-zinc-200 font-medium">{row.product_name}</span>
+                      <span className="text-foreground font-medium">{row.product_name}</span>
                     </td>
 
                     {/* Family */}
@@ -623,37 +623,37 @@ export function SkuLeaderboard({
                     </td>
 
                     {/* Size */}
-                    <td className="px-3 py-2.5 text-zinc-500 text-xs font-mono">
+                    <td className="px-3 py-2.5 text-muted-foreground text-xs font-mono">
                       {row.size || '—'}
                     </td>
 
                     {/* Retail Bottles */}
-                    <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-xs text-muted-foreground">
                       {fmtBtl(row.retail_bottles)}
                     </td>
 
                     {/* Wholesale Bottles */}
-                    <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-xs text-muted-foreground">
                       {fmtBtl(row.wholesale_bottles)}
                     </td>
 
                     {/* Total Bottles — highlighted */}
-                    <td className="px-3 py-2.5 text-right font-mono font-bold text-white">
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-foreground">
                       {fmtBtl(row.total_bottles)}
                     </td>
 
                     {/* Retail $ */}
-                    <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-xs text-muted-foreground">
                       {fmtDollar(row.retail_amount)}
                     </td>
 
                     {/* Wholesale $ */}
-                    <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-xs text-muted-foreground">
                       {fmtDollar(row.wholesale_amount)}
                     </td>
 
                     {/* Total $ — gold */}
-                    <td className="px-3 py-2.5 text-right font-mono font-bold text-[#C5A572]">
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-primary">
                       {fmtDollar(row.total_amount)}
                     </td>
 
@@ -668,30 +668,30 @@ export function SkuLeaderboard({
                 ))}
 
                 {/* Totals footer row */}
-                <tr className="border-t-2 border-[#C5A572]/30 bg-[#111] font-semibold">
+                <tr className="border-t-2 border-primary/30 bg-card font-semibold">
                   <td className="px-3 py-2.5" />
                   <td
                     colSpan={3}
-                    className="px-3 py-2.5 text-xs text-zinc-400 uppercase tracking-wider"
+                    className="px-3 py-2.5 text-xs text-muted-foreground uppercase tracking-wider"
                   >
                     Total — {sorted.length} SKUs
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-300">
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
                     {fmtBtl(totalsRow.retail_bottles)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-300">
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
                     {fmtBtl(totalsRow.wholesale_bottles)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-sm text-white">
+                  <td className="px-3 py-2.5 text-right font-mono text-sm text-foreground">
                     {fmtBtl(totalsRow.total_bottles)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-300">
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
                     {fmtDollar(totalsRow.retail_amount)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs text-zinc-300">
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-foreground">
                     {fmtDollar(totalsRow.wholesale_amount)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-sm text-[#C5A572]">
+                  <td className="px-3 py-2.5 text-right font-mono text-sm text-primary">
                     {fmtDollar(totalsRow.total_amount)}
                   </td>
                   <td className="px-3 py-2.5" />

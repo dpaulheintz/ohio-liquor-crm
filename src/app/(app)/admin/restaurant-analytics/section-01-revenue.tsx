@@ -16,23 +16,12 @@ import {
 const GOLD = '#C5A572';
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// ─── Data contract ────────────────────────────────────────────────────────────
-
-export interface MonthlyRevenuePoint {
-  month: string;
-  cur: number | null;
-  prior: number | null;
-}
-
-export interface Section01Data {
-  ytdFnbRevenue: number;
-  priorYtdFnbRevenue: number;
-  laborPct: number | null;
-  guestCount: number;
-  avgCheck: number;
-  dataThrough: string | null;
-  monthlyRevenue: MonthlyRevenuePoint[];
-}
+// Placeholder 12-month scaffold — all zeros until data is wired
+const EMPTY_YOY = MONTH_LABELS.map((month) => ({
+  month,
+  [new Date().getFullYear()]: null,
+  [new Date().getFullYear() - 1]: null,
+}));
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
@@ -40,17 +29,6 @@ function fmtDollar(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(1)}k`;
   return `$${n.toFixed(0)}`;
-}
-
-function fmtPct(n: number): string {
-  return `${n.toFixed(1)}%`;
-}
-
-function yoyBadge(cur: number, prior: number): { label: string; up: boolean } | null {
-  if (!prior) return null;
-  const delta = ((cur - prior) / prior) * 100;
-  const sign = delta >= 0 ? '+' : '';
-  return { label: `${sign}${delta.toFixed(1)}% vs prior year`, up: delta >= 0 };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -64,15 +42,15 @@ function KpiCard({
   badge?: { label: string; up: boolean } | null;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">{label}</span>
-      <span className="text-3xl font-serif font-bold text-white leading-none">{value}</span>
+    <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-1.5">
+      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{label}</span>
+      <span className="text-3xl font-serif font-bold text-foreground leading-none">{value}</span>
       {badge && (
         <span className={`text-xs font-mono ${badge.up ? 'text-emerald-400' : 'text-red-400'}`}>
           {badge.label}
         </span>
       )}
-      {sub && <span className="text-xs text-zinc-600">{sub}</span>}
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -81,8 +59,8 @@ function KpiCard({
 function ChartTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 font-medium border-b border-zinc-800 pb-1">{label}</p>}
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] px-3 py-2 text-xs shadow-xl min-w-[130px]">
+      {label && <p className="text-white/60 mb-1.5 font-medium border-b border-zinc-700 pb-1">{label}</p>}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((p: any) => (
         <p key={p.name} className="flex justify-between gap-3">
@@ -96,67 +74,61 @@ function ChartTip({ active, payload, label }: { active?: boolean; payload?: any[
   );
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+export interface Section01RevenueProps {
+  dataThrough: string | null;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function Section01Revenue({ data }: { data: Section01Data }) {
+export function Section01Revenue({ dataThrough }: Section01RevenueProps) {
   const currentYear = new Date().getFullYear();
   const priorYear   = currentYear - 1;
-
-  const badge = data.ytdFnbRevenue > 0
-    ? yoyBadge(data.ytdFnbRevenue, data.priorYtdFnbRevenue)
-    : null;
-
-  const chartData = data.monthlyRevenue.map((pt) => ({
-    month: pt.month,
-    [currentYear]: pt.cur,
-    [priorYear]: pt.prior,
-  }));
-
-  const dataThroughLabel = data.dataThrough
-    ? new Date(data.dataThrough + 'T00:00:00').toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric',
-      })
-    : null;
 
   return (
     <div className="space-y-4">
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KpiCard
-          label="YTD F&B Revenue"
-          value={data.ytdFnbRevenue > 0 ? fmtDollar(data.ytdFnbRevenue) : '—'}
-          badge={badge}
+          label={`YTD F&B Revenue`}
+          value="—"
           sub={`${currentYear} year-to-date`}
         />
         <KpiCard
           label="YTD Retail Revenue"
           value="—"
-          sub="Retail POS not yet connected"
+          sub={`${currentYear} year-to-date`}
         />
         <KpiCard
           label="Labor % of Sales"
-          value={data.laborPct != null ? fmtPct(data.laborPct) : '—'}
+          value="—"
           sub="Blended, all locations"
         />
         <KpiCard
           label="Guest Count"
-          value={data.guestCount > 0 ? data.guestCount.toLocaleString() : '—'}
+          value="—"
           sub={`YTD ${currentYear}`}
         />
         <KpiCard
           label="Avg Check"
-          value={data.avgCheck > 0 ? fmtDollar(data.avgCheck) : '—'}
-          sub={dataThroughLabel ? `Through ${dataThroughLabel}` : 'No data loaded'}
+          value="—"
+          sub={
+            dataThrough
+              ? `Data through ${new Date(dataThrough + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+              : 'No data loaded'
+          }
         />
       </div>
 
       {/* Year-over-year chart */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
+      <div className="rounded-xl border border bg-card p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
             Monthly F&amp;B Revenue — Year over Year
           </h3>
-          <div className="flex items-center gap-4 text-[10px] text-zinc-500">
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: GOLD }} />
               {currentYear}
@@ -168,54 +140,55 @@ export function Section01Revenue({ data }: { data: Section01Data }) {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-            <XAxis
-              dataKey="month"
-              tick={{ fill: '#71717a', fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tickFormatter={(v) => fmtDollar(v as number)}
-              tick={{ fill: '#71717a', fontSize: 9 }}
-              axisLine={false}
-              tickLine={false}
-              width={52}
-            />
-            <Tooltip
-              content={(props) => (
-                <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
-              )}
-            />
-            <Bar
-              dataKey={String(currentYear)}
-              name={String(currentYear)}
-              fill={GOLD}
-              fillOpacity={0.85}
-              radius={[3, 3, 0, 0]}
-              maxBarSize={30}
-              isAnimationActive={false}
-            />
-            <Line
-              dataKey={String(priorYear)}
-              name={String(priorYear)}
-              stroke="#64748b"
-              strokeWidth={2}
-              dot={false}
-              strokeDasharray="5 3"
-              connectNulls
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+        <div className="flex items-center justify-center h-[220px] rounded-lg border border-dashed border text-muted-foreground text-xs">
+          {/* Placeholder — chart renders once daily_sales data is wired */}
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={EMPTY_YOY} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#666666', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={fmtDollar}
+                tick={{ fill: '#666666', fontSize: 9 }}
+                axisLine={false}
+                tickLine={false}
+                width={52}
+              />
+              <Tooltip
+                content={(props) => (
+                  <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
+                )}
+              />
+              <Bar
+                dataKey={String(currentYear)}
+                name={String(currentYear)}
+                fill={GOLD}
+                fillOpacity={0.85}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={30}
+                isAnimationActive={false}
+              />
+              <Line
+                dataKey={String(priorYear)}
+                name={String(priorYear)}
+                stroke="#64748b"
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 3"
+                connectNulls
+                isAnimationActive={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
 
-        {dataThroughLabel && (
-          <p className="mt-2 text-right text-[10px] text-zinc-700 font-mono">
-            data through {dataThroughLabel}
-          </p>
-        )}
+        <p className="mt-2 text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+          No data — connect Toast / MarginEdge sync to populate
+        </p>
       </div>
     </div>
   );

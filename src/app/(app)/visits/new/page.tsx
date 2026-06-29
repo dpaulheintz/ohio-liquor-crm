@@ -553,7 +553,7 @@ function NewVisitForm() {
                               key={dt}
                               type="button"
                               onClick={() => updateKpiDisplayType(i, dt)}
-                              className={`px-2 py-1 border-l first:border-l-0 border-border transition-colors ${kpi.displayType === dt ? 'bg-[#C5A572] text-black font-semibold' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                              className={`px-2 py-1 border-l first:border-l-0 border-border transition-colors ${kpi.displayType === dt ? 'bg-primary text-white font-semibold' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                             >{dt}</button>
                           ))}
                         </div>

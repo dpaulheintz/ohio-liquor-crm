@@ -97,8 +97,8 @@ function exportCsv(events: KpiEventRow[]) {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#1a1a1a] p-2.5 shadow-xl text-xs min-w-[100px]">
-      <p className="text-zinc-400 mb-1">{label}</p>
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] p-2.5 shadow-xl text-xs min-w-[100px]">
+      <p className="text-white/60 mb-1">{label}</p>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((p: any) => (
         <div key={p.name} className="flex justify-between gap-3">
@@ -118,21 +118,21 @@ function WeeklyCard({ label, value, prior, color, sub }: {
   const delta = value - prior;
   const pct   = prior > 0 ? ((delta / prior) * 100).toFixed(0) : null;
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-      <p className="text-xs text-zinc-500 mb-1.5 uppercase tracking-wider">{label}</p>
-      <p className="text-3xl font-bold tabular-nums" style={{ color: color ?? 'white' }}>{value}</p>
+    <div className="bg-white border border rounded-xl p-4">
+      <p className="text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">{label}</p>
+      <p className="text-3xl font-bold tabular-nums" style={{ color: color ?? undefined }}>{value}</p>
       <div className="flex items-center gap-1.5 mt-1.5">
         {prior === 0 && value === 0 ? (
-          <p className="text-xs text-zinc-600">{sub ?? 'No prior data'}</p>
+          <p className="text-xs text-muted-foreground">{sub ?? 'No prior data'}</p>
         ) : delta > 0 ? (
           <><TrendingUp className="h-3 w-3 text-green-400" /><p className="text-xs text-green-400 font-medium">+{pct}% vs prior wk</p></>
         ) : delta < 0 ? (
           <><TrendingDown className="h-3 w-3 text-red-400" /><p className="text-xs text-red-400 font-medium">{pct}% vs prior wk</p></>
         ) : (
-          <><Minus className="h-3 w-3 text-zinc-600" /><p className="text-xs text-zinc-600">No change</p></>
+          <><Minus className="h-3 w-3 text-muted-foreground" /><p className="text-xs text-muted-foreground">No change</p></>
         )}
       </div>
-      {sub && <p className="text-[10px] text-zinc-700 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -142,7 +142,7 @@ function WeeklyCard({ label, value, prior, color, sub }: {
 function StatusCell({ status }: { status: 'up' | 'down' | null }) {
   if (status === 'up')   return <span className="inline-block h-5 w-5 rounded bg-green-500/20 text-green-400 text-[10px] font-bold flex items-center justify-center">↑</span>;
   if (status === 'down') return <span className="inline-block h-5 w-5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold flex items-center justify-center">↓</span>;
-  return <span className="inline-block h-5 w-5 rounded bg-zinc-800 text-zinc-700 text-[10px] flex items-center justify-center">—</span>;
+  return <span className="inline-block h-5 w-5 rounded bg-muted text-muted-foreground text-[10px] flex items-center justify-center">—</span>;
 }
 
 // ─── Display Tracking Section ─────────────────────────────────────────────────
@@ -232,17 +232,17 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
       {/* ── Summary charts ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* By Type */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-xs text-zinc-500 mb-3 uppercase tracking-wider">Active by Type</p>
+        <div className="bg-white border border rounded-xl p-4">
+          <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Active by Type</p>
           {byType.length === 0 ? (
-            <p className="text-sm text-zinc-600 py-6 text-center">No active displays</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">No active displays</p>
           ) : (
             <ResponsiveContainer width="100%" height={140}>
               <PieChart>
                 <Pie data={byType} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={32} outerRadius={52} paddingAngle={2}>
                   {byType.map((e) => <Cell key={e.name} fill={TYPE_COLORS[e.name] ?? '#888'} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: '#111', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11, color: '#fff' }} itemStyle={{ color: '#e4e4e7' }} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -250,25 +250,25 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
             {byType.map(e => (
               <div key={e.name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full" style={{ background: TYPE_COLORS[e.name] ?? '#888' }} />
-                <span className="flex-1 text-zinc-400">{e.name}</span>
-                <span className="text-zinc-300 font-mono">{e.value}</span>
+                <span className="flex-1 text-muted-foreground">{e.name}</span>
+                <span className="text-foreground font-mono">{e.value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* By Rep */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-xs text-zinc-500 mb-3 uppercase tracking-wider">Active by Rep</p>
+        <div className="bg-white border border rounded-xl p-4">
+          <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Active by Rep</p>
           {byRep.length === 0 ? (
-            <p className="text-sm text-zinc-600 py-6 text-center">No active displays</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">No active displays</p>
           ) : (
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={byRep} margin={{ top: 0, right: 12, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(197,165,114,0.06)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
                 <Bar dataKey="count" name="Displays" fill={GOLD} radius={[3,3,0,0]} maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
@@ -276,16 +276,16 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
         </div>
 
         {/* Monthly trend */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <p className="text-xs text-zinc-500 mb-3 uppercase tracking-wider">Active Trend</p>
+        <div className="bg-white border border rounded-xl p-4">
+          <p className="text-xs text-muted-foreground mb-3 uppercase tracking-wider">Active Trend</p>
           {trend.length < 2 ? (
-            <p className="text-sm text-zinc-600 py-6 text-center">Not enough data</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">Not enough data</p>
           ) : (
             <ResponsiveContainer width="100%" height={140}>
               <LineChart data={trend} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line dataKey="active" name="Active" stroke={GOLD} strokeWidth={2} dot={{ fill: GOLD, r: 3 }} connectNulls />
               </LineChart>
@@ -295,40 +295,40 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
       </div>
 
       {/* ── Active displays ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-3">
+      <div className="bg-white border border rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border flex items-center gap-3">
           <span className="h-2 w-2 rounded-full bg-green-400" />
-          <p className="text-sm font-medium text-zinc-300">Active Displays</p>
-          <span className="text-xs text-zinc-600">{active.length} confirmed this month</span>
+          <p className="text-sm font-medium text-foreground">Active Displays</p>
+          <span className="text-xs text-muted-foreground">{active.length} confirmed this month</span>
         </div>
         {active.length === 0 ? (
-          <p className="px-4 py-8 text-center text-zinc-600 text-sm">No active displays this month</p>
+          <p className="px-4 py-8 text-center text-muted-foreground text-sm">No active displays this month</p>
         ) : (
-          <div className="divide-y divide-zinc-800/50">
-            <div className="hidden md:grid grid-cols-[1fr_100px_80px_80px_80px_60px] gap-3 px-4 py-2 text-xs text-zinc-600 font-medium uppercase tracking-wide">
+          <div className="divide-y divide-border">
+            <div className="hidden md:grid grid-cols-[1fr_100px_80px_80px_80px_60px] gap-3 px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
               <span>Agency</span><span>Rep</span><span>Type</span><span>Months</span><span>First Set</span><span className="text-right">Photo</span>
             </div>
             {active.map(d => (
               <div key={d.id} className="px-4 py-3 grid md:grid-cols-[1fr_100px_80px_80px_80px_60px] gap-3 items-center">
                 <div>
-                  <p className="text-sm text-zinc-200 font-medium">{d.agency_name}</p>
-                  <p className="text-xs text-zinc-600">
+                  <p className="text-sm text-foreground font-medium">{d.agency_name}</p>
+                  <p className="text-xs text-muted-foreground">
                     {[d.account_agency_id ? `#${d.account_agency_id}` : null, d.account_city].filter(Boolean).join(' — ')}
                   </p>
                 </div>
-                <span className="text-xs text-zinc-400">{d.rep_name ?? d.rep_email}</span>
+                <span className="text-xs text-muted-foreground">{d.rep_name ?? d.rep_email}</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                   style={{ background: `${TYPE_COLORS[d.display_type] ?? '#888'}20`, color: TYPE_COLORS[d.display_type] ?? '#888', border: `1px solid ${TYPE_COLORS[d.display_type] ?? '#888'}40` }}>
                   {d.display_type}
                 </span>
-                <span className="text-xs text-zinc-400">{consecutiveMonths(d)} mo.</span>
-                <span className="text-xs text-zinc-600">{d.first_confirmed ? fmtMonthShort(d.first_confirmed.slice(0,7)) : '—'}</span>
+                <span className="text-xs text-muted-foreground">{consecutiveMonths(d)} mo.</span>
+                <span className="text-xs text-muted-foreground">{d.first_confirmed ? fmtMonthShort(d.first_confirmed.slice(0,7)) : '—'}</span>
                 <div className="text-right">
                   {d.latest_photo_url ? (
                     <button onClick={() => setPhotoModal(d.latest_photo_url!)}>
-                      <img src={d.latest_photo_url} alt="Display" className="h-8 w-8 rounded object-cover ml-auto hover:opacity-80 transition-opacity border border-zinc-700" />
+                      <img src={d.latest_photo_url} alt="Display" className="h-8 w-8 rounded object-cover ml-auto hover:opacity-80 transition-opacity border border" />
                     </button>
-                  ) : <span className="text-xs text-zinc-700">—</span>}
+                  ) : <span className="text-xs text-muted-foreground">—</span>}
                 </div>
               </div>
             ))}
@@ -338,14 +338,14 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
 
       {/* ── Inactive / lost displays ── */}
       {inactive.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-3">
+        <div className="bg-white border border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border flex items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-red-400" />
-            <p className="text-sm font-medium text-zinc-300">Lost / Inactive Displays</p>
-            <span className="text-xs text-zinc-600">{inactive.length} need follow-up</span>
+            <p className="text-sm font-medium text-foreground">Lost / Inactive Displays</p>
+            <span className="text-xs text-muted-foreground">{inactive.length} need follow-up</span>
           </div>
-          <div className="divide-y divide-zinc-800/50">
-            <div className="hidden md:grid grid-cols-[1fr_100px_80px_100px_80px_auto] gap-3 px-4 py-2 text-xs text-zinc-600 font-medium uppercase tracking-wide">
+          <div className="divide-y divide-border">
+            <div className="hidden md:grid grid-cols-[1fr_100px_80px_100px_80px_auto] gap-3 px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
               <span>Agency</span><span>Rep</span><span>Type</span><span>Last Active</span><span>Mo. Since</span><span />
             </div>
             {inactive.map(d => {
@@ -354,18 +354,18 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
               return (
                 <div key={d.id} className="px-4 py-3 grid md:grid-cols-[1fr_100px_80px_100px_80px_auto] gap-3 items-center">
                   <div>
-                    <p className="text-sm text-zinc-200 font-medium">{d.agency_name}</p>
-                    <p className="text-xs text-zinc-600">
+                    <p className="text-sm text-foreground font-medium">{d.agency_name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {[d.account_agency_id ? `#${d.account_agency_id}` : null, d.account_city].filter(Boolean).join(' — ')}
                     </p>
                   </div>
-                  <span className="text-xs text-zinc-400">{d.rep_name ?? d.rep_email}</span>
-                  <span className="text-xs text-zinc-500">{d.display_type}</span>
+                  <span className="text-xs text-muted-foreground">{d.rep_name ?? d.rep_email}</span>
+                  <span className="text-xs text-muted-foreground">{d.display_type}</span>
                   <span className="text-xs text-amber-500">{lastActive ? fmtMonthShort(lastActive) : '—'}</span>
                   <span className="text-xs text-red-400">{monthsSince != null ? `${monthsSince} mo.` : '—'}</span>
                   <button
                     onClick={() => onCreateAssignment(d)}
-                    className="text-xs px-2.5 py-1 rounded border border-zinc-700 text-zinc-400 hover:border-[#C5A572]/60 hover:text-[#C5A572] transition-colors shrink-0"
+                    className="text-xs px-2.5 py-1 rounded border border text-muted-foreground hover:border-primary/60 hover:text-primary transition-colors shrink-0"
                   >
                     Assign Check
                   </button>
@@ -377,33 +377,33 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
       )}
 
       {/* ── Timeline grid ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-zinc-800">
-          <p className="text-sm font-medium text-zinc-300">Display Timeline</p>
-          <p className="text-xs text-zinc-600 mt-0.5">↑ Up · ↓ Down · — No data</p>
+      <div className="bg-white border border rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border">
+          <p className="text-sm font-medium text-foreground">Display Timeline</p>
+          <p className="text-xs text-muted-foreground mt-0.5">↑ Up · ↓ Down · — No data</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-zinc-800">
-                <th className="text-left px-4 py-2 text-zinc-500 font-medium w-[220px] sticky left-0 bg-zinc-900">Agency</th>
-                <th className="px-2 py-2 text-zinc-500 font-medium whitespace-nowrap">Rep</th>
-                <th className="px-2 py-2 text-zinc-500 font-medium whitespace-nowrap">Type</th>
+              <tr className="border-b border">
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium w-[220px] sticky left-0 bg-white">Agency</th>
+                <th className="px-2 py-2 text-muted-foreground font-medium whitespace-nowrap">Rep</th>
+                <th className="px-2 py-2 text-muted-foreground font-medium whitespace-nowrap">Type</th>
                 {allMonths.map(m => (
-                  <th key={m} className={`px-2 py-2 text-zinc-500 font-medium whitespace-nowrap ${m === curMonth ? 'text-[#C5A572]' : ''}`}>
+                  <th key={m} className={`px-2 py-2 text-muted-foreground font-medium whitespace-nowrap ${m === curMonth ? 'text-primary' : ''}`}>
                     {monthLabel(m)}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/40">
+            <tbody className="divide-y divide-border">
               {displays.sort((a,b) => a.agency_name.localeCompare(b.agency_name)).map(d => (
-                <tr key={d.id} className="hover:bg-zinc-800/20 transition-colors">
-                  <td className="px-4 py-2 sticky left-0 bg-zinc-900">
-                    <p className="text-zinc-300 font-medium truncate max-w-[200px]">{d.agency_name}</p>
-                    <p className="text-zinc-600">{d.account_city}</p>
+                <tr key={d.id} className="hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-2 sticky left-0 bg-white">
+                    <p className="text-foreground font-medium truncate max-w-[200px]">{d.agency_name}</p>
+                    <p className="text-muted-foreground">{d.account_city}</p>
                   </td>
-                  <td className="px-2 py-2 text-zinc-500 whitespace-nowrap">{(d.rep_name ?? d.rep_email).split(' ')[0]}</td>
+                  <td className="px-2 py-2 text-muted-foreground whitespace-nowrap">{(d.rep_name ?? d.rep_email).split(' ')[0]}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <span className="text-[10px] font-semibold" style={{ color: TYPE_COLORS[d.display_type] ?? '#888' }}>{d.display_type}</span>
                   </td>
@@ -587,20 +587,20 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">KPI Dashboard</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">
+            <p className="text-sm text-muted-foreground mt-0.5">
               {kpiEvents.length.toLocaleString()} KPI events · {totalKpiVisits.toLocaleString()} KPI visits · {totalVisitCount.toLocaleString()} total visits
             </p>
           </div>
           <button
             onClick={() => exportCsv(visibleEvents)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border bg-white text-xs text-foreground hover:bg-muted transition-colors shrink-0"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV
           </button>
@@ -608,7 +608,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
 
         {/* ── Weekly metric cards ────────────────────────────────────── */}
         <div>
-          <p className="text-xs text-zinc-600 uppercase tracking-widest mb-2">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
             Last Week · {fmtWeekRange(weeklyMetrics.weekStart, weeklyMetrics.weekEnd)}
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -621,52 +621,52 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
         </div>
 
         {/* ── Filters ───────────────────────────────────────────────── */}
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
+        <div className="bg-white/60 border border rounded-xl p-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             {PRESETS.map(p => (
               <button key={p.value} onClick={() => applyPreset(p.value)}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  preset === p.value ? 'bg-[#C5A572] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
+                  preset === p.value ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}>{p.label}</button>
             ))}
             <div className="flex items-center gap-1.5 ml-1">
               <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPreset('all'); }}
-                className="h-7 bg-zinc-800 border border-zinc-700 rounded px-2 text-xs text-zinc-300 w-[130px]" />
-              <span className="text-zinc-600 text-xs">→</span>
+                className="h-7 bg-muted border border rounded px-2 text-xs text-foreground w-[130px]" />
+              <span className="text-muted-foreground text-xs">→</span>
               <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPreset('all'); }}
-                className="h-7 bg-zinc-800 border border-zinc-700 rounded px-2 text-xs text-zinc-300 w-[130px]" />
+                className="h-7 bg-muted border border rounded px-2 text-xs text-foreground w-[130px]" />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select value={repId} onChange={e => setRepId(e.target.value)}
-              className="h-8 bg-zinc-800 border border-zinc-700 rounded px-2 text-xs text-zinc-300 w-[150px]">
+              className="h-8 bg-muted border border rounded px-2 text-xs text-foreground w-[150px]">
               <option value="all">All Reps</option>
               {repList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             <select value={kpiType} onChange={e => setKpiType(e.target.value)}
-              className="h-8 bg-zinc-800 border border-zinc-700 rounded px-2 text-xs text-zinc-300 w-[130px]">
+              className="h-8 bg-muted border border rounded px-2 text-xs text-foreground w-[130px]">
               <option value="all">All Types</option>
               {KPI_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
             <input type="text" placeholder="Search account or ID…" value={accountSearch} onChange={e => setAccountSearch(e.target.value)}
-              className="h-8 bg-zinc-800 border border-zinc-700 rounded px-2.5 text-xs text-zinc-300 w-[180px] placeholder-zinc-600" />
+              className="h-8 bg-muted border border rounded px-2.5 text-xs text-foreground w-[180px] placeholder-zinc-600" />
             <button onClick={() => setHasPhotos(h => !h)}
               className={`flex items-center gap-1.5 h-8 px-3 rounded text-xs font-medium transition-colors border ${
-                hasPhotos ? 'bg-[#C5A572]/15 text-[#C5A572] border-[#C5A572]/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-white'
+                hasPhotos ? 'bg-primary/10 text-primary border-primary/40' : 'bg-muted text-muted-foreground border hover:text-foreground'
               }`}><Camera className="h-3 w-3" /> Has Photos</button>
             <button onClick={() => setQtyGt1(q => !q)}
               className={`flex items-center gap-1.5 h-8 px-3 rounded text-xs font-medium transition-colors border ${
-                qtyGt1 ? 'bg-[#C5A572]/15 text-[#C5A572] border-[#C5A572]/40' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-white'
+                qtyGt1 ? 'bg-primary/10 text-primary border-primary/40' : 'bg-muted text-muted-foreground border hover:text-foreground'
               }`}>Qty &gt; 1</button>
-            <div className="flex rounded border border-zinc-700 overflow-hidden text-xs">
+            <div className="flex rounded border border overflow-hidden text-xs">
               {(['all', 'sold', 'unsold'] as const).map(s => (
                 <button key={s} onClick={() => setSoldStatusFilter(s)}
-                  className={`px-2.5 py-1 capitalize transition-colors ${soldStatusFilter === s ? 'bg-[#C5A572] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}>
+                  className={`px-2.5 py-1 capitalize transition-colors ${soldStatusFilter === s ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
                   {s === 'all' ? 'All' : s}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-zinc-600 ml-auto">
+            <span className="text-xs text-muted-foreground ml-auto">
               {visibleGroups.length.toLocaleString()} visits · {visibleEvents.length.toLocaleString()} KPI events
             </span>
           </div>
@@ -674,33 +674,33 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
 
         {/* ── Filter-period stat cards ──────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1.5">KPI Events</p>
+          <div className="bg-white border border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground mb-1.5">KPI Events</p>
             <p className="text-3xl font-bold tabular-nums">{stats.totalEvents.toLocaleString()}</p>
             {priorPct != null ? (
               <p className={`text-xs mt-1.5 font-medium ${priorPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {priorPct >= 0 ? '▲' : '▼'} {Math.abs(priorPct).toFixed(1)}% vs prior
               </p>
-            ) : <p className="text-xs mt-1.5 text-zinc-600">{stats.totalVisits} visits</p>}
+            ) : <p className="text-xs mt-1.5 text-muted-foreground">{stats.totalVisits} visits</p>}
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1.5">KPI Coverage</p>
+          <div className="bg-white border border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground mb-1.5">KPI Coverage</p>
             <p className="text-3xl font-bold tabular-nums">
               {totalVisitCount > 0 ? ((totalKpiVisits / totalVisitCount) * 100).toFixed(0) : '0'}%
             </p>
-            <p className="text-xs mt-1.5 text-zinc-600">{totalKpiVisits} of {totalVisitCount} visits</p>
+            <p className="text-xs mt-1.5 text-muted-foreground">{totalKpiVisits} of {totalVisitCount} visits</p>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1.5">Avg Quantity</p>
+          <div className="bg-white border border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground mb-1.5">Avg Quantity</p>
             <p className="text-3xl font-bold tabular-nums">{stats.avgQty.toFixed(1)}</p>
-            <p className="text-xs mt-1.5 text-zinc-600">per KPI event</p>
+            <p className="text-xs mt-1.5 text-muted-foreground">per KPI event</p>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-500 mb-1.5">Top KPI Type</p>
+          <div className="bg-white border border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground mb-1.5">Top KPI Type</p>
             <p className="text-2xl font-bold" style={{ color: KPI_COLORS[stats.topType] ?? '#fff' }}>
               {stats.totalEvents > 0 ? stats.topType : '—'}
             </p>
-            <p className="text-xs mt-1.5 text-zinc-600">
+            <p className="text-xs mt-1.5 text-muted-foreground">
               {stats.totalEvents > 0 ? `${stats.byType[stats.topType] ?? 0} events` : 'No data'}
             </p>
           </div>
@@ -709,7 +709,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
         {/* Sold/Unsold summary */}
         {(stats.byType['Menu'] > 0 || stats.byType['Feature'] > 0) && (
           <div className="flex gap-4 text-sm">
-            <span className="text-zinc-500">Menu + Feature KPIs:</span>
+            <span className="text-muted-foreground">Menu + Feature KPIs:</span>
             <span className="text-emerald-400 font-medium">✓ {soldCount} sold</span>
             <span className="text-amber-400 font-medium">○ {unsoldCount} unsold</span>
           </div>
@@ -718,48 +718,48 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
         {/* ── Charts ────────────────────────────────────────────────── */}
         <div>
           <button onClick={() => setShowCharts(c => !c)}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-3 transition-colors">
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors">
             {showCharts ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span className="font-medium">Charts</span>
           </button>
           {showCharts && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-sm font-medium text-zinc-300 mb-3">KPI Events by Type</p>
+              <div className="bg-white border border rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground mb-3">KPI Events by Type</p>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart layout="vertical" data={typeChartData} margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(197,165,114,0.06)' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
                     <Bar dataKey="count" name="Events" radius={[0, 3, 3, 0]} maxBarSize={24}>
                       {typeChartData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-sm font-medium text-zinc-300 mb-3">KPI Events by Rep</p>
+              <div className="bg-white border border rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground mb-3">KPI Events by Rep</p>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={repChartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(197,165,114,0.06)' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
                     <Bar dataKey="count" name="Events" fill={GOLD} radius={[3, 3, 0, 0]} maxBarSize={36} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-sm font-medium text-zinc-300 mb-3">Monthly Trend</p>
+              <div className="bg-white border border rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground mb-3">Monthly Trend</p>
                 {trendData.length < 2 ? (
-                  <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">Not enough data</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Not enough data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={trendData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip />} />
                       <Line dataKey="count" name="Events" stroke={GOLD} strokeWidth={2}
                         dot={{ fill: GOLD, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, strokeWidth: 0 }} connectNulls={false} />
@@ -767,17 +767,17 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                   </ResponsiveContainer>
                 )}
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-sm font-medium text-zinc-300 mb-3">Quantity Distribution</p>
+              <div className="bg-white border border rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground mb-3">Quantity Distribution</p>
                 {qtyDistData.length === 0 ? (
-                  <div className="h-[180px] flex items-center justify-center text-zinc-600 text-sm">No data</div>
+                  <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={qtyDistData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                      <XAxis dataKey="qty" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(197,165,114,0.06)' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <XAxis dataKey="qty" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
                       <Bar dataKey="count" name="Events" fill="#60a5fa" radius={[3, 3, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -790,10 +790,10 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
         {/* ── Display Tracking ──────────────────────────────────────── */}
         <div>
           <button onClick={() => setShowDisplays(c => !c)}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white mb-3 transition-colors">
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors">
             {showDisplays ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span className="font-medium">Display Tracking</span>
-            <span className="text-xs text-zinc-600 ml-1">
+            <span className="text-xs text-muted-foreground ml-1">
               {agencyDisplays.length} accounts · {weeklyMetrics.activeDisplays} active this month
             </span>
           </button>
@@ -803,32 +803,32 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
         </div>
 
         {/* ── KPI Visits Table ───────────────────────────────────────── */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <p className="text-sm font-medium text-zinc-300">KPI Visit Log</p>
-            <p className="text-xs text-zinc-600">{visibleGroups.length.toLocaleString()} visits</p>
+        <div className="bg-white border border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">KPI Visit Log</p>
+            <p className="text-xs text-muted-foreground">{visibleGroups.length.toLocaleString()} visits</p>
           </div>
 
           {/* Desktop column header */}
-          <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-zinc-800/60 text-xs text-zinc-600 font-medium uppercase tracking-wide">
+          <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_auto] gap-3 px-4 py-2 border-b border text-xs text-muted-foreground font-medium uppercase tracking-wide">
             <span /><span>Date</span><span>Rep · Account</span><span>KPIs</span><span className="text-right pr-1">Photos</span>
           </div>
 
-          <div className="divide-y divide-zinc-800/50">
+          <div className="divide-y divide-border">
             {visibleGroups.length === 0 ? (
-              <div className="py-12 text-center text-zinc-600 text-sm">No visits match the current filters</div>
+              <div className="py-12 text-center text-muted-foreground text-sm">No visits match the current filters</div>
             ) : (
               visibleGroups.slice(0, 200).map(group => {
                 const isExpanded = expandedId === group.visit_id;
                 return (
                   <div key={group.visit_id}>
-                    <button className="w-full text-left px-4 py-3 hover:bg-zinc-800/30 transition-colors"
+                    <button className="w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : group.visit_id)}>
 
                       {/* Mobile */}
                       <div className="md:hidden space-y-1">
                         <div className="flex items-center gap-2 flex-wrap pl-5">
-                          <span className="text-zinc-600 -ml-5">
+                          <span className="text-muted-foreground -ml-5">
                             {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                           </span>
                           {group.kpis.map(k => {
@@ -841,28 +841,28 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                             );
                           })}
                           {group.photo_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <Camera className="h-3 w-3" />{group.photo_count}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm pl-5">
-                          <span className="font-medium text-zinc-200">{group.rep_name || group.rep_email}</span>
-                          <span className="text-zinc-600">@</span>
-                          <span className="text-zinc-400 truncate">{group.account_name}</span>
+                          <span className="font-medium text-foreground">{group.rep_name || group.rep_email}</span>
+                          <span className="text-muted-foreground">@</span>
+                          <span className="text-muted-foreground truncate">{group.account_name}</span>
                         </div>
-                        <p className="text-xs text-zinc-600 pl-5">{fmtDate(group.visited_at)}</p>
+                        <p className="text-xs text-muted-foreground pl-5">{fmtDate(group.visited_at)}</p>
                       </div>
 
                       {/* Desktop */}
                       <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_auto] gap-3 items-start">
-                        <span className="text-zinc-600 mt-0.5">
+                        <span className="text-muted-foreground mt-0.5">
                           {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </span>
-                        <span className="text-xs text-zinc-500 mt-0.5 whitespace-nowrap">{fmtDate(group.visited_at)}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{fmtDate(group.visited_at)}</span>
                         <div className="min-w-0">
-                          <span className="text-sm font-medium text-zinc-200 block truncate">{group.rep_name || group.rep_email}</span>
-                          <span className="text-xs text-zinc-500 truncate block">
+                          <span className="text-sm font-medium text-foreground block truncate">{group.rep_name || group.rep_email}</span>
+                          <span className="text-xs text-muted-foreground truncate block">
                             @ {agencyLabel(group.account_name, group.account_agency_id, group.account_city)}
                           </span>
                         </div>
@@ -879,7 +879,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                         </div>
                         <div className="text-right">
                           {group.photo_count > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <Camera className="h-3 w-3" />{group.photo_count}
                             </span>
                           )}
@@ -889,22 +889,22 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
 
                     {/* Expanded detail */}
                     {isExpanded && (
-                      <div className="px-4 md:pl-[148px] pb-4 pt-2 bg-black/20 border-t border-zinc-800/40">
+                      <div className="px-4 md:pl-[148px] pb-4 pt-2 bg-muted/30 border-t border">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-zinc-600 uppercase tracking-wide">Account:</span>
-                            <span className="text-xs font-medium text-zinc-300">
+                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Account:</span>
+                            <span className="text-xs font-medium text-foreground">
                               {agencyLabel(group.account_name, group.account_agency_id, group.account_city)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-zinc-600 uppercase tracking-wide">Visit Type:</span>
-                            <span className="text-xs font-medium text-zinc-300">
+                            <span className="text-xs text-muted-foreground uppercase tracking-wide">Visit Type:</span>
+                            <span className="text-xs font-medium text-foreground">
                               {group.visit_type === 'phone_call' ? '📞 Phone Call' : '📍 In Person'}
                             </span>
                           </div>
                           <div>
-                            <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1.5">KPIs</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">KPIs</p>
                             <div className="flex flex-wrap gap-2">
                               {group.kpis.map(k => {
                                 const color = KPI_COLORS[k.kpi] ?? '#888';
@@ -915,10 +915,10 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                                       {k.kpi}{k.display_type ? ` · ${k.display_type}` : ''}
                                     </span>
                                     {k.kpi_quantity > 1 && (
-                                      <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded">×{k.kpi_quantity}</span>
+                                      <span className="text-xs font-bold text-foreground bg-muted px-1.5 py-0.5 rounded">×{k.kpi_quantity}</span>
                                     )}
                                     {(k.kpi === 'Menu' || k.kpi === 'Feature') && (
-                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${k.sold_status === 'sold' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-amber-900/50 text-amber-400'}`}>
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${k.sold_status === 'sold' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                         {k.sold_status}
                                       </span>
                                     )}
@@ -929,28 +929,28 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                           </div>
                           {group.notes && (
                             <div>
-                              <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1">Notes</p>
-                              <p className="text-sm text-zinc-200 leading-relaxed">{group.notes}</p>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
+                              <p className="text-sm text-foreground leading-relaxed">{group.notes}</p>
                             </div>
                           )}
                           {group.photo_count > 0 && group.photo_urls.length > 0 && (
                             <div>
-                              <p className="text-xs text-zinc-600 uppercase tracking-wide mb-1.5">Photos</p>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Photos</p>
                               <div className="flex gap-2 overflow-x-auto pb-1">
                                 {group.photo_urls.map((url, i) => (
                                   <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                    <img src={url} alt={`Photo ${i+1}`} className="h-28 w-28 rounded-lg object-cover shrink-0 hover:opacity-90 transition-opacity border border-zinc-700" />
+                                    <img src={url} alt={`Photo ${i+1}`} className="h-28 w-28 rounded-lg object-cover shrink-0 hover:opacity-90 transition-opacity border border" />
                                   </a>
                                 ))}
                               </div>
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-600">
-                            <span>Photos: <span className="text-zinc-300">{group.photo_count}</span></span>
-                            <span>Visited: <span className="text-zinc-300">{fmtDatetime(group.visited_at)}</span></span>
+                          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                            <span>Photos: <span className="text-foreground">{group.photo_count}</span></span>
+                            <span>Visited: <span className="text-foreground">{fmtDatetime(group.visited_at)}</span></span>
                           </div>
                           <Link href={`/accounts/${group.account_id}`}
-                            className="inline-flex items-center gap-1 text-xs text-[#C5A572] hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                             onClick={e => e.stopPropagation()}>
                             View account <ExternalLink className="h-3 w-3" />
                           </Link>
@@ -964,8 +964,8 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
           </div>
 
           {visibleGroups.length > 200 && (
-            <div className="px-4 py-3 border-t border-zinc-800 text-center">
-              <p className="text-xs text-zinc-600">
+            <div className="px-4 py-3 border-t border text-center">
+              <p className="text-xs text-muted-foreground">
                 Showing first 200 of {visibleGroups.length.toLocaleString()} visits. Use filters or export CSV for full data.
               </p>
             </div>

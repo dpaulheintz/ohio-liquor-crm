@@ -32,10 +32,10 @@ export interface Section04PrimeCostProps {
 
 function KpiChip({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#0a0a0a] px-4 py-3 flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">{label}</span>
+    <div className="rounded-xl border border bg-background px-4 py-3 flex flex-col gap-1">
+      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{label}</span>
       <span className="text-2xl font-serif font-bold text-white leading-none">{value}</span>
-      {sub && <span className="text-[10px] text-zinc-600">{sub}</span>}
+      {sub && <span className="text-[10px] text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -54,12 +54,12 @@ export function Section04PrimeCost(_props: Section04PrimeCostProps) {
       </div>
 
       {/* Stacked bar chart — labor (gold) + COGS (blue), target line */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
+      <div className="rounded-xl border border bg-card p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
             Monthly Labor + COGS as % of Revenue
           </h3>
-          <div className="flex items-center gap-4 text-[10px] text-zinc-500">
+          <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: GOLD }} />
               Labor %
@@ -79,13 +79,13 @@ export function Section04PrimeCost(_props: Section04PrimeCostProps) {
             <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: '#71717a', fontSize: 10 }}
+              tick={{ fill: '#666666', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v) => `${v}%`}
-              tick={{ fill: '#71717a', fontSize: 9 }}
+              tick={{ fill: '#666666', fontSize: 9 }}
               axisLine={false}
               tickLine={false}
               width={40}
@@ -109,7 +109,7 @@ export function Section04PrimeCost(_props: Section04PrimeCostProps) {
             <Line dataKey="__placeholder" stroke="transparent" />
           </ComposedChart>
         </ResponsiveContainer>
-        <p className="mt-2 text-center text-[10px] text-zinc-700 uppercase tracking-widest">
+        <p className="mt-2 text-center text-[10px] text-muted-foreground uppercase tracking-widest">
           No data — connect daily_sales to populate
         </p>
       </div>

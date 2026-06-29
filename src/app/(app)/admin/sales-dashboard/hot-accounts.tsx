@@ -38,14 +38,14 @@ function AccountRow({
       : '—';
 
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-zinc-800 last:border-0 group">
-      <span className="text-xs text-zinc-600 w-4 shrink-0 text-right font-mono">{rank}</span>
+    <div className="flex items-center gap-3 py-2.5 border-b border last:border-0 group">
+      <span className="text-xs text-muted-foreground w-4 shrink-0 text-right font-mono">{rank}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-200 truncate font-medium group-hover:text-white transition-colors">
+        <p className="text-sm text-foreground truncate font-medium group-hover:text-foreground transition-colors">
           {account.account_name || account.account_key}
         </p>
         {account.top_product && (
-          <p className="text-xs text-zinc-600 truncate">{account.top_product}</p>
+          <p className="text-xs text-muted-foreground truncate">{account.top_product}</p>
         )}
       </div>
       <div className="flex flex-col items-end shrink-0 gap-0.5">
@@ -54,7 +54,7 @@ function AccountRow({
         >
           {pctLabel}
         </span>
-        <span className="text-xs text-zinc-500 font-mono">
+        <span className="text-xs text-muted-foreground font-mono">
           {isUp ? '+' : ''}{account.bottle_change.toLocaleString()} btl
         </span>
       </div>
@@ -78,17 +78,17 @@ function AccountPanel({
   accentColor: string;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111111] overflow-hidden flex flex-col">
-      <div className="px-4 pt-4 pb-3 border-b border-zinc-800 flex items-center gap-2">
+    <div className="rounded-xl border border bg-card overflow-hidden flex flex-col">
+      <div className="px-4 pt-4 pb-3 border-b border flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
         <div>
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
-          <p className="text-xs text-zinc-500">{subtitle}</p>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
       </div>
       <div className="px-4 flex-1">
         {accounts.length === 0 ? (
-          <p className="py-6 text-center text-sm text-zinc-600">No data</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">No data</p>
         ) : (
           accounts.map((a, i) => (
             <AccountRow key={a.account_key} account={a} direction={direction} rank={i + 1} />

@@ -64,9 +64,9 @@ export function Sidebar() {
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-background">
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="font-serif text-lg font-bold uppercase tracking-widest truncate">
+    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r border-sidebar-border md:bg-sidebar text-sidebar-foreground">
+      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <Link href="/" className="font-serif text-lg font-bold uppercase tracking-widest truncate text-sidebar-foreground">
           High Bank CRM
         </Link>
       </div>
@@ -85,8 +85,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               )}
             >
               <Icon className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function Sidebar() {
 
         {isAdmin && (
           <>
-            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
               Admin
             </div>
             {adminItems.map((item) => {
@@ -110,8 +110,8 @@ export function Sidebar() {
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -142,21 +142,21 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t p-3">
+      <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-sidebar-accent text-sidebar-accent-foreground">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
               {profile?.full_name || profile?.email}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-sidebar-foreground/50">
               {profile?.role}
             </p>
           </div>
           <form action={signOut}>
-            <Button variant="ghost" size="icon" type="submit" className="h-8 w-8">
+            <Button variant="ghost" size="icon" type="submit" className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
               <LogOut className="h-4 w-4" />
               <span className="sr-only">Sign out</span>
             </Button>

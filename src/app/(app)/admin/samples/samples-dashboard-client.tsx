@@ -77,21 +77,21 @@ function fmtDate(iso: string): string {
 function SectionHeader({ num, title }: { num: string; title: string }) {
   return (
     <div className="flex items-center gap-4 mb-4">
-      <span className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 shrink-0">{num}</span>
-      <h2 className="font-serif text-base font-semibold text-white tracking-wide">{title}</h2>
-      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${GOLD}33, transparent)` }} />
+      <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground shrink-0">{num}</span>
+      <h2 className="font-serif text-base font-semibold text-foreground tracking-wide">{title}</h2>
+      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, rgba(200,16,46,0.2), transparent)` }} />
     </div>
   );
 }
 
 function KpiCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">{label}</span>
-      <span className="text-3xl font-serif font-bold leading-none" style={{ color: color ?? 'white' }}>
+    <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-1.5">
+      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{label}</span>
+      <span className="text-3xl font-serif font-bold leading-none" style={{ color: color ?? undefined }}>
         {typeof value === 'number' ? value.toLocaleString() : value}
       </span>
-      {sub && <span className="text-xs text-zinc-600">{sub}</span>}
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -100,8 +100,8 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string | 
 function ChartTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 font-medium border-b border-zinc-800 pb-1">{label}</p>}
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] px-3 py-2 text-xs shadow-xl min-w-[130px]">
+      {label && <p className="text-white/60 mb-1.5 font-medium border-b border-zinc-700 pb-1">{label}</p>}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((p: any) => (
         <p key={p.name} className="flex justify-between gap-3">
@@ -299,47 +299,47 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-[#C5A572]/15 px-6 py-5">
-        <h1 className="font-serif text-2xl font-bold tracking-wide text-white">Samples Dashboard</h1>
-        <p className="text-xs text-zinc-500 mt-0.5 uppercase tracking-widest">
+      <div className="border-b border px-6 py-5">
+        <h1 className="font-serif text-2xl font-bold tracking-wide text-foreground">Samples Dashboard</h1>
+        <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">
           Spirit &amp; Swag Pull Tracking
         </p>
       </div>
 
       {/* Filters */}
-      <div className="sticky top-0 z-30 border-b border-[#C5A572]/15 bg-[#0a0a0a]/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
+      <div className="sticky top-0 z-30 border-b border bg-background/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
         {/* Date range */}
         <div className="flex items-center gap-2 text-xs shrink-0">
-          <span className="text-zinc-500 uppercase tracking-wider">Range</span>
+          <span className="text-muted-foreground uppercase tracking-wider">Range</span>
           <input type="date" value={dateFrom} max={dateTo} onChange={e => setDateFrom(e.target.value)}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60" />
-          <span className="text-zinc-600">→</span>
+            className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60" />
+          <span className="text-muted-foreground">→</span>
           <input type="date" value={dateTo} min={dateFrom} onChange={e => setDateTo(e.target.value)}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60" />
+            className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60" />
         </div>
 
         {/* Pull type */}
-        <div className="flex items-center gap-1 rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-white border border p-0.5">
           {(['all', 'spirits', 'swag'] as PullTypeFilter[]).map(t => (
             <button key={t} onClick={() => setPullType(t)}
               className={`rounded px-3 py-1 text-xs capitalize transition-colors ${
-                pullType === t ? 'bg-[#C5A572] text-black font-semibold' : 'text-zinc-400 hover:text-zinc-200'
+                pullType === t ? 'bg-primary text-white font-semibold' : 'text-muted-foreground hover:text-foreground'
               }`}>{t}</button>
           ))}
         </div>
 
         {/* Person filter */}
         <select value={personFilter} onChange={e => setPersonFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60">
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60">
           <option value="">All People</option>
           {allPersons.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
 
         {/* Category filter */}
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60">
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60">
           <option value="">All Categories</option>
           {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -368,17 +368,17 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Most Pulled Spirits */}
-                <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+                <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
                     Most Pulled Spirits
                   </h3>
                   {spiritRanked.length === 0 ? (
-                    <p className="py-8 text-center text-zinc-600 text-sm">No spirit data in range.</p>
+                    <p className="py-8 text-center text-muted-foreground text-sm">No spirit data in range.</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={Math.max(160, spiritRanked.length * 36)}>
                       <BarChart data={spiritRanked} layout="vertical" margin={{ top: 0, right: 60, bottom: 0, left: 8 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                        <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                        <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
                         <YAxis dataKey="name" type="category" tick={{ fill: '#a1a1aa', fontSize: 10 }} axisLine={false} tickLine={false} width={180} />
                         <Tooltip content={props => <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />} />
                         <Bar dataKey="qty" name="Bottles" fill={GOLD} fillOpacity={0.85} radius={[0, 3, 3, 0]} isAnimationActive={false}>
@@ -390,10 +390,10 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                 </div>
 
                 {/* Pulls by Category (donut) */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">Pulls by Category</h3>
+                <div className="rounded-xl border border bg-card p-4 flex flex-col">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">Pulls by Category</h3>
                   {spiritByCat.length === 0 ? (
-                    <p className="flex-1 flex items-center justify-center text-sm text-zinc-600">No data</p>
+                    <p className="flex-1 flex items-center justify-center text-sm text-muted-foreground">No data</p>
                   ) : (
                     <>
                       <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 160 }}>
@@ -403,21 +403,21 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                               innerRadius={46} outerRadius={68} paddingAngle={2} startAngle={90} endAngle={-270}>
                               {spiritByCat.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} fillOpacity={0.9} />)}
                             </Pie>
-                            <Tooltip contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                            <Tooltip contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11, color: '#fff' }}
                               itemStyle={{ color: '#e4e4e7' }} />
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-base font-bold text-white font-serif">{spiritPulls.length}</span>
-                          <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">pulls</span>
+                          <span className="text-base font-bold text-foreground font-serif">{spiritPulls.length}</span>
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">pulls</span>
                         </div>
                       </div>
                       <div className="space-y-1 mt-2">
                         {spiritByCat.map(({ name, value }, i) => (
                           <div key={name} className="flex items-center gap-2 text-xs">
                             <span className="h-2 w-2 rounded-full shrink-0" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
-                            <span className="flex-1 truncate text-zinc-400">{name}</span>
-                            <span className="font-mono text-zinc-300">{value}</span>
+                            <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                            <span className="font-mono text-foreground">{value}</span>
                           </div>
                         ))}
                       </div>
@@ -428,17 +428,17 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Top Pullers */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">Top Spirit Pullers</h3>
+                <div className="rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">Top Spirit Pullers</h3>
                   {spiritTopPullers.length === 0 ? (
-                    <p className="py-6 text-center text-zinc-600 text-sm">No data</p>
+                    <p className="py-6 text-center text-muted-foreground text-sm">No data</p>
                   ) : (
                     <div className="space-y-1.5">
                       {spiritTopPullers.map(({ name, qty }, i) => (
                         <div key={name} className="flex items-center gap-3 text-xs">
-                          <span className="text-zinc-600 font-mono w-5 text-right">{i + 1}</span>
-                          <span className="flex-1 text-zinc-300">{name}</span>
-                          <span className="font-mono text-zinc-400">{qty} bottles</span>
+                          <span className="text-muted-foreground font-mono w-5 text-right">{i + 1}</span>
+                          <span className="flex-1 text-foreground">{name}</span>
+                          <span className="font-mono text-muted-foreground">{qty} bottles</span>
                         </div>
                       ))}
                     </div>
@@ -446,16 +446,16 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                 </div>
 
                 {/* Monthly Trend */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">Monthly Spirit Bottles</h3>
+                <div className="rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">Monthly Spirit Bottles</h3>
                   {spiritMonthly.length === 0 ? (
-                    <p className="py-6 text-center text-zinc-600 text-sm">No data</p>
+                    <p className="py-6 text-center text-muted-foreground text-sm">No data</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={160}>
                       <LineChart data={spiritMonthly} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
                         <Tooltip content={props => <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />} />
                         <Line dataKey="bottles" name="Bottles" stroke={GOLD} strokeWidth={2.5} dot={{ r: 3, fill: GOLD }} activeDot={{ r: 5 }} connectNulls />
                       </LineChart>
@@ -474,17 +474,17 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Most Pulled Swag */}
-                <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+                <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
                     Most Pulled Swag Items
                   </h3>
                   {swagRanked.length === 0 ? (
-                    <p className="py-8 text-center text-zinc-600 text-sm">No swag data in range.</p>
+                    <p className="py-8 text-center text-muted-foreground text-sm">No swag data in range.</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={Math.max(160, swagRanked.length * 30)}>
                       <BarChart data={swagRanked} layout="vertical" margin={{ top: 0, right: 50, bottom: 0, left: 8 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                        <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                        <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
                         <YAxis dataKey="name" type="category" tick={{ fill: '#a1a1aa', fontSize: 9 }} axisLine={false} tickLine={false} width={260}
                           tickFormatter={(v: string) => v.length > 38 ? v.slice(0, 37) + '...' : v} />
                         <Tooltip content={props => <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />} />
@@ -497,10 +497,10 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                 </div>
 
                 {/* Pulls by Category */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">Pulls by Category</h3>
+                <div className="rounded-xl border border bg-card p-4 flex flex-col">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">Pulls by Category</h3>
                   {swagByCat.length === 0 ? (
-                    <p className="flex-1 flex items-center justify-center text-sm text-zinc-600">No data</p>
+                    <p className="flex-1 flex items-center justify-center text-sm text-muted-foreground">No data</p>
                   ) : (
                     <>
                       <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 160 }}>
@@ -510,21 +510,21 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                               innerRadius={46} outerRadius={68} paddingAngle={2} startAngle={90} endAngle={-270}>
                               {swagByCat.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} fillOpacity={0.9} />)}
                             </Pie>
-                            <Tooltip contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                            <Tooltip contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11, color: '#fff' }}
                               itemStyle={{ color: '#e4e4e7' }} />
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-base font-bold text-white font-serif">{swagPulls.length}</span>
-                          <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">pulls</span>
+                          <span className="text-base font-bold text-foreground font-serif">{swagPulls.length}</span>
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">pulls</span>
                         </div>
                       </div>
                       <div className="space-y-1 mt-2">
                         {swagByCat.map(({ name, value }, i) => (
                           <div key={name} className="flex items-center gap-2 text-xs">
                             <span className="h-2 w-2 rounded-full shrink-0" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
-                            <span className="flex-1 truncate text-zinc-400">{name}</span>
-                            <span className="font-mono text-zinc-300">{value}</span>
+                            <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                            <span className="font-mono text-foreground">{value}</span>
                           </div>
                         ))}
                       </div>
@@ -535,17 +535,17 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Top Pullers */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">Top Swag Pullers</h3>
+                <div className="rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">Top Swag Pullers</h3>
                   {swagTopPullers.length === 0 ? (
-                    <p className="py-6 text-center text-zinc-600 text-sm">No data</p>
+                    <p className="py-6 text-center text-muted-foreground text-sm">No data</p>
                   ) : (
                     <div className="space-y-1.5">
                       {swagTopPullers.map(({ name, qty }, i) => (
                         <div key={name} className="flex items-center gap-3 text-xs">
-                          <span className="text-zinc-600 font-mono w-5 text-right">{i + 1}</span>
-                          <span className="flex-1 text-zinc-300">{name}</span>
-                          <span className="font-mono text-zinc-400">{qty} items</span>
+                          <span className="text-muted-foreground font-mono w-5 text-right">{i + 1}</span>
+                          <span className="flex-1 text-foreground">{name}</span>
+                          <span className="font-mono text-muted-foreground">{qty} items</span>
                         </div>
                       ))}
                     </div>
@@ -553,15 +553,15 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                 </div>
 
                 {/* By Swag Category (bar) */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">By Swag Category</h3>
+                <div className="rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">By Swag Category</h3>
                   {swagByItemCat.length === 0 ? (
-                    <p className="py-6 text-center text-zinc-600 text-sm">No data</p>
+                    <p className="py-6 text-center text-muted-foreground text-sm">No data</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={Math.max(120, swagByItemCat.length * 28)}>
                       <BarChart data={swagByItemCat} layout="vertical" margin={{ top: 0, right: 40, bottom: 0, left: 8 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                        <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                        <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
                         <YAxis dataKey="name" type="category" tick={{ fill: '#a1a1aa', fontSize: 9 }} axisLine={false} tickLine={false} width={120} />
                         <Bar dataKey="qty" name="Items" radius={[0, 3, 3, 0]} isAnimationActive={false}>
                           {swagByItemCat.map((d) => (
@@ -575,16 +575,16 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                 </div>
 
                 {/* Monthly Trend */}
-                <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-                  <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">Monthly Swag Items</h3>
+                <div className="rounded-xl border border bg-card p-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">Monthly Swag Items</h3>
                   {swagMonthly.length === 0 ? (
-                    <p className="py-6 text-center text-zinc-600 text-sm">No data</p>
+                    <p className="py-6 text-center text-muted-foreground text-sm">No data</p>
                   ) : (
                     <ResponsiveContainer width="100%" height={160}>
                       <LineChart data={swagMonthly} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
                         <Tooltip content={props => <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />} />
                         <Line dataKey="items" name="Items" stroke={SWAG_COLOR} strokeWidth={2.5} dot={{ r: 3, fill: SWAG_COLOR }} activeDot={{ r: 5 }} connectNulls />
                       </LineChart>
@@ -599,20 +599,20 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
         {/* ── Section 4: Recent Activity Feed ────────────────────────────────── */}
         <section>
           <SectionHeader num="04" title="Recent Activity" />
-          <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
+          <div className="rounded-xl border border bg-card p-4">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+              <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                 Activity Feed ({filtered.length} pulls)
               </h3>
               <button onClick={exportCsv}
-                className="rounded px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors shrink-0">
+                className="rounded px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-foreground transition-colors shrink-0">
                 Export CSV
               </button>
             </div>
             {filtered.length === 0 ? (
-              <p className="py-10 text-center text-zinc-600 text-sm">No pulls in this date range.</p>
+              <p className="py-10 text-center text-muted-foreground text-sm">No pulls in this date range.</p>
             ) : (
-              <div className="divide-y divide-zinc-800/60 max-h-[600px] overflow-y-auto">
+              <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
                 {filtered.map((p) => {
                   const isExpanded = expandedId === p.id;
                   const totalQty = p.items.reduce((s, i) => s + i.quantity, 0);
@@ -620,17 +620,17 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                     <div key={p.id}>
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : p.id)}
-                        className="w-full flex items-center gap-3 px-2 py-3 text-left hover:bg-zinc-900/40 transition-colors"
+                        className="w-full flex items-center gap-3 px-2 py-3 text-left hover:bg-muted/50 transition-colors"
                       >
                         <span className="text-sm" title={p.pull_type}>
                           {p.pull_type === 'spirits' ? '🥃' : '👕'}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs text-zinc-300 font-medium truncate">
-                            {p.person_name} <span className="text-zinc-600">·</span>{' '}
-                            <span className="text-zinc-500">{p.category}</span>
+                          <p className="text-xs text-foreground font-medium truncate">
+                            {p.person_name} <span className="text-muted-foreground">·</span>{' '}
+                            <span className="text-muted-foreground">{p.category}</span>
                           </p>
-                          <p className="text-[10px] text-zinc-600 truncate">
+                          <p className="text-[10px] text-muted-foreground truncate">
                             {p.items.map(i => `${i.item_name}${i.size ? ` (${i.size})` : ''} ×${i.quantity}`).join(', ')}
                           </p>
                         </div>
@@ -638,27 +638,27 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
                           <p className="text-xs font-mono" style={{ color: p.pull_type === 'spirits' ? SPIRIT_COLOR : SWAG_COLOR }}>
                             {totalQty} {p.pull_type === 'spirits' ? 'btl' : 'itm'}
                           </p>
-                          <p className="text-[10px] text-zinc-600">{fmtDate(p.created_at)}</p>
+                          <p className="text-[10px] text-muted-foreground">{fmtDate(p.created_at)}</p>
                         </div>
-                        <span className="text-zinc-600 text-xs">{isExpanded ? '▾' : '▸'}</span>
+                        <span className="text-muted-foreground text-xs">{isExpanded ? '▾' : '▸'}</span>
                       </button>
                       {isExpanded && (
                         <div className="px-10 pb-3 space-y-2 text-xs">
                           {p.account_name && (
-                            <p className="text-zinc-400"><span className="text-zinc-600">Account:</span> {p.account_name}</p>
+                            <p className="text-muted-foreground"><span className="text-muted-foreground">Account:</span> {p.account_name}</p>
                           )}
-                          <div className="rounded-lg border border-zinc-800/60 bg-zinc-900/30 divide-y divide-zinc-800/40">
+                          <div className="rounded-lg border bg-muted/30 divide-y divide-border">
                             {p.items.map(i => (
                               <div key={i.id} className="flex items-center justify-between px-3 py-1.5">
-                                <span className="text-zinc-300">{i.item_name}</span>
-                                <span className="text-zinc-500 font-mono">
+                                <span className="text-foreground">{i.item_name}</span>
+                                <span className="text-muted-foreground font-mono">
                                   {i.size ? `${i.size} · ` : ''}×{i.quantity}
                                 </span>
                               </div>
                             ))}
                           </div>
                           {p.notes && (
-                            <p className="text-zinc-500 italic">&ldquo;{p.notes}&rdquo;</p>
+                            <p className="text-muted-foreground italic">&ldquo;{p.notes}&rdquo;</p>
                           )}
                         </div>
                       )}
@@ -678,18 +678,18 @@ export function SamplesDashboardClient({ pulls }: SamplesDashboardClientProps) {
               { label: 'Spirit Sample Form', path: '/samples/spirits', emoji: '🥃' },
               { label: 'Swag Sample Form', path: '/samples/swag', emoji: '👕' },
             ].map(({ label, path, emoji }) => (
-              <div key={path} className="rounded-xl border border-zinc-800 bg-[#111] p-5 flex flex-col items-center gap-3">
+              <div key={path} className="rounded-xl border border bg-card p-5 flex flex-col items-center gap-3">
                 <span className="text-3xl">{emoji}</span>
-                <p className="text-sm font-medium text-zinc-300">{label}</p>
+                <p className="text-sm font-medium text-foreground">{label}</p>
                 <a
                   href={path}
                   target="_blank"
                   rel="noopener"
-                  className="text-xs font-mono text-[#C5A572] underline underline-offset-2 break-all text-center"
+                  className="text-xs font-mono text-primary underline underline-offset-2 break-all text-center"
                 >
                   {typeof window !== 'undefined' ? window.location.origin : ''}{path}
                 </a>
-                <p className="text-[10px] text-zinc-600 text-center">
+                <p className="text-[10px] text-muted-foreground text-center">
                   Print a QR code pointing to this URL and place it at the shelf
                 </p>
               </div>

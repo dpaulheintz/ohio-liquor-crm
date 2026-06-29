@@ -137,7 +137,7 @@ export function SectionHbWholesale({
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-10 text-center text-zinc-600 text-sm">
+      <div className="rounded-xl border border bg-card p-10 text-center text-muted-foreground text-sm">
         No HB wholesale data for the selected period.
       </div>
     );
@@ -162,15 +162,15 @@ export function SectionHbWholesale({
       {/* Trend + Product mix */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Monthly trend by location */}
-        <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             HB Wholesale Bottles by Location — Monthly
           </h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={38} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={38} />
               <Tooltip
                 content={(props) => (
                   <ChartTip
@@ -180,7 +180,7 @@ export function SectionHbWholesale({
                   />
                 )}
               />
-              <Legend wrapperStyle={{ fontSize: 10, color: '#71717a', paddingTop: 8 }} />
+              <Legend wrapperStyle={{ fontSize: 10, color: '#666666', paddingTop: 8 }} />
               {HB_LOCATIONS.map(loc => (
                 <Line
                   key={loc}
@@ -198,8 +198,8 @@ export function SectionHbWholesale({
         </div>
 
         {/* Product mix donut */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+        <div className="rounded-xl border border bg-card p-4 flex flex-col">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
             Product Mix (Wholesale Bottles)
           </h3>
           <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 168 }}>
@@ -226,24 +226,24 @@ export function SectionHbWholesale({
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-base font-bold text-white font-serif leading-none">
+              <span className="text-base font-bold text-foreground font-serif leading-none">
                 {fmtBottles(mixTotal)}
               </span>
-              <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">bottles</span>
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">bottles</span>
             </div>
           </div>
           <div className="space-y-1 mt-1">
             {productMix.slice(0, 5).map(({ name, value }) => (
               <div key={name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }} />
-                <span className="flex-1 truncate text-zinc-400">{name}</span>
-                <span className="font-mono text-zinc-300">{value.toLocaleString()}</span>
-                <span className="font-mono text-zinc-600 w-9 text-right">
+                <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                <span className="font-mono text-foreground">{value.toLocaleString()}</span>
+                <span className="font-mono text-muted-foreground w-9 text-right">
                   {mixTotal > 0 ? ((value / mixTotal) * 100).toFixed(0) : 0}%
                 </span>
               </div>
@@ -254,8 +254,8 @@ export function SectionHbWholesale({
 
       {/* Top products bar chart */}
       {topProducts.length > 0 && (
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Top Products Ordered by HB Bars (Wholesale Bottles)
           </h3>
           <ResponsiveContainer width="100%" height={Math.max(180, topProducts.length * 34)}>
@@ -264,8 +264,8 @@ export function SectionHbWholesale({
               layout="vertical"
               margin={{ top: 0, right: 56, bottom: 0, left: 8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
+              <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis
                 dataKey="name"
                 type="category"
@@ -275,7 +275,7 @@ export function SectionHbWholesale({
                 width={200}
               />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
               />
               <Bar dataKey="bottles" name="Wholesale Bottles" radius={[0, 3, 3, 0]} isAnimationActive={false}>
                 {[...topProducts].reverse().map((p) => (

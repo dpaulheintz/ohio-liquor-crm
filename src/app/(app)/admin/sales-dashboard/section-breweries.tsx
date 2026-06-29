@@ -90,29 +90,29 @@ export function SectionBreweries({
     <div className="space-y-4">
       {/* Summary KPIs */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Named Brewery Accounts</span>
-          <span className="text-3xl font-serif font-bold text-white leading-none">{breweries.length}</span>
+        <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Named Brewery Accounts</span>
+          <span className="text-3xl font-serif font-bold text-foreground leading-none">{breweries.length}</span>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Total Bottles</span>
-          <span className="text-3xl font-serif font-bold text-white leading-none">
+        <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Total Bottles</span>
+          <span className="text-3xl font-serif font-bold text-foreground leading-none">
             {totalBottles >= 1000 ? `${(totalBottles / 1000).toFixed(1)}k` : totalBottles.toLocaleString()}
           </span>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Total Revenue</span>
-          <span className="text-3xl font-serif font-bold text-white leading-none">{fmtDollar(totalRevenue)}</span>
+        <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Total Revenue</span>
+          <span className="text-3xl font-serif font-bold text-foreground leading-none">{fmtDollar(totalRevenue)}</span>
         </div>
       </div>
 
       {/* Horizontal bar chart — all brewery groups */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           Brewery Accounts Ranked by Revenue
         </h3>
         {breweries.length === 0 ? (
-          <p className="py-10 text-center text-zinc-600 text-sm">No brewery data for selected range.</p>
+          <p className="py-10 text-center text-muted-foreground text-sm">No brewery data for selected range.</p>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(200, breweries.length * 34)}>
             <BarChart
@@ -120,8 +120,8 @@ export function SectionBreweries({
               layout="vertical"
               margin={{ top: 0, right: 88, bottom: 0, left: 8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tickFormatter={fmtDollar} tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
+              <XAxis type="number" tickFormatter={fmtDollar} tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis
                 dataKey="name"
                 type="category"
@@ -131,7 +131,7 @@ export function SectionBreweries({
                 width={180}
               />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 itemStyle={{ color: '#e4e4e7' }}
                 labelStyle={{ color: '#a1a1aa' }}
                 formatter={(v: number) => [fmtDollar(v), 'Revenue']}
