@@ -151,8 +151,8 @@ export function SectionSkuTable({
   function ChartTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
     if (!active || !payload?.length) return null;
     return (
-      <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[150px]">
-        {label && <p className="text-zinc-400 mb-1.5 font-medium border-b border-zinc-800 pb-1">{label}</p>}
+      <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] px-3 py-2 text-xs shadow-xl min-w-[150px]">
+        {label && <p className="text-white/60 mb-1.5 font-medium border-b border-zinc-700 pb-1">{label}</p>}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {payload.map((p: any) => {
           if (p.value == null) return null;
@@ -192,15 +192,15 @@ export function SectionSkuTable({
   const isSingle = selected.length === 1;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
+    <div className="rounded-xl border border bg-card p-5">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
           SKU Revenue — Trailing 12 Months (ending {new Date(dateTo + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})
         </h3>
         <button
           onClick={exportCsv}
-          className="rounded px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors shrink-0"
+          className="rounded px-3 py-1 text-xs bg-muted hover:bg-muted text-foreground transition-colors shrink-0"
         >
           Export CSV
         </button>
@@ -210,20 +210,20 @@ export function SectionSkuTable({
       <div className="mb-4 space-y-2">
         {/* Controls row */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium shrink-0">SKU</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">SKU</span>
           <button
             onClick={clearAll}
             className={`rounded px-2 py-0.5 text-xs transition-colors ${
               activeCodes !== null && activeCodes.length === 0
-                ? 'bg-[#C5A572] text-black font-semibold'
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                ? 'bg-primary text-black font-semibold'
+                : 'bg-muted text-muted-foreground hover:bg-muted'
             }`}
           >
             All
           </button>
           <button
             onClick={selectAll}
-            className="rounded px-2 py-0.5 text-xs bg-zinc-800 text-zinc-500 hover:bg-zinc-700 transition-colors"
+            className="rounded px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-muted transition-colors"
           >
             Select all
           </button>
@@ -262,8 +262,8 @@ export function SectionSkuTable({
                       title={label}
                       className="rounded px-2 py-0.5 text-xs transition-all whitespace-nowrap"
                       style={{
-                        backgroundColor: isActive ? color + '28' : 'rgb(39,39,42)',
-                        color: isActive ? color : '#71717a',
+                        backgroundColor: isActive ? color + '28' : '#f4f4f5',
+                        color: isActive ? color : '#666666',
                         borderWidth: 1,
                         borderStyle: 'solid',
                         borderColor: isActive ? color + '70' : 'transparent',
@@ -281,23 +281,23 @@ export function SectionSkuTable({
 
       {/* Chart */}
       {selected.length === 0 || skuList.length === 0 ? (
-        <div className="flex items-center justify-center h-48 text-zinc-600 text-sm">
+        <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
           Select one or more SKUs above to chart their revenue trend.
         </div>
       ) : (
         <>
           <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fill: '#71717a', fontSize: 10 }}
+                tick={{ fill: '#666666', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }}
+                tick={{ fill: '#666666', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 width={52}
@@ -348,12 +348,12 @@ export function SectionSkuTable({
                   ) : (
                     <span className="inline-block w-5 h-0 border-t-2 shrink-0" style={{ borderColor: color }} />
                   )}
-                  <span className="text-zinc-400">
-                    <span className="font-mono text-zinc-300">{code}</span>
+                  <span className="text-muted-foreground">
+                    <span className="font-mono text-foreground">{code}</span>
                     {' · '}{meta.product_name}
-                    {meta.size && <span className="text-zinc-600"> ({meta.size})</span>}
+                    {meta.size && <span className="text-muted-foreground"> ({meta.size})</span>}
                   </span>
-                  <span className="font-mono text-[#C5A572] font-semibold">{fmtDollar(meta.total)}</span>
+                  <span className="font-mono text-primary font-semibold">{fmtDollar(meta.total)}</span>
                 </div>
               );
             })}

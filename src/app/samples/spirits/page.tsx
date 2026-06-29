@@ -6,7 +6,7 @@ import { SPIRIT_PRODUCTS, SPIRIT_CATEGORIES } from '@/lib/sample-data';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GOLD = '#C5A572';
+const BRAND_RED = '#C8102E';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,14 +78,14 @@ export default function SpiritSamplePage() {
   // ── Success screen ──────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-dvh bg-[#0a0a0a] flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-dvh bg-background flex flex-col items-center justify-center px-6 text-center">
         <div className="text-5xl mb-4">&#127867;</div>
-        <h1 className="font-serif text-2xl font-bold text-white mb-2">Samples Logged!</h1>
-        <p className="text-zinc-400 mb-8">Thank you, {name}.</p>
+        <h1 className="font-serif text-2xl font-bold text-foreground mb-2">Samples Logged!</h1>
+        <p className="text-muted-foreground mb-8">Thank you, {name}.</p>
         <button
           onClick={reset}
           className="rounded-lg px-8 py-3 text-sm font-semibold transition-colors"
-          style={{ backgroundColor: GOLD, color: '#000' }}
+          style={{ backgroundColor: BRAND_RED, color: '#fff' }}
         >
           Log Another Pull
         </button>
@@ -95,32 +95,32 @@ export default function SpiritSamplePage() {
 
   // ── Form ────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-dvh bg-[#0a0a0a] text-white">
+    <div className="min-h-dvh bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-zinc-800 px-5 py-4">
-        <h1 className="font-serif text-xl font-bold tracking-wide" style={{ color: GOLD }}>
+      <div className="border-b border px-5 py-4">
+        <h1 className="font-serif text-xl font-bold tracking-wide" style={{ color: BRAND_RED }}>
           Spirit Sample Pull
         </h1>
-        <p className="text-xs text-zinc-500 mt-0.5">High Bank Distillery</p>
+        <p className="text-xs text-muted-foreground mt-0.5">High Bank Distillery</p>
       </div>
 
       <div className="px-5 py-5 space-y-5 max-w-lg mx-auto pb-32">
         {/* Name */}
         <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Your Name *</label>
+          <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Your Name *</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="First and Last"
             autoComplete="name"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#C5A572]/60"
+            className="w-full rounded-lg border border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60"
           />
         </div>
 
         {/* Category */}
         <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Reason *</label>
+          <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Reason *</label>
           <div className="grid grid-cols-2 gap-2">
             {SPIRIT_CATEGORIES.map((cat) => (
               <button
@@ -129,9 +129,9 @@ export default function SpiritSamplePage() {
                 onClick={() => setCategory(cat)}
                 className="rounded-lg border px-3 py-2.5 text-sm text-left transition-all"
                 style={{
-                  borderColor: category === cat ? GOLD : '#3f3f46',
-                  backgroundColor: category === cat ? GOLD + '18' : 'transparent',
-                  color: category === cat ? GOLD : '#a1a1aa',
+                  borderColor: category === cat ? BRAND_RED : '#d1d5db',
+                  backgroundColor: category === cat ? BRAND_RED + '18' : 'transparent',
+                  color: category === cat ? BRAND_RED : '#6b7280',
                 }}
               >
                 {cat}
@@ -142,37 +142,37 @@ export default function SpiritSamplePage() {
 
         {/* Spirit lines */}
         <div className="space-y-3">
-          <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Spirits *</label>
+          <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Spirits *</label>
           {lines.map((line) => (
-            <div key={line.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 space-y-2">
+            <div key={line.id} className="rounded-lg border border bg-white/50 p-3 space-y-2">
               <select
                 value={line.product}
                 onChange={(e) => updateLine(line.id, 'product', e.target.value)}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C5A572]/60 appearance-none"
+                className="w-full rounded-lg border border bg-white px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 appearance-none"
               >
-                <option value="" className="text-zinc-600">Select spirit...</option>
+                <option value="" className="text-muted-foreground">Select spirit...</option>
                 {SPIRIT_PRODUCTS.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
               {/* Quantity stepper */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500">Quantity</span>
+                <span className="text-xs text-muted-foreground">Quantity</span>
                 <div className="flex items-center gap-0">
                   <button
                     type="button"
                     onClick={() => updateLine(line.id, 'quantity', Math.max(1, line.quantity - 1))}
-                    className="h-9 w-9 rounded-l-lg border border-zinc-700 bg-zinc-800 text-lg text-zinc-300 hover:bg-zinc-700 transition-colors"
+                    className="h-9 w-9 rounded-l-lg border border bg-muted text-lg text-foreground hover:bg-muted transition-colors"
                   >
                     −
                   </button>
-                  <span className="h-9 w-12 border-t border-b border-zinc-700 bg-zinc-900 flex items-center justify-center text-sm font-mono font-semibold text-white">
+                  <span className="h-9 w-12 border-t border-b border bg-white flex items-center justify-center text-sm font-mono font-semibold text-foreground">
                     {line.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => updateLine(line.id, 'quantity', line.quantity + 1)}
-                    className="h-9 w-9 rounded-r-lg border border-zinc-700 bg-zinc-800 text-lg text-zinc-300 hover:bg-zinc-700 transition-colors"
+                    className="h-9 w-9 rounded-r-lg border border bg-muted text-lg text-foreground hover:bg-muted transition-colors"
                   >
                     +
                   </button>
@@ -183,7 +183,7 @@ export default function SpiritSamplePage() {
                 <button
                   type="button"
                   onClick={() => removeLine(line.id)}
-                  className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
                 >
                   Remove
                 </button>
@@ -193,7 +193,7 @@ export default function SpiritSamplePage() {
           <button
             type="button"
             onClick={addLine}
-            className="w-full rounded-lg border border-dashed border-zinc-700 py-2.5 text-sm text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors"
+            className="w-full rounded-lg border border-dashed border py-2.5 text-sm text-muted-foreground hover:border-zinc-500 hover:text-foreground transition-colors"
           >
             + Add Another Spirit
           </button>
@@ -201,24 +201,24 @@ export default function SpiritSamplePage() {
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Notes <span className="text-zinc-700">(optional)</span></label>
+          <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Notes <span className="text-muted-foreground">(optional)</span></label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Anything else to note..."
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#C5A572]/60 resize-none"
+            className="w-full rounded-lg border border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 resize-none"
           />
         </div>
       </div>
 
       {/* Sticky submit */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-[#0a0a0a]/95 backdrop-blur-sm px-5 py-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border bg-background/95 backdrop-blur-sm px-5 py-4">
         <button
           onClick={handleSubmit}
           disabled={!canSubmit || submitting}
           className="w-full rounded-lg py-3.5 text-sm font-semibold transition-all disabled:opacity-40"
-          style={{ backgroundColor: canSubmit && !submitting ? GOLD : '#3f3f46', color: canSubmit ? '#000' : '#71717a' }}
+          style={{ backgroundColor: canSubmit && !submitting ? '#C8102E' : '#D1D5DB', color: canSubmit ? '#fff' : '#666666' }}
         >
           {submitting ? 'Saving...' : 'Submit Pull'}
         </button>

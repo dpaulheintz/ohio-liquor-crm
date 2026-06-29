@@ -126,15 +126,15 @@ export function SectionWholesale({
 
       {/* Monthly bars + Family pie */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Monthly Wholesale Bottles Sold
           </h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyBars} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
               <Tooltip
                 content={(props) => (
                   <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
@@ -146,8 +146,8 @@ export function SectionWholesale({
         </div>
 
         {/* Family pie */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+        <div className="rounded-xl border border bg-card p-4 flex flex-col">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
             Bottles by Family
           </h3>
           <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 160 }}>
@@ -160,23 +160,23 @@ export function SectionWholesale({
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                   itemStyle={{ color: '#e4e4e7' }}
-                  labelStyle={{ color: '#71717a' }}
+                  labelStyle={{ color: '#666666' }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-base font-bold text-white font-serif leading-none">{fmtBottles(pieTotalBtl)}</span>
-              <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">bottles</span>
+              <span className="text-base font-bold text-foreground font-serif leading-none">{fmtBottles(pieTotalBtl)}</span>
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">bottles</span>
             </div>
           </div>
           <div className="space-y-1 mt-2">
             {familyPie.slice(0, 5).map(({ name, value }) => (
               <div key={name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }} />
-                <span className="flex-1 truncate text-zinc-400">{name}</span>
-                <span className="font-mono text-zinc-300">{value.toLocaleString()}</span>
+                <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                <span className="font-mono text-foreground">{value.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -184,20 +184,20 @@ export function SectionWholesale({
       </div>
 
       {/* Top 20 accounts — grouped by actual buyer, ranked by revenue */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           Top 20 Wholesale Accounts by Revenue
         </h3>
         {topAccounts.length === 0 ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">No data for selected range.</p>
+          <p className="py-8 text-center text-muted-foreground text-sm">No data for selected range.</p>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(240, topAccounts.length * 32)}>
             <BarChart data={topAccounts} layout="vertical" margin={{ top: 0, right: 80, bottom: 0, left: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
               <XAxis
                 type="number"
                 tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }}
+                tick={{ fill: '#666666', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -211,7 +211,7 @@ export function SectionWholesale({
                 tickFormatter={(v: string) => v.length > 28 ? v.slice(0, 27) + '…' : v}
               />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 itemStyle={{ color: '#e4e4e7' }}
                 labelStyle={{ color: '#a1a1aa' }}
                 formatter={(v: number) => [fmtDollar(v), 'Revenue']}

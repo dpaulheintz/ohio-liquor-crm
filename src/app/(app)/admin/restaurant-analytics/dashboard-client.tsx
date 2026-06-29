@@ -81,7 +81,7 @@ function computeRange(preset: Preset): { from: string; to: string } {
 function SectionHeader({ num, title }: { num: string; title: string }) {
   return (
     <div className="flex items-center gap-4 mb-4">
-      <span className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 shrink-0">{num}</span>
+      <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground shrink-0">{num}</span>
       <h2 className="font-serif text-base font-semibold text-white tracking-wide">{title}</h2>
       <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${GOLD}33, transparent)` }} />
     </div>
@@ -133,22 +133,22 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* ── Page header ──────────────────────────────────────────────────────── */}
-      <div className="border-b border-[#C5A572]/15 px-6 py-5">
+      <div className="border-b border-primary/15 px-6 py-5">
         <div className="flex items-baseline justify-between flex-wrap gap-3">
           <div>
             <h1 className="font-serif text-2xl font-bold tracking-wide text-white">
               Restaurant Analytics
             </h1>
-            <p className="text-xs text-zinc-500 mt-0.5 uppercase tracking-widest">
+            <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">
               High Bank Distillery — Operations Intelligence
             </p>
           </div>
           {dataThrough && (
-            <span className="text-xs text-zinc-600 font-mono">
+            <span className="text-xs text-muted-foreground font-mono">
               Data through{' '}
-              <span className="text-zinc-400">
+              <span className="text-muted-foreground">
                 {new Date(dataThrough + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </span>
@@ -157,11 +157,11 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
       </div>
 
       {/* ── Sticky controls ──────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 border-b border-[#C5A572]/15 bg-[#0a0a0a]/95 backdrop-blur-sm px-6 py-3 space-y-2.5">
+      <div className="sticky top-0 z-30 border-b border-primary/15 bg-background/95 backdrop-blur-sm px-6 py-3 space-y-2.5">
 
         {/* Preset pills + Custom date pickers */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium shrink-0">Range</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">Range</span>
           <div className="flex items-center gap-1 flex-wrap">
             {PRESETS.map(({ key, label }) => (
               <button
@@ -169,8 +169,8 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
                 onClick={() => applyPreset(key)}
                 className={`rounded px-2.5 py-1 text-xs transition-colors font-medium ${
                   preset === key
-                    ? 'bg-[#C5A572] text-black'
-                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                    ? 'bg-primary text-black'
+                    : 'bg-muted text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
               >
                 {label}
@@ -184,15 +184,15 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
                 value={dateFrom}
                 max={dateTo}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+                className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
               />
-              <span className="text-zinc-600">→</span>
+              <span className="text-muted-foreground">→</span>
               <input
                 type="date"
                 value={dateTo}
                 min={dateFrom}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+                className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
               />
             </div>
           )}
@@ -200,13 +200,13 @@ export function RestaurantDashboardClient({ dataThrough }: RestaurantDashboardCl
 
         {/* Location pills */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium shrink-0">Location</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">Location</span>
           <button
             onClick={() => setSelectedLocations([])}
             className={`rounded px-2.5 py-0.5 text-xs transition-colors font-medium ${
               selectedLocations.length === 0
-                ? 'bg-[#C5A572] text-black'
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                ? 'bg-primary text-black'
+                : 'bg-muted text-muted-foreground hover:bg-muted'
             }`}
           >
             All

@@ -35,8 +35,8 @@ function fmtDollar(n: number) {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#1a1a1a] p-3 shadow-xl text-sm min-w-[160px]">
-      <p className="text-[#C5A572] font-semibold mb-2">{label}</p>
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] p-3 shadow-xl text-sm min-w-[160px]">
+      <p className="text-primary font-semibold mb-2">{label}</p>
       {payload.map((p: { name: string; value: number; color: string }) => (
         <div key={p.name} className="flex justify-between gap-4 text-xs mb-1">
           <span style={{ color: p.color }} className="font-medium">{p.name}</span>
@@ -53,7 +53,7 @@ function CustomLegend({ payload }: any) {
   return (
     <div className="flex justify-center gap-6 mt-2">
       {payload.map((p: { value: string; color: string; type: string }) => (
-        <div key={p.value} className="flex items-center gap-1.5 text-xs text-zinc-400">
+        <div key={p.value} className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
             className="inline-block rounded-sm"
             style={{
@@ -73,7 +73,7 @@ export function RevenueChart({ data, currentYear, loading }: RevenueChartProps) 
   if (loading) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <div className="h-6 w-6 rounded-full border-2 border-[#C5A572] border-t-transparent animate-spin" />
+        <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -81,21 +81,21 @@ export function RevenueChart({ data, currentYear, loading }: RevenueChartProps) 
   return (
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
         <XAxis
           dataKey="month"
-          tick={{ fill: '#71717a', fontSize: 12 }}
+          tick={{ fill: '#666666', fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           tickFormatter={(v) => fmtDollar(v)}
-          tick={{ fill: '#71717a', fontSize: 11 }}
+          tick={{ fill: '#666666', fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           width={60}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(197,165,114,0.06)' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
         <Legend content={<CustomLegend />} />
 
         {/* Current year: gold bars */}

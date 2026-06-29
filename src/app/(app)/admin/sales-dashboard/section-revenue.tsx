@@ -243,17 +243,17 @@ export function SectionRevenue({
       {/* YoY bar chart + Family donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* YoY ComposedChart */}
-        <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Monthly Revenue — Year over Year
           </h3>
           <ResponsiveContainer width="100%" height={220}>
             <ComposedChart data={yoyData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis
                 tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }}
+                tick={{ fill: '#666666', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 width={52}
@@ -289,7 +289,7 @@ export function SectionRevenue({
               />
             </ComposedChart>
           </ResponsiveContainer>
-          <div className="flex items-center gap-5 mt-2 text-[10px] text-zinc-500">
+          <div className="flex items-center gap-5 mt-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: GOLD }} />
               {y0}
@@ -299,15 +299,15 @@ export function SectionRevenue({
               {y1}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block w-5 h-0 border-t-2 border-dashed border-zinc-600" />
+              <span className="inline-block w-5 h-0 border-t-2 border-dashed border-muted-foreground" />
               {y2}
             </span>
           </div>
         </div>
 
         {/* Family donut */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+        <div className="rounded-xl border border bg-card p-4 flex flex-col">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
             Revenue by Brand Family
           </h3>
           <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 168 }}>
@@ -335,17 +335,17 @@ export function SectionRevenue({
                 </Pie>
                 <Tooltip
                   formatter={(v: number) => fmtDollar(v)}
-                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                   itemStyle={{ color: '#e4e4e7' }}
-                  labelStyle={{ color: '#71717a' }}
+                  labelStyle={{ color: '#666666' }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-lg font-bold text-white font-serif leading-none">
+              <span className="text-lg font-bold text-foreground font-serif leading-none">
                 {fmtDollar(donutTotal)}
               </span>
-              <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">total</span>
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">total</span>
             </div>
           </div>
           {/* Legend */}
@@ -356,9 +356,9 @@ export function SectionRevenue({
                   className="h-2 w-2 rounded-full shrink-0"
                   style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }}
                 />
-                <span className="flex-1 truncate text-zinc-400">{name}</span>
-                <span className="font-mono text-zinc-300">{fmtDollar(value)}</span>
-                <span className="font-mono text-zinc-600 w-9 text-right">
+                <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                <span className="font-mono text-foreground">{fmtDollar(value)}</span>
+                <span className="font-mono text-muted-foreground w-9 text-right">
                   {donutTotal > 0 ? ((value / donutTotal) * 100).toFixed(0) : 0}%
                 </span>
               </div>
@@ -372,16 +372,16 @@ export function SectionRevenue({
         {/* YTD comparison card + chart side-by-side on large screens */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* YTD KPI card */}
-          <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-2 justify-center">
-            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+          <div className="rounded-xl border border bg-card px-5 py-4 flex flex-col gap-2 justify-center">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               YTD Bailment {currentYear}
             </span>
-            <span className="text-3xl font-serif font-bold text-white leading-none">
+            <span className="text-3xl font-serif font-bold text-foreground leading-none">
               {bailmentYtd ? fmtDollar(bailmentYtd.cur) : '—'}
             </span>
             {bailmentYtd && (
               <>
-                <span className="text-xs text-zinc-600">
+                <span className="text-xs text-muted-foreground">
                   vs LY: {fmtDollar(bailmentYtd.ly)}
                 </span>
                 <span className={`text-sm font-mono font-semibold ${bailmentYtd.diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -392,7 +392,7 @@ export function SectionRevenue({
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] text-zinc-700">
+                <span className="text-[10px] text-muted-foreground">
                   Jan–{new Date(currentYear, parseInt(bailmentYtd.thru, 10) - 1, 1)
                     .toLocaleDateString('en-US', { month: 'short' })} {currentYear} vs {currentYear - 1}
                 </span>
@@ -401,12 +401,12 @@ export function SectionRevenue({
           </div>
 
           {/* Bailment YoY chart */}
-          <div className="lg:col-span-3 rounded-xl border border-zinc-800 bg-[#111] p-4">
+          <div className="lg:col-span-3 rounded-xl border border bg-card p-4">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+              <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
                 Bailment — Year over Year
               </h3>
-              <div className="flex items-center gap-5 text-[10px] text-zinc-500">
+              <div className="flex items-center gap-5 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ background: GOLD }} />
                   {y0}
@@ -419,11 +419,11 @@ export function SectionRevenue({
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={bailmentYoy} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis
                   tickFormatter={fmtDollar}
-                  tick={{ fill: '#71717a', fontSize: 9 }}
+                  tick={{ fill: '#666666', fontSize: 9 }}
                   axisLine={false}
                   tickLine={false}
                   width={52}
@@ -447,22 +447,22 @@ export function SectionRevenue({
       </div>
 
       {/* 12-month rolling trend */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           12-Month Rolling Revenue Trend
         </h3>
         <ResponsiveContainer width="100%" height={120}>
           <LineChart data={rollingTrend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: '#71717a', fontSize: 9 }}
+              tick={{ fill: '#666666', fontSize: 9 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               tickFormatter={fmtDollar}
-              tick={{ fill: '#71717a', fontSize: 9 }}
+              tick={{ fill: '#666666', fontSize: 9 }}
               axisLine={false}
               tickLine={false}
               width={52}
@@ -498,12 +498,12 @@ export function SectionRevenue({
         ].map(({ title, data }) => {
           const total = data.reduce((s, d) => s + d.value, 0);
           return (
-            <div key={title} className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+            <div key={title} className="rounded-xl border border bg-card p-4 flex flex-col">
+              <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
                 {title}
               </h3>
               {total === 0 ? (
-                <p className="flex-1 flex items-center justify-center text-xs text-zinc-600 py-8">
+                <p className="flex-1 flex items-center justify-center text-xs text-muted-foreground py-8">
                   No data for selected range
                 </p>
               ) : (
@@ -530,26 +530,26 @@ export function SectionRevenue({
                         </Pie>
                         <Tooltip
                           formatter={(v: number) => fmtDollar(v)}
-                          contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                          contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                           itemStyle={{ color: '#e4e4e7' }}
-                          labelStyle={{ color: '#71717a' }}
+                          labelStyle={{ color: '#666666' }}
                         />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-base font-bold text-white font-serif leading-none">
+                      <span className="text-base font-bold text-foreground font-serif leading-none">
                         {fmtDollar(total)}
                       </span>
-                      <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">total</span>
+                      <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">total</span>
                     </div>
                   </div>
                   <div className="space-y-1 mt-2">
                     {data.map(({ name, value, color }) => (
                       <div key={name} className="flex items-center gap-2 text-xs">
                         <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
-                        <span className="flex-1 truncate text-zinc-400">{name}</span>
-                        <span className="font-mono text-zinc-300">{fmtDollar(value)}</span>
-                        <span className="font-mono text-zinc-600 w-9 text-right">
+                        <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                        <span className="font-mono text-foreground">{fmtDollar(value)}</span>
+                        <span className="font-mono text-muted-foreground w-9 text-right">
                           {total > 0 ? ((value / total) * 100).toFixed(0) : 0}%
                         </span>
                       </div>

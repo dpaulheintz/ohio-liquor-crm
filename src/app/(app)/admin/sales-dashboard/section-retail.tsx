@@ -179,15 +179,15 @@ export function SectionRetail({
       {/* Trend + Stacked bar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Monthly retail trend */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Retail Revenue by Month
           </h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={monthlyTrend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={fmtDollar} tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={fmtDollar} tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
               <Tooltip
                 content={(props) => (
                   <ChartTip
@@ -212,17 +212,17 @@ export function SectionRetail({
         </div>
 
         {/* Stacked bar by family */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Retail Bottles by Brand Family
           </h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={stackedData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
               />
               {families.map((f) => (
                 <Bar
@@ -239,7 +239,7 @@ export function SectionRetail({
           {/* Legend */}
           <div className="flex flex-wrap gap-3 mt-2">
             {families.map(f => (
-              <span key={f} className="flex items-center gap-1 text-[10px] text-zinc-500">
+              <span key={f} className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <span className="h-2 w-2 rounded-sm" style={{ background: FAMILY_COLORS[f] ?? FAMILY_COLOR_DEFAULT }} />
                 {f}
               </span>
@@ -249,12 +249,12 @@ export function SectionRetail({
       </div>
 
       {/* Top products horizontal bar */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           Top Products by Retail Bottles
         </h3>
         {topSkus.length === 0 ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">No retail data for selected range.</p>
+          <p className="py-8 text-center text-muted-foreground text-sm">No retail data for selected range.</p>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(180, topSkus.length * 32)}>
             <BarChart
@@ -262,8 +262,8 @@ export function SectionRetail({
               layout="vertical"
               margin={{ top: 0, right: 64, bottom: 0, left: 8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
+              <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis
                 dataKey="displayName"
                 type="category"
@@ -273,7 +273,7 @@ export function SectionRetail({
                 width={200}
               />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 itemStyle={{ color: '#e4e4e7' }}
                 labelStyle={{ color: '#a1a1aa' }}
               />
@@ -303,15 +303,15 @@ export function SectionRetail({
       </div>
 
       {/* Agency ranking by SKU */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
+      <div className="rounded-xl border border bg-card p-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
             Top 10 Agencies by SKU
           </h3>
           <select
             value={selectedSkuCode}
             onChange={e => setSelectedSkuCode(e.target.value)}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:border-[#C5A572]/60 max-w-xs"
+            className="bg-white border border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/60 max-w-xs"
           >
             <option value="">— Select a SKU —</option>
             {skuOptions.map(s => (
@@ -323,11 +323,11 @@ export function SectionRetail({
         </div>
 
         {!selectedSkuCode ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">
+          <p className="py-8 text-center text-muted-foreground text-sm">
             Select a SKU above to see which retail agencies sold the most bottles.
           </p>
         ) : topAgencies.length === 0 ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">No agency data for this SKU in the selected range.</p>
+          <p className="py-8 text-center text-muted-foreground text-sm">No agency data for this SKU in the selected range.</p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Horizontal bar chart */}
@@ -337,8 +337,8 @@ export function SectionRetail({
                 layout="vertical"
                 margin={{ top: 0, right: 56, bottom: 0, left: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis
                   dataKey="agency_name"
                   type="category"
@@ -349,7 +349,7 @@ export function SectionRetail({
                   tickFormatter={(v: string | null) => v ? (v.length > 22 ? v.slice(0, 21) + '…' : v) : 'Unknown'}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 />
                 <Bar dataKey="bottles" name="Retail Bottles" fill={GOLD} fillOpacity={0.8} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                   <LabelList
@@ -366,24 +366,24 @@ export function SectionRetail({
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">#</th>
-                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Agency</th>
-                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-zinc-500 font-medium">ID</th>
-                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Bottles</th>
-                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-zinc-500 font-medium">Revenue</th>
+                  <tr className="border-b border">
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-muted-foreground font-medium">#</th>
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Agency</th>
+                    <th className="px-2 py-1.5 text-left text-[10px] uppercase tracking-widest text-muted-foreground font-medium">ID</th>
+                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Bottles</th>
+                    <th className="px-2 py-1.5 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Revenue</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900">
+                <tbody className="divide-y divide-border">
                   {topAgencies.map((a, i) => (
-                    <tr key={a.agency_id} className="hover:bg-zinc-900/50 transition-colors">
-                      <td className="px-2 py-2 text-zinc-600 font-mono">{i + 1}</td>
-                      <td className="px-2 py-2 text-zinc-300 font-medium truncate max-w-[160px]">
+                    <tr key={a.agency_id} className="hover:bg-white/50 transition-colors">
+                      <td className="px-2 py-2 text-muted-foreground font-mono">{i + 1}</td>
+                      <td className="px-2 py-2 text-foreground font-medium truncate max-w-[160px]">
                         {a.agency_name ?? 'Unknown'}
                       </td>
-                      <td className="px-2 py-2 text-zinc-600 font-mono">{a.agency_id}</td>
-                      <td className="px-2 py-2 text-right font-mono text-zinc-300">{a.bottles.toLocaleString()}</td>
-                      <td className="px-2 py-2 text-right font-mono text-zinc-200">
+                      <td className="px-2 py-2 text-muted-foreground font-mono">{a.agency_id}</td>
+                      <td className="px-2 py-2 text-right font-mono text-foreground">{a.bottles.toLocaleString()}</td>
+                      <td className="px-2 py-2 text-right font-mono text-foreground">
                         {a.revenue >= 1000 ? `$${(a.revenue / 1000).toFixed(1)}k` : `$${a.revenue.toFixed(0)}`}
                       </td>
                     </tr>
