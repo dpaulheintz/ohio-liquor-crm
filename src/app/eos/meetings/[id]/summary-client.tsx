@@ -142,7 +142,7 @@ export default function SummaryClient({ meeting, notes, meetingTodos, ratings }:
                 <div className={cn(
                   'w-4 h-4 rounded border flex items-center justify-center shrink-0',
                   t.completed
-                    ? 'bg-[#C9963A] border-[#C9963A]'
+                    ? 'bg-[#16A34A] border-[#16A34A]'
                     : 'border-[#3D2E1E] print:border-gray-400',
                 )}>
                   {t.completed && (

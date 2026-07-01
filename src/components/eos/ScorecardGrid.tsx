@@ -256,7 +256,7 @@ export default function ScorecardGrid({
       {onFlagForIDS && (
         <div className="mb-4 rounded-xl bg-[#0F2E2B] border border-[#3D2E1E] px-4 py-3">
           <span className="text-sm text-[#5B9E94] font-medium">{onTrackCount} of {metrics.length} metrics on track this week</span>
-          {currentWeek && <span className="text-xs text-[#8B6520] ml-2">(week of {new Date(currentWeek + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>}
+          {currentWeek && <span className="text-xs text-[#15803D] ml-2">(week of {new Date(currentWeek + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>}
         </div>
       )}
 
@@ -265,7 +265,7 @@ export default function ScorecardGrid({
         <div className="flex justify-end mb-3">
           <button
             onClick={() => { setModalMetric(null); setShowModal(true); }}
-            className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors"
           >
             + Add Metric
           </button>
@@ -312,7 +312,7 @@ export default function ScorecardGrid({
       {!hasCurrentWeekData && currentWeek && (
         <div className="hidden md:flex items-center gap-2 mb-4 rounded-xl border border-[#3D2E1E] bg-[#2E1E08] px-4 py-3 text-sm text-[#D4821A]">
           <span className="font-medium">No data entered for {formatWeekHeader(currentWeek, currentYear)} yet.</span>
-          <span className="text-[#8B6520]">Click any cell in the current-week column to start.</span>
+          <span className="text-[#15803D]">Click any cell in the current-week column to start.</span>
         </div>
       )}
 
@@ -351,14 +351,14 @@ export default function ScorecardGrid({
                   className={cn(
                     'sticky top-0 z-30 px-1 py-2.5 text-center text-[11px] font-semibold border-b-2 border-r border-[#3D2E1E] whitespace-nowrap',
                     i === 0
-                      ? 'bg-[#2A1F14] text-[#C9963A]'
+                      ? 'bg-[#2A1F14] text-[#16A34A]'
                       : 'bg-[#0E0B07] text-[#B8A99A]',
                   )}
                   style={{ width: 90, minWidth: 90 }}
                 >
                   <span className="block">{formatWeekHeader(week, currentYear)}</span>
                   {i === 0 && (
-                    <span className="block text-[9px] font-normal text-[#8B6520] mt-0.5 uppercase tracking-wide">
+                    <span className="block text-[9px] font-normal text-[#15803D] mt-0.5 uppercase tracking-wide">
                       current
                     </span>
                   )}
@@ -401,13 +401,13 @@ export default function ScorecardGrid({
                       {onFlagForIDS && isOffTrack && !flaggedTitles.has(flagTitle) && (
                         <button
                           onClick={() => onFlagForIDS(flagTitle)}
-                          className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#8B6520] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
+                          className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#15803D] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
                         >
                           Flag
                         </button>
                       )}
                       {onFlagForIDS && flaggedTitles.has(flagTitle) && (
-                        <span className="text-[11px] text-[#8B6520] shrink-0">Flagged</span>
+                        <span className="text-[11px] text-[#15803D] shrink-0">Flagged</span>
                       )}
                       {/* Admin context menu */}
                       {isAdmin && (

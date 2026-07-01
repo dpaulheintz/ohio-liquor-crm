@@ -35,7 +35,7 @@ const DROPDOWN_ACTIONS: { key: ModalKey; label: string }[] = [
   { key: 'meeting',  label: 'Start Meeting' },
 ];
 
-const mCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#C9963A] transition-colors';
+const mCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#16A34A] transition-colors';
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
@@ -89,7 +89,7 @@ function TodoQuickModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add To-Do'}
           </button>
         </div>
@@ -138,7 +138,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
               {(['short', 'long'] as const).map(t => (
                 <button key={t} type="button" onClick={() => setTerm(t)}
                   className={cn('flex-1 text-sm font-medium capitalize transition-colors',
-                    term === t ? 'bg-[#C9963A] text-[#0E0B07]' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
+                    term === t ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
                   {t}
                 </button>
               ))}
@@ -151,7 +151,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add Opportunity'}
           </button>
         </div>
@@ -192,7 +192,7 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
           {TYPE_OPTS.map(opt => (
             <button key={opt.value} type="button" onClick={() => setType(opt.value)}
               className={cn('flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors border',
-                type === opt.value ? 'bg-[#C9963A] border-[#C9963A] text-[#0E0B07]' : 'bg-[#1C1510] border-[#3D2E1E] text-[#B8A99A] hover:text-[#F5ECD7]')}>
+                type === opt.value ? 'bg-[#16A34A] border-[#16A34A] text-white' : 'bg-[#1C1510] border-[#3D2E1E] text-[#B8A99A] hover:text-[#F5ECD7]')}>
               {opt.label}
             </button>
           ))}
@@ -201,7 +201,7 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
         <OwnerSelect ownerName={ownerName} ownerEmail={ownerEmail} onChange={(n, e) => { setOwnerName(n); setOwnerEmail(e); }} className={mCls} />
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Sharing…' : 'Share'}
           </button>
         </div>
@@ -228,7 +228,7 @@ function MeetingQuickModal({ onClose }: { onClose: () => void }) {
         <p className="text-sm text-[#B8A99A] mb-5">This will create a new meeting record and open the live runner.</p>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {starting ? 'Starting…' : 'Start Meeting'}
           </button>
         </div>
@@ -281,7 +281,7 @@ export default function SmartAddButton({ pageContext, className }: { pageContext
           <div className="flex shadow-2xl rounded-full overflow-hidden">
             <button
               onClick={() => openModal(pageDefault.modal)}
-              className="flex items-center gap-2 bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-bold px-5 py-3 transition-colors"
+              className="flex items-center gap-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold px-5 py-3 transition-colors"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -292,8 +292,8 @@ export default function SmartAddButton({ pageContext, className }: { pageContext
             <button
               onClick={() => setDropdownOpen(o => !o)}
               className={cn(
-                'bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] px-3 py-3 transition-colors',
-                dropdownOpen && 'bg-[#E8B86D]',
+                'bg-[#16A34A] hover:bg-[#15803D] text-white px-3 py-3 transition-colors',
+                dropdownOpen && 'bg-[#15803D]',
               )}
               aria-label="More actions"
             >

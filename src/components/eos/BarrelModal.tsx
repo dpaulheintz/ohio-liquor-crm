@@ -51,7 +51,7 @@ export default function BarrelModal({ mode, barrel, onSave, onClose }: Props) {
   }
 
   const inputCls =
-    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] transition-colors placeholder:text-[#6B5A4A]';
+    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
 
   return (
     <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -98,7 +98,7 @@ export default function BarrelModal({ mode, barrel, onSave, onClose }: Props) {
                   onClick={() => set('barrel_type', t)}
                   className={`flex-1 py-2 text-sm font-medium transition-colors capitalize ${
                     form.barrel_type === t
-                      ? 'bg-[#C9963A] text-[#0E0B07]'
+                      ? 'bg-[#16A34A] text-white'
                       : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]'
                   }`}
                 >
@@ -174,7 +174,7 @@ export default function BarrelModal({ mode, barrel, onSave, onClose }: Props) {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors"
+              className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
             >
               {saving ? 'Saving…' : mode === 'create' ? 'Add Barrel' : 'Save Changes'}
             </button>

@@ -17,7 +17,7 @@ const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string }>
   not_started: { label: 'Not Started', bg: 'bg-[#2A1F14]', text: 'text-[#B8A99A]' },
   on_track:    { label: 'On Track',    bg: 'bg-[#0F2E2B]', text: 'text-[#5B9E94]' },
   off_track:   { label: 'Off Track',   bg: 'bg-[#2E0F0F]',  text: 'text-[#C0392B]'  },
-  complete:    { label: 'Complete',    bg: 'bg-[#C9963A]', text: 'text-[#0E0B07]' },
+  complete:    { label: 'Complete',    bg: 'bg-[#16A34A]', text: 'text-white' },
 };
 
 const BOARD_COLUMNS: { status: Status; label: string }[] = [
@@ -75,7 +75,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
             <select
               value={quarterFilter}
               onChange={e => setQuarterFilter(e.target.value)}
-              className="rounded-lg border border-[#3D2E1E] bg-[#1C1510] text-[#F5ECD7] text-sm px-3 py-1.5 focus:outline-none focus:border-[#C9963A] transition-colors"
+              className="rounded-lg border border-[#3D2E1E] bg-[#1C1510] text-[#F5ECD7] text-sm px-3 py-1.5 focus:outline-none focus:border-[#16A34A] transition-colors"
             >
               {quarters.map(q => (
                 <option key={q} value={q}>{q === 'all' ? 'All Quarters' : q}</option>
@@ -89,7 +89,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
                 onClick={() => setView(v)}
                 className={cn(
                   'px-3 py-1.5 font-medium capitalize transition-colors',
-                  view === v ? 'bg-[#C9963A] text-[#0E0B07]' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]',
+                  view === v ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]',
                 )}
               >
                 {v}
@@ -98,7 +98,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors"
           >
             + Add Barrel
           </button>
@@ -145,7 +145,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
                           <div className="mt-2 flex items-center gap-1.5">
                             <div className="flex-1 h-1 rounded-full bg-[#2A1F14] overflow-hidden">
                               <div
-                                className="h-1 rounded-full bg-[#C9963A]"
+                                className="h-1 rounded-full bg-[#16A34A]"
                                 style={{ width: `${(doneMs / totalMs) * 100}%` }}
                               />
                             </div>

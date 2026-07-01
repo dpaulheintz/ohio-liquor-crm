@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 type Modal = 'todo' | 'opp' | 'headline' | 'meeting' | null;
 
-const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#C9963A] transition-colors';
+const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#16A34A] transition-colors';
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
@@ -63,7 +63,7 @@ function TodoQuickModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add To-Do'}
           </button>
         </div>
@@ -110,7 +110,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
               {(['short', 'long'] as const).map(t => (
                 <button key={t} type="button" onClick={() => setTerm(t)}
                   className={cn('flex-1 text-sm font-medium capitalize transition-colors',
-                    term === t ? 'bg-[#C9963A] text-[#0E0B07]' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
+                    term === t ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
                   {t}
                 </button>
               ))}
@@ -119,7 +119,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add Opportunity'}
           </button>
         </div>
@@ -163,7 +163,7 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
               className={cn(
                 'flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors border',
                 type === opt.value
-                  ? 'bg-[#C9963A] border-[#C9963A] text-[#0E0B07]'
+                  ? 'bg-[#16A34A] border-[#16A34A] text-white'
                   : 'bg-[#1C1510] border-[#3D2E1E] text-[#B8A99A] hover:text-[#F5ECD7]',
               )}
             >
@@ -174,7 +174,7 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
         <input autoFocus type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} placeholder="Share good news…" />
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add Headline'}
           </button>
         </div>
@@ -201,7 +201,7 @@ function MeetingConfirmModal({ onClose }: { onClose: () => void }) {
         <p className="text-sm text-[#B8A99A] mb-5">This will create a new meeting record and open the live runner.</p>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {starting ? 'Starting…' : 'Start Meeting'}
           </button>
         </div>
@@ -262,8 +262,8 @@ export default function EosFab() {
         onClick={() => setOpen(o => !o)}
         className={cn(
           'fixed bottom-6 right-6 z-[55] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all',
-          'bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-2xl font-light',
-          open && 'rotate-45 bg-[#E8B86D]',
+          'bg-[#16A34A] hover:bg-[#15803D] text-white text-2xl font-light',
+          open && 'rotate-45 bg-[#15803D]',
         )}
         aria-label="Quick actions"
       >

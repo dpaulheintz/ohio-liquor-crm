@@ -74,7 +74,7 @@ function OppModal({
     catch { setError('Failed to save.'); setSaving(false); }
   }
 
-  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] transition-colors placeholder:text-[#6B5A4A]';
+  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
 
   return (
     <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -111,7 +111,7 @@ function OppModal({
                 {(['short', 'long'] as const).map(t => (
                   <button key={t} type="button" onClick={() => set('term', t)}
                     className={cn('flex-1 text-xs font-medium capitalize transition-colors',
-                      form.term === t ? 'bg-[#C9963A] text-[#0E0B07]' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
+                      form.term === t ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
                     {t}
                   </button>
                 ))}
@@ -133,7 +133,7 @@ function OppModal({
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {saving ? 'Saving…' : mode === 'create' ? 'Add' : 'Save'}
             </button>
           </div>
@@ -213,7 +213,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
           <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>Opportunities</h1>
           <p className="text-[#B8A99A] mt-1 text-sm">Short and long-term issues to identify, discuss, and solve</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-medium transition-colors">
+        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors">
           + Add Opportunity
         </button>
       </div>
@@ -228,7 +228,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
         ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)}
             className={cn('px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px]',
-              filter === key ? 'border-[#C9963A] text-[#5B9E94]' : 'border-transparent text-[#B8A99A] hover:text-[#F5ECD7]')}>
+              filter === key ? 'border-[#16A34A] text-[#16A34A]' : 'border-transparent text-[#B8A99A] hover:text-[#F5ECD7]')}>
             {label} <span className="text-xs opacity-60 ml-1">{counts[key as keyof typeof counts]}</span>
           </button>
         ))}
@@ -247,7 +247,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     <button
                       onClick={() => handleReopenOpp(opp.id)}
                       title="Re-open"
-                      className="w-4 h-4 rounded-full bg-[#C9963A] hover:bg-[#5B9E94] flex items-center justify-center text-[#F5ECD7] transition-all"
+                      className="w-4 h-4 rounded-full bg-[#16A34A] hover:bg-[#5B9E94] flex items-center justify-center text-[#F5ECD7] transition-all"
                     >
                       <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
                         <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -258,9 +258,9 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                       onClick={() => handleMarkSolved(opp.id)}
                       title="Mark as solved"
                       className={cn(
-                        'w-4 h-4 rounded-full transition-all hover:scale-125 hover:ring-2 hover:ring-[#C9963A]/50',
+                        'w-4 h-4 rounded-full transition-all hover:scale-125 hover:ring-2 hover:ring-[#16A34A]/50',
                         flashedSolvedIds.has(opp.id)
-                          ? 'bg-[#5B9E94] scale-125 ring-2 ring-[#C9963A]/50'
+                          ? 'bg-[#5B9E94] scale-125 ring-2 ring-[#16A34A]/50'
                           : pri.dot,
                       )}
                     />
@@ -274,7 +274,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     {/* Term badge */}
                     <span className={cn(
                       'shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
-                      opp.term === 'long' ? 'bg-[#2A1F14] text-[#B8A99A]' : 'bg-[#8B6520] text-[#E8B86D]',
+                      opp.term === 'long' ? 'bg-[#2A1F14] text-[#B8A99A]' : 'border border-[#16A34A] text-[#16A34A]',
                     )}>
                       {opp.term}-term
                     </span>
@@ -290,7 +290,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                       value={opp.status}
                       onChange={e => handleStatusChange(opp.id, e.target.value)}
                       onClick={e => e.stopPropagation()}
-                      className="text-xs bg-[#2A1F14] border border-[#3D2E1E] rounded px-1.5 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#C9963A] transition-colors"
+                      className="text-xs bg-[#2A1F14] border border-[#3D2E1E] rounded px-1.5 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#16A34A] transition-colors"
                     >
                       {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -303,7 +303,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     activeMeetingId ? (
                       <Link
                         href={`/eos/meetings/${activeMeetingId}/run?section=ids&opportunity=${opp.id}`}
-                        className="text-xs text-[#C9963A] hover:text-[#E8B86D] px-1.5 py-1 transition-colors whitespace-nowrap"
+                        className="text-xs text-[#16A34A] hover:text-[#15803D] px-1.5 py-1 transition-colors whitespace-nowrap"
                         title="Discuss in current meeting"
                       >
                         Discuss in IDS →

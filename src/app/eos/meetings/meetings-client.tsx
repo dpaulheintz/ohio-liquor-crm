@@ -28,7 +28,7 @@ function fmtDuration(start: string | null, end: string | null) {
 
 function ratingColor(r: number | null) {
   if (!r) return 'bg-[#3D2E1E]';
-  if (r >= 8) return 'bg-[#C9963A]';
+  if (r >= 8) return 'bg-[#16A34A]';
   if (r >= 6) return 'bg-[#D4821A]';
   return 'bg-[#C0392B]';
 }
@@ -60,7 +60,7 @@ export default function MeetingsClient({ initialMeetings }: Props) {
         </div>
         <button
           onClick={() => setShowStartModal(true)}
-          className="px-5 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-medium transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors flex items-center gap-2"
         >
           <span className="text-base">▶</span> Start Level 10
         </button>
@@ -93,7 +93,7 @@ export default function MeetingsClient({ initialMeetings }: Props) {
             >
               <span className="text-sm text-[#F5ECD7]">{fmtDate(m.started_at)}</span>
               <span className="text-xs text-[#B8A99A]">Level 10 Meeting</span>
-              <span className={cn('text-xs', m.ended_at ? 'text-[#B8A99A]' : 'text-[#C9963A] font-medium')}>
+              <span className={cn('text-xs', m.ended_at ? 'text-[#B8A99A]' : 'text-[#16A34A] font-medium')}>
                 {fmtDuration(m.started_at, m.ended_at)}
               </span>
               <span className="flex items-center gap-1.5">
@@ -113,14 +113,14 @@ export default function MeetingsClient({ initialMeetings }: Props) {
                 {m.ended_at ? (
                   <Link
                     href={`/eos/meetings/${m.id}`}
-                    className="text-xs text-[#C9963A] hover:text-[#E8B86D] font-medium transition-colors"
+                    className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
                   >
                     View Summary
                   </Link>
                 ) : (
                   <Link
                     href={`/eos/meetings/${m.id}/run`}
-                    className="text-xs text-[#C9963A] hover:text-[#E8B86D] font-medium transition-colors"
+                    className="text-xs text-[#16A34A] hover:text-[#15803D] font-medium transition-colors"
                   >
                     Resume ▶
                   </Link>
@@ -150,7 +150,7 @@ export default function MeetingsClient({ initialMeetings }: Props) {
               <button
                 onClick={handleStart}
                 disabled={starting}
-                className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
               >
                 {starting ? 'Starting…' : 'Start Meeting'}
               </button>
