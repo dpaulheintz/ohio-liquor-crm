@@ -31,7 +31,7 @@ type Props = {
 };
 
 const BARREL_STATUS_CONFIG: Record<string, { label: string; cls: string; dotCls: string }> = {
-  complete:    { label: 'Complete',    cls: 'bg-[#C9963A] text-[#0E0B07] font-semibold',  dotCls: 'bg-[#C9963A]' },
+  complete:    { label: 'Complete',    cls: 'bg-[#16A34A] text-white font-semibold',  dotCls: 'bg-[#16A34A]' },
   on_track:    { label: 'On Track',    cls: 'bg-[#0F2E2B] text-[#5B9E94]',    dotCls: 'bg-[#5B9E94]' },
   off_track:   { label: 'Off Track',   cls: 'bg-[#2E0F0F] text-[#C0392B]',      dotCls: 'bg-[#C0392B]' },
   not_started: { label: 'Not Started', cls: 'bg-[#2A1F14] text-[#B8A99A]',       dotCls: 'bg-[#6B5A4A]' },
@@ -226,7 +226,7 @@ export default function EosDashboardClient({
         </div>
         <button
           onClick={() => setShowStartModal(true)}
-          className="px-5 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-semibold transition-colors flex items-center gap-2 shrink-0"
+          className="px-5 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold transition-colors flex items-center gap-2 shrink-0"
         >
           <span>▶</span> Start Level 10
         </button>
@@ -241,7 +241,7 @@ export default function EosDashboardClient({
             {onTrackCount}<span className="text-lg font-normal text-[#6B5A4A]"> / {metrics.length}</span>
           </p>
           <p className="text-xs text-[#B8A99A]">metrics on track this week</p>
-          <Link href="/eos/scorecard" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
+          <Link href="/eos/scorecard" className="text-xs text-[#16A34A] hover:text-[#15803D] mt-auto pt-2 transition-colors">
             View Scorecard →
           </Link>
         </div>
@@ -251,12 +251,12 @@ export default function EosDashboardClient({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A]">Barrels</p>
           <p className="text-3xl font-bold text-[#F5ECD7]">{barrels.length}</p>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mt-0.5">
-            <span className="text-[#C9963A]">{barrelCounts.complete} complete</span>
+            <span className="text-[#16A34A]">{barrelCounts.complete} complete</span>
             <span className="text-[#5B9E94]">{barrelCounts.on_track} on track</span>
             <span className="text-[#C0392B]">{barrelCounts.off_track} off track</span>
             <span className="text-[#B8A99A]">{barrelCounts.not_started} not started</span>
           </div>
-          <Link href="/eos/barrels" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
+          <Link href="/eos/barrels" className="text-xs text-[#16A34A] hover:text-[#15803D] mt-auto pt-2 transition-colors">
             View Barrels →
           </Link>
         </div>
@@ -270,7 +270,7 @@ export default function EosDashboardClient({
           ) : (
             <p className="text-xs text-[#6B5A4A]">none overdue</p>
           )}
-          <Link href="/eos/todos" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
+          <Link href="/eos/todos" className="text-xs text-[#16A34A] hover:text-[#15803D] mt-auto pt-2 transition-colors">
             View To-Dos →
           </Link>
         </div>
@@ -282,7 +282,7 @@ export default function EosDashboardClient({
           <p className="text-xs text-[#B8A99A]">
             {shortOpps} short-term · {longOpps} long-term
           </p>
-          <Link href="/eos/opportunities" className="text-xs text-[#C9963A] hover:text-[#E8B86D] mt-auto pt-2 transition-colors">
+          <Link href="/eos/opportunities" className="text-xs text-[#16A34A] hover:text-[#15803D] mt-auto pt-2 transition-colors">
             View Opportunities →
           </Link>
         </div>
@@ -294,7 +294,7 @@ export default function EosDashboardClient({
         <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-[#F5ECD7]">Scorecard Snapshot</h3>
-            <Link href="/eos/scorecard" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+            <Link href="/eos/scorecard" className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
               View full scorecard →
             </Link>
           </div>
@@ -349,7 +349,7 @@ export default function EosDashboardClient({
         <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-[#F5ECD7]">This Week&apos;s Headlines</h3>
-            <Link href="/eos/headlines" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+            <Link href="/eos/headlines" className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
               View all →
             </Link>
           </div>
@@ -403,7 +403,7 @@ export default function EosDashboardClient({
               <button
                 onClick={handleAddHeadline}
                 disabled={addingHeadline || !newTitle.trim()}
-                className="px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-40 text-[#0E0B07] text-xs font-semibold transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-40 text-white text-xs font-semibold transition-colors"
               >
                 {addingHeadline ? '…' : '+ Add'}
               </button>
@@ -418,7 +418,7 @@ export default function EosDashboardClient({
         <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-[#F5ECD7]">Barrels Progress</h3>
-            <Link href="/eos/barrels" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+            <Link href="/eos/barrels" className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
               View all barrels →
             </Link>
           </div>
@@ -444,7 +444,7 @@ export default function EosDashboardClient({
                       <div className="shrink-0 flex items-center gap-1.5">
                         <div className="w-16 h-1.5 bg-[#2A1F14] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#C9963A] rounded-full"
+                            className="h-full bg-[#16A34A] rounded-full"
                             style={{ width: `${(done / total) * 100}%` }}
                           />
                         </div>
@@ -468,7 +468,7 @@ export default function EosDashboardClient({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-[#F5ECD7]">Recent Meeting</h3>
             {recentMeeting && (
-              <Link href={`/eos/meetings/${recentMeeting.id}`} className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+              <Link href={`/eos/meetings/${recentMeeting.id}`} className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
                 View summary →
               </Link>
             )}
@@ -500,7 +500,7 @@ export default function EosDashboardClient({
                       <div key={t.id} className="flex items-start gap-2">
                         <div className={cn(
                           'mt-0.5 w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center',
-                          t.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E]',
+                          t.completed ? 'bg-[#16A34A] border-[#16A34A]' : 'border-[#3D2E1E]',
                         )}>
                           {t.completed && (
                             <svg className="w-2 h-2" viewBox="0 0 10 10" fill="none">
@@ -543,7 +543,7 @@ export default function EosDashboardClient({
               <p className="text-xs text-[#6B5A4A]">Start your first Level 10 Meeting to see the recap here.</p>
               <button
                 onClick={() => setShowStartModal(true)}
-                className="mt-1 px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-xs font-medium transition-colors"
+                className="mt-1 px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium transition-colors"
               >
                 ▶ Start Level 10
               </button>
@@ -567,7 +567,7 @@ export default function EosDashboardClient({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-[#F5ECD7]">Open To-Dos</h3>
               {incompleteTodos.length > 0 && (
-                <Link href="/eos/todos" className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+                <Link href="/eos/todos" className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
                   View all {incompleteTodos.length} →
                 </Link>
               )}
@@ -587,7 +587,7 @@ export default function EosDashboardClient({
                         disabled={togglingTodos.has(todo.id)}
                         className={cn(
                           'shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors',
-                          todo.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E] hover:border-[#C9963A]',
+                          todo.completed ? 'bg-[#16A34A] border-[#16A34A]' : 'border-[#3D2E1E] hover:border-[#16A34A]',
                           togglingTodos.has(todo.id) && 'opacity-50',
                         )}
                       >
@@ -615,7 +615,7 @@ export default function EosDashboardClient({
                   );
                 })}
                 {incompleteTodos.length > 8 && (
-                  <Link href="/eos/todos" className="block text-center text-xs text-[#C9963A] hover:text-[#E8B86D] pt-2 transition-colors">
+                  <Link href="/eos/todos" className="block text-center text-xs text-[#16A34A] hover:text-[#15803D] pt-2 transition-colors">
                     View all {incompleteTodos.length} to-dos →
                   </Link>
                 )}
@@ -654,7 +654,7 @@ export default function EosDashboardClient({
               <button
                 onClick={handleDashCreateTodo}
                 disabled={dashTodoAdding || !dashTodoTitle.trim()}
-                className="px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-40 text-[#0E0B07] text-xs font-semibold transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-40 text-white text-xs font-semibold transition-colors"
               >
                 {dashTodoAdding ? '…' : '+ Add'}
               </button>
@@ -684,7 +684,7 @@ export default function EosDashboardClient({
               <button
                 onClick={handleStart}
                 disabled={starting}
-                className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors"
+                className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
               >
                 {starting ? 'Starting…' : 'Start Meeting'}
               </button>

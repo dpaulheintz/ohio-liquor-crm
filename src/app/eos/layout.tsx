@@ -39,12 +39,12 @@ export default async function EosLayout({ children }: { children: React.ReactNod
       <aside className="hidden md:flex md:w-56 md:flex-col" style={{ background: '#1C1510', borderRight: '1px solid #3D2E1E' }}>
         {/* Header */}
         <div className="flex flex-col px-4 py-4" style={{ borderBottom: '1px solid #3D2E1E' }}>
-          <span className="font-serif text-sm font-bold tracking-widest uppercase" style={{ color: '#C9963A' }}>
+          <span className="font-serif text-sm font-bold tracking-widest uppercase" style={{ color: '#16A34A' }}>
             High Bank
           </span>
           <div className="flex items-center gap-2 mt-1">
             <span className="font-serif text-lg font-bold tracking-wide" style={{ color: '#F5ECD7' }}>EOS</span>
-            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest uppercase" style={{ background: '#C9963A', color: '#0E0B07' }}>
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest uppercase" style={{ background: '#16A34A', color: 'white' }}>
               L10
             </span>
           </div>
@@ -72,14 +72,14 @@ export default async function EosLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2.5 px-2 py-2">
             <div
               className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
-              style={{ background: '#C9963A', color: '#0E0B07' }}
+              style={{ background: '#16A34A', color: 'white' }}
             >
               {initials}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate" style={{ color: '#F5ECD7' }}>{displayName}</p>
               {admin ? (
-                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5" style={{ background: '#2A1F14', color: '#C9963A' }}>
+                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5" style={{ background: '#2A1F14', color: '#16A34A' }}>
                   Admin
                 </span>
               ) : (
@@ -129,10 +129,10 @@ function EosNavLink({ href, label, emoji, activeDot }: {
       {activeDot && (
         <span className="flex items-center gap-1 shrink-0">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5B9E94] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#5B9E94]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]" />
           </span>
-          <span className="text-[10px] text-[#5B9E94] font-medium">Live</span>
+          <span className="text-[10px] text-[#16A34A] font-medium">Live</span>
         </span>
       )}
     </Link>

@@ -51,7 +51,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
   }
 
   const inputCls =
-    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] transition-colors placeholder:text-[#6B5A4A]';
+    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
 
   const goalHint =
     form.metric_type === 'boolean'
@@ -164,7 +164,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 disabled:cursor-not-allowed text-[#F5ECD7] text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
             >
               {saving ? 'Saving…' : mode === 'create' ? 'Add Metric' : 'Save Changes'}
             </button>

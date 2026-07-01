@@ -9,7 +9,7 @@ const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string }>
   not_started: { label: 'Not Started', bg: 'bg-[#2A1F14]', text: 'text-[#B8A99A]' },
   on_track:    { label: 'On Track',    bg: 'bg-[#0F2E2B]', text: 'text-[#5B9E94]' },
   off_track:   { label: 'Off Track',   bg: 'bg-[#2E0F0F]',  text: 'text-[#C0392B]'  },
-  complete:    { label: 'Complete',    bg: 'bg-[#C9963A]', text: 'text-[#0E0B07]' },
+  complete:    { label: 'Complete',    bg: 'bg-[#16A34A]', text: 'text-white' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -95,7 +95,7 @@ function BarrelGroup({
                       <span className="text-xs text-[#B8A99A]">{completedMs}/{totalMs}</span>
                       <div className="w-16 h-1 rounded-full bg-[#2A1F14] overflow-hidden">
                         <div
-                          className="h-1 rounded-full bg-[#C9963A] transition-all"
+                          className="h-1 rounded-full bg-[#16A34A] transition-all"
                           style={{ width: `${progress * 100}%` }}
                         />
                       </div>
@@ -121,7 +121,7 @@ function BarrelGroup({
                     value={barrel.status}
                     onChange={e => { e.stopPropagation(); onStatusChange(barrel.id, e.target.value); }}
                     onClick={e => e.stopPropagation()}
-                    className="text-[11px] bg-transparent border border-[#3D2E1E] rounded px-1 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#C9963A] shrink-0"
+                    className="text-[11px] bg-transparent border border-[#3D2E1E] rounded px-1 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#16A34A] shrink-0"
                   >
                     {Object.entries(STATUS_CONFIG).map(([v, c]) => (
                       <option key={v} value={v}>{c.label}</option>
@@ -133,13 +133,13 @@ function BarrelGroup({
                 {onFlagForIDS && !flaggedTitles.has(flagTitle) && (
                   <button
                     onClick={e => { e.stopPropagation(); onFlagForIDS(flagTitle); }}
-                    className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#8B6520] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
+                    className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#15803D] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
                   >
                     Flag
                   </button>
                 )}
                 {onFlagForIDS && flaggedTitles.has(flagTitle) && (
-                  <span className="text-[11px] text-[#8B6520] shrink-0">Flagged</span>
+                  <span className="text-[11px] text-[#15803D] shrink-0">Flagged</span>
                 )}
               </div>
             );

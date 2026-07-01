@@ -142,7 +142,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
   const completedCount = milestones.filter(m => m.completed).length;
 
   const inputCls =
-    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] transition-colors placeholder:text-[#6B5A4A]';
+    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
 
   return (
     <>
@@ -188,7 +188,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                   type="text"
                   value={form.title}
                   onChange={e => setField('title', e.target.value)}
-                  className="w-full bg-transparent border-0 border-b border-[#3D2E1E] pb-1 text-[#F5ECD7] text-lg font-semibold focus:outline-none focus:border-[#C9963A] transition-colors"
+                  className="w-full bg-transparent border-0 border-b border-[#3D2E1E] pb-1 text-[#F5ECD7] text-lg font-semibold focus:outline-none focus:border-[#16A34A] transition-colors"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                         className={cn(
                           'flex-1 py-1.5 text-xs font-medium transition-colors capitalize',
                           form.barrel_type === t
-                            ? 'bg-[#C9963A] text-[#0E0B07]'
+                            ? 'bg-[#16A34A] text-white'
                             : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]',
                         )}
                       >
@@ -298,8 +298,8 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                         className={cn(
                           'w-4 h-4 rounded shrink-0 border transition-colors flex items-center justify-center',
                           m.completed
-                            ? 'bg-[#C9963A] border-[#C9963A] text-[#F5ECD7]'
-                            : 'border-[#3D2E1E] hover:border-[#C9963A]',
+                            ? 'bg-[#16A34A] border-[#16A34A] text-[#F5ECD7]'
+                            : 'border-[#3D2E1E] hover:border-[#16A34A]',
                         )}
                       >
                         {m.completed && (
@@ -366,12 +366,12 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                           setAddingMilestone(false);
                         }
                       }}
-                      className="flex-1 bg-[#1C1510] border border-[#3D2E1E] rounded px-2 py-1 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A]"
+                      className="flex-1 bg-[#1C1510] border border-[#3D2E1E] rounded px-2 py-1 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A]"
                       placeholder="Milestone title…"
                     />
                     <button
                       onClick={handleAddMilestone}
-                      className="text-[#C9963A] hover:text-[#E8B86D] text-sm transition-colors"
+                      className="text-[#16A34A] hover:text-[#15803D] text-sm transition-colors"
                     >
                       Add
                     </button>
@@ -398,7 +398,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors"
+                className="w-full py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
               >
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>

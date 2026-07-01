@@ -72,7 +72,7 @@ function TodoFormModal({
     }
   }
 
-  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] transition-colors placeholder:text-[#6B5A4A]';
+  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
 
   return (
     <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -104,7 +104,7 @@ function TodoFormModal({
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-semibold transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {saving ? 'Saving…' : mode === 'create' ? 'Add To-Do' : 'Save'}
             </button>
           </div>
@@ -188,7 +188,7 @@ export default function TodosClient({ initialTodos }: Props) {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors"
         >
           + Add To-Do
         </button>
@@ -203,7 +203,7 @@ export default function TodosClient({ initialTodos }: Props) {
             className={cn(
               'px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-[2px]',
               filter === f
-                ? 'border-[#C9963A] text-[#5B9E94]'
+                ? 'border-[#16A34A] text-[#16A34A]'
                 : 'border-transparent text-[#B8A99A] hover:text-[#F5ECD7]',
             )}
           >
@@ -233,8 +233,8 @@ export default function TodosClient({ initialTodos }: Props) {
                 className={cn(
                   'shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors',
                   todo.completed
-                    ? 'bg-[#C9963A] border-[#C9963A] text-[#F5ECD7]'
-                    : 'border-[#3D2E1E] hover:border-[#C9963A]',
+                    ? 'bg-[#16A34A] border-[#16A34A] text-[#F5ECD7]'
+                    : 'border-[#3D2E1E] hover:border-[#16A34A]',
                   toggling.has(todo.id) && 'opacity-50',
                 )}
               >

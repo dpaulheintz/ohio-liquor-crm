@@ -301,7 +301,7 @@ export default function RunnerClient({
   }
 
   // ── Input styles ──
-  const inputCls = 'rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#C9963A] placeholder:text-[#6B5A4A] transition-colors';
+  const inputCls = 'rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] placeholder:text-[#6B5A4A] transition-colors';
 
   // ═══ SECTION RENDERERS ═══════════════════════════════════════════════════════
 
@@ -348,7 +348,7 @@ export default function RunnerClient({
                           n.has(h.id) ? n.delete(h.id) : n.add(h.id);
                           return n;
                         })}
-                        className="accent-[#C9963A]"
+                        className="accent-[#16A34A]"
                       />
                       <span className={cn('text-sm', sharedHeadlines.has(h.id) ? 'text-[#B8A99A] line-through' : 'text-[#F5ECD7]')}>
                         {h.title}
@@ -414,7 +414,7 @@ export default function RunnerClient({
                     type="checkbox"
                     checked={readHeadlines.has(h.id)}
                     onChange={() => setReadHeadlines(prev => { const n = new Set(prev); n.has(h.id) ? n.delete(h.id) : n.add(h.id); return n; })}
-                    className="accent-[#C9963A]"
+                    className="accent-[#16A34A]"
                   />
                   <span className={cn('text-sm flex-1', readHeadlines.has(h.id) ? 'text-[#6B5A4A] line-through' : 'text-[#F5ECD7]')}>{h.title}</span>
                   {h.owner_name && <span className="text-xs text-[#6B5A4A]">{h.owner_name}</span>}
@@ -448,7 +448,7 @@ export default function RunnerClient({
               <option value="customer_win">Customer Win</option>
               <option value="employee_update">Team Update</option>
             </select>
-            <button onClick={handleAddHeadline} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">
+            <button onClick={handleAddHeadline} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#16A34A] text-sm font-medium transition-colors shrink-0">
               + Add
             </button>
           </div>
@@ -471,7 +471,7 @@ export default function RunnerClient({
                   <button
                     onClick={() => handleToggleTodo(t.id, !t.completed)}
                     className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-                      t.completed ? 'bg-[#C9963A] border-[#C9963A]' : 'border-[#3D2E1E] hover:border-[#C9963A]')}
+                      t.completed ? 'bg-[#16A34A] border-[#16A34A]' : 'border-[#3D2E1E] hover:border-[#16A34A]')}
                   >
                     {t.completed && <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </button>
@@ -497,7 +497,7 @@ export default function RunnerClient({
                   <span className="text-xs text-[#C0392B] shrink-0">{fmtShortDate(t.due_date)}</span>
                   <button
                     onClick={() => handleCarryForward(t.id)}
-                    className="text-[11px] px-2 py-1 rounded bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] font-medium transition-colors shrink-0"
+                    className="text-[11px] px-2 py-1 rounded bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#16A34A] font-medium transition-colors shrink-0"
                   >
                     Carry Forward +7d
                   </button>
@@ -534,7 +534,7 @@ export default function RunnerClient({
               onChange={e => setNewTodoDue(e.target.value)}
               className={cn(inputCls, 'w-36')}
             />
-            <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">
+            <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#16A34A] text-sm font-medium transition-colors shrink-0">
               + Add
             </button>
           </div>
@@ -566,7 +566,7 @@ export default function RunnerClient({
                   {(['short', 'long'] as const).map(t => (
                     <button key={t} type="button" onClick={() => setNewOppTerm(t)}
                       className={cn('px-3 py-1.5 text-sm font-medium capitalize transition-colors',
-                        newOppTerm === t ? 'bg-[#C9963A] text-[#0E0B07]' : 'text-[#B8A99A] hover:text-[#F5ECD7]')}>
+                        newOppTerm === t ? 'bg-[#16A34A] text-white' : 'text-[#B8A99A] hover:text-[#F5ECD7]')}>
                       {t}-term
                     </button>
                   ))}
@@ -597,7 +597,7 @@ export default function RunnerClient({
                 <button
                   onClick={handleAddOpportunity}
                   disabled={addingOpp || !newOppTitle.trim()}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] disabled:opacity-50 text-[#0E0B07] text-sm font-medium transition-colors"
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-medium transition-colors"
                 >
                   {addingOpp ? 'Adding…' : 'Add Opportunity'}
                 </button>
@@ -606,7 +606,7 @@ export default function RunnerClient({
           ) : (
             <button
               onClick={() => setShowAddOpp(true)}
-              className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[#3D2E1E] text-[#C9963A] hover:border-[#C9963A]/60 hover:text-[#5B9E94] hover:bg-[#0F2E2B] transition-all text-sm font-medium"
+              className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[#3D2E1E] text-[#16A34A] hover:border-[#16A34A]/60 hover:text-[#5B9E94] hover:bg-[#0F2E2B] transition-all text-sm font-medium"
             >
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -627,7 +627,7 @@ export default function RunnerClient({
                   onClick={() => setSelectedOppId(opp.id === selectedOppId ? null : opp.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors',
-                    selectedOppId === opp.id ? 'bg-[#0F2E2B] ring-1 ring-[#C9963A]/50' : 'hover:bg-[#0F2E2B]',
+                    selectedOppId === opp.id ? 'bg-[#0F2E2B] ring-1 ring-[#16A34A]/50' : 'hover:bg-[#0F2E2B]',
                   )}
                 >
                   <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
@@ -657,7 +657,7 @@ export default function RunnerClient({
                   <option key={m.email} value={m.name}>{m.name}</option>
                 ))}
               </select>
-              <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#C9963A] text-sm font-medium transition-colors shrink-0">+ Add</button>
+              <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-[#2A1F14] hover:bg-[#3D2E1E] text-[#16A34A] text-sm font-medium transition-colors shrink-0">+ Add</button>
             </div>
           </div>
         </div>
@@ -688,7 +688,7 @@ export default function RunnerClient({
                       className={cn(
                         'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
                         selectedOpp.status === s.value
-                          ? 'bg-[#C9963A] border-[#C9963A] text-[#0E0B07]'
+                          ? 'bg-[#16A34A] border-[#16A34A] text-white'
                           : 'border-[#3D2E1E] text-[#B8A99A] hover:bg-[#2A1F14]',
                       )}
                     >
@@ -722,7 +722,7 @@ export default function RunnerClient({
               return (
                 <div key={member.email} className="flex items-center gap-3">
                   {/* Avatar */}
-                  <div className="shrink-0 w-8 h-8 rounded-full bg-[#C9963A] flex items-center justify-center text-[11px] font-bold text-[#0E0B07]">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-[#16A34A] flex items-center justify-center text-[11px] font-bold text-white">
                     {member.initials}
                   </div>
                   {/* Name */}
@@ -736,7 +736,7 @@ export default function RunnerClient({
                         className={cn(
                           'w-8 h-8 rounded-lg text-xs font-bold transition-all',
                           selected === n
-                            ? 'bg-[#C9963A] text-[#0E0B07] font-bold ring-2 ring-[#C9963A]/30'
+                            ? 'bg-[#16A34A] text-white font-bold ring-2 ring-[#16A34A]/30'
                             : 'bg-[#2A1F14] text-[#B8A99A] hover:bg-[#3D2E1E] hover:text-[#F5ECD7]',
                         )}
                       >
@@ -754,7 +754,7 @@ export default function RunnerClient({
             {avgRating !== null ? (
               <span className="text-sm text-[#5B9E94] font-medium">
                 Average: {avgRating} / 10
-                <span className="text-[#8B6520] font-normal ml-2">({ratedCount} of {EOS_TEAM_MEMBERS.length} rated)</span>
+                <span className="text-[#15803D] font-normal ml-2">({ratedCount} of {EOS_TEAM_MEMBERS.length} rated)</span>
               </span>
             ) : (
               <span className="text-sm text-[#6B5A4A]">No ratings entered yet.</span>
@@ -793,7 +793,7 @@ export default function RunnerClient({
         <button
           onClick={() => setShowEndModal(true)}
           className="w-full py-3 rounded-xl text-sm font-bold transition-opacity hover:opacity-90"
-          style={{ background: 'linear-gradient(90deg, #8B6520 0%, #C9963A 100%)', color: '#0E0B07' }}
+          style={{ background: 'linear-gradient(90deg, #15803D 0%, #16A34A 100%)', color: 'white' }}
         >
           End Meeting &amp; Save
         </button>
@@ -809,14 +809,14 @@ export default function RunnerClient({
       <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#3D2E1E] bg-[#1C1510]">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span className="font-serif text-base sm:text-lg font-bold text-[#F5ECD7] truncate" style={{ letterSpacing: '-0.01em' }}>High Bank Distillery</span>
-          <span className="text-[#8B6520] hidden sm:inline">—</span>
-          <span className="text-sm text-[#C9963A] font-medium hidden sm:inline">Level 10 Meeting</span>
+          <span className="text-[#15803D] hidden sm:inline">—</span>
+          <span className="text-sm text-[#16A34A] font-medium hidden sm:inline">Level 10 Meeting</span>
         </div>
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <span className="text-xs sm:text-sm text-[#8B6520] hidden md:inline">
+          <span className="text-xs sm:text-sm text-[#15803D] hidden md:inline">
             {new Date(meeting.started_at!).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
-          <span className="font-mono text-[#C9963A] text-base sm:text-lg tabular-nums">{fmtElapsed(elapsed)}</span>
+          <span className="font-mono text-[#16A34A] text-base sm:text-lg tabular-nums">{fmtElapsed(elapsed)}</span>
           <button
             onClick={() => setShowEndModal(true)}
             className="px-3 py-1.5 rounded-lg bg-[#2E0F0F] hover:bg-[#2E0F0F] text-[#C0392B] text-sm font-medium transition-colors border border-[#3D2E1E]"
@@ -832,13 +832,13 @@ export default function RunnerClient({
           <button key={s.key} onClick={() => goTo(i)} className="flex items-center gap-1 sm:gap-1.5 group shrink-0" title={s.name}>
             <div className={cn(
               'w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all',
-              i < currentSection ? 'bg-[#C9963A]'
-                : i === currentSection ? 'bg-[#C9963A] ring-2 ring-[#C9963A]/30 animate-pulse'
+              i < currentSection ? 'bg-[#16A34A]'
+                : i === currentSection ? 'bg-[#16A34A] ring-2 ring-[#16A34A]/30 animate-pulse'
                 : 'bg-[#3D2E1E] group-hover:bg-[#6B5A4A]',
             )} />
             <span className={cn(
               'text-[11px] hidden lg:inline transition-colors whitespace-nowrap',
-              i === currentSection ? 'text-[#C9963A] font-medium' : 'text-[#6B5A4A] group-hover:text-[#B8A99A]',
+              i === currentSection ? 'text-[#16A34A] font-medium' : 'text-[#6B5A4A] group-hover:text-[#B8A99A]',
             )}>
               {s.name}
             </span>
@@ -851,15 +851,15 @@ export default function RunnerClient({
       <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg sm:text-xl font-serif font-bold text-[#F5ECD7]">{section.name}</h2>
-          <p className="text-xs text-[#8B6520] mt-0.5">{section.time} min suggested</p>
+          <p className="text-xs text-[#15803D] mt-0.5">{section.time} min suggested</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button onClick={() => setPaused(!paused)} className="text-xs text-[#C9963A] hover:text-[#E8B86D] transition-colors">
+          <button onClick={() => setPaused(!paused)} className="text-xs text-[#16A34A] hover:text-[#15803D] transition-colors">
             {paused ? '▶ Resume' : '⏸ Pause'}
           </button>
           <div className={cn(
             'font-mono text-xl sm:text-2xl font-bold tabular-nums',
-            timerExpired ? 'text-[#C0392B] animate-pulse' : 'text-[#C9963A]',
+            timerExpired ? 'text-[#C0392B] animate-pulse' : 'text-[#16A34A]',
           )}>
             {fmtTimer(timerSeconds)}
           </div>
@@ -897,7 +897,7 @@ export default function RunnerClient({
         <span className="text-xs text-[#6B5A4A]">{currentSection + 1} / {SECTIONS.length}</span>
         <button
           onClick={goNext}
-          className="px-4 py-2 rounded-lg bg-[#C9963A] hover:bg-[#E8B86D] text-[#0E0B07] text-sm font-semibold transition-colors"
+          className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-semibold transition-colors"
         >
           {currentSection === SECTIONS.length - 1 ? 'Finish →' : 'Next →'}
         </button>
