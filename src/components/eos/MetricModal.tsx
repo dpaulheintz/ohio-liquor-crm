@@ -51,7 +51,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
   }
 
   const inputCls =
-    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
+    'w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-green-600 transition-colors placeholder:text-gray-400';
 
   const goalHint =
     form.metric_type === 'boolean'
@@ -63,15 +63,15 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
       : '';
 
   return (
-    <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D2E1E]">
-          <h2 className="text-lg font-semibold text-[#F5ECD7]">
+    <div className="fixed inset-0 bg-gray-50/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">
             {mode === 'create' ? 'Add Metric' : 'Edit Metric'}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#B8A99A] hover:text-[#F5ECD7] text-2xl leading-none transition-colors w-7 h-7 flex items-center justify-center"
+            className="text-gray-500 hover:text-gray-900 text-2xl leading-none transition-colors w-7 h-7 flex items-center justify-center"
           >
             ×
           </button>
@@ -79,13 +79,13 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {error && (
-            <p className="text-sm text-[#C0392B] rounded-lg bg-[#2E0F0F] border border-[#3D2E1E] px-3 py-2">
+            <p className="text-sm text-red-600 rounded-lg bg-red-50 border border-gray-200 px-3 py-2">
               {error}
             </p>
           )}
 
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Title *</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Title *</label>
             <input
               type="text"
               value={form.title}
@@ -98,7 +98,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Type *</label>
+              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Type *</label>
               <select
                 value={form.metric_type}
                 onChange={e => set('metric_type', e.target.value)}
@@ -112,7 +112,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Goal *</label>
+              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Goal *</label>
               <select
                 value={form.goal_operator}
                 onChange={e => set('goal_operator', e.target.value)}
@@ -128,8 +128,8 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">
-              Goal Value *{goalHint && <span className="text-[#6B5A4A] font-normal ml-1">— {goalHint}</span>}
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">
+              Goal Value *{goalHint && <span className="text-gray-400 font-normal ml-1">— {goalHint}</span>}
             </label>
             <input
               type="text"
@@ -144,7 +144,7 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Owner</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Owner</label>
             <OwnerSelect
               ownerName={form.owner_name}
               ownerEmail={form.owner_email}
@@ -157,14 +157,14 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors"
+              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
             >
               {saving ? 'Saving…' : mode === 'create' ? 'Add Metric' : 'Save Changes'}
             </button>

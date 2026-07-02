@@ -12,9 +12,9 @@ type Props = { initialHeadlines: Headline[] };
 type TypeFilter = 'all' | 'good_news' | 'customer_win' | 'employee_update';
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  good_news:       { label: 'Good News',       bg: 'bg-[#2E1E08]', text: 'text-[#D4821A]', dot: 'bg-[#D4821A]' },
-  customer_win:    { label: 'Customer Win',    bg: 'bg-[#0F2E2B]',  text: 'text-[#5B9E94]',  dot: 'bg-[#5B9E94]' },
-  employee_update: { label: 'Employee Update', bg: 'bg-[#0F2E2B]',   text: 'text-[#5B9E94]',   dot: 'bg-[#5B9E94]'  },
+  good_news:       { label: 'Good News',       bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500' },
+  customer_win:    { label: 'Customer Win',    bg: 'bg-green-50',  text: 'text-green-600',  dot: 'bg-green-600' },
+  employee_update: { label: 'Employee Update', bg: 'bg-green-50',   text: 'text-green-600',   dot: 'bg-green-600'  },
 };
 
 function fmtDate(d: string) {
@@ -52,21 +52,21 @@ function HeadlineModal({
     catch { setError('Failed to save.'); setSaving(false); }
   }
 
-  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
+  const inputCls = 'w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-green-600 transition-colors placeholder:text-gray-400';
 
   return (
-    <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D2E1E]">
-          <h2 className="text-lg font-semibold text-[#F5ECD7]">{mode === 'create' ? 'Share a Headline' : 'Edit Headline'}</h2>
-          <button onClick={onClose} className="text-[#B8A99A] hover:text-[#F5ECD7] text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
+    <div className="fixed inset-0 bg-gray-50/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">{mode === 'create' ? 'Share a Headline' : 'Edit Headline'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <p className="text-sm text-[#C0392B] bg-[#2E0F0F] border border-[#3D2E1E] rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-gray-200 rounded-lg px-3 py-2">{error}</p>}
 
           {/* Type selection */}
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-2 block">Type</label>
+            <label className="text-xs font-medium text-gray-500 mb-2 block">Type</label>
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
                 <button
@@ -77,7 +77,7 @@ function HeadlineModal({
                     'py-2 px-2 rounded-lg text-xs font-medium transition-colors border',
                     form.headline_type === key
                       ? `${cfg.bg} ${cfg.text} border-transparent`
-                      : 'bg-[#1C1510] text-[#B8A99A] border-[#3D2E1E] hover:bg-[#2A1F14]',
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100',
                   )}
                 >
                   {cfg.label}
@@ -87,7 +87,7 @@ function HeadlineModal({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Headline *</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Headline *</label>
             <textarea
               autoFocus
               value={form.title}
@@ -99,7 +99,7 @@ function HeadlineModal({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">From</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">From</label>
             <select
               value={EOS_TEAM_MEMBERS.find(m => m.name === form.owner_name)?.email || ''}
               onChange={e => {
@@ -116,8 +116,8 @@ function HeadlineModal({
           </div>
 
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {saving ? 'Sharing…' : mode === 'create' ? 'Share' : 'Save'}
             </button>
           </div>
@@ -164,16 +164,16 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>Headlines</h1>
-          <p className="text-[#B8A99A] mt-1 text-sm">Good news, customer wins, and team updates</p>
+          <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Headlines</h1>
+          <p className="text-gray-500 mt-1 text-sm">Good news, customer wins, and team updates</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors">
+        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
           + Share Headline
         </button>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 mb-5 border-b border-[#3D2E1E] flex-wrap">
+      <div className="flex gap-1 mb-5 border-b border-gray-200 flex-wrap">
         {([
           { key: 'all', label: 'All' },
           { key: 'good_news', label: 'Good News' },
@@ -182,7 +182,7 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
         ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)}
             className={cn('px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px] whitespace-nowrap',
-              filter === key ? 'border-[#16A34A] text-[#16A34A]' : 'border-transparent text-[#B8A99A] hover:text-[#F5ECD7]')}>
+              filter === key ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-900')}>
             {label}
           </button>
         ))}
@@ -195,7 +195,7 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
           return (
             <div
               key={headline.id}
-              className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-5 py-4 hover:bg-[#2A1F14]/40 transition-colors group/row"
+              className="rounded-xl border border-gray-200 bg-white px-5 py-4 hover:bg-gray-100/40 transition-colors group/row"
             >
               <div className="flex items-start gap-3">
                 {/* Type dot */}
@@ -206,19 +206,19 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
                   <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5', cfg.bg, cfg.text)}>
                     {cfg.label}
                   </span>
-                  <p className="text-sm text-[#F5ECD7] leading-relaxed">{headline.title}</p>
+                  <p className="text-sm text-gray-900 leading-relaxed">{headline.title}</p>
                   <div className="flex items-center gap-2 mt-1.5">
                     {headline.owner_name && (
-                      <span className="text-xs text-[#B8A99A]">{headline.owner_name}</span>
+                      <span className="text-xs text-gray-500">{headline.owner_name}</span>
                     )}
-                    <span className="text-xs text-[#6B5A4A]">{fmtDate(headline.created_at)}</span>
+                    <span className="text-xs text-gray-400">{fmtDate(headline.created_at)}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                  <button onClick={() => setEditingHeadline(headline)} className="text-[#6B5A4A] hover:text-[#F5ECD7] text-xs px-1.5 py-1 transition-colors">Edit</button>
-                  <button onClick={() => handleDelete(headline.id)} className="text-[#6B5A4A] hover:text-[#C0392B] text-xs px-1.5 py-1 transition-colors">✕</button>
+                  <button onClick={() => setEditingHeadline(headline)} className="text-gray-400 hover:text-gray-900 text-xs px-1.5 py-1 transition-colors">Edit</button>
+                  <button onClick={() => handleDelete(headline.id)} className="text-gray-400 hover:text-red-600 text-xs px-1.5 py-1 transition-colors">✕</button>
                 </div>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
         })}
 
         {filtered.length === 0 && (
-          <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-6 py-12 text-center text-[#6B5A4A] text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
             No headlines yet. Click &ldquo;+ Share Headline&rdquo; to celebrate a win.
           </div>
         )}

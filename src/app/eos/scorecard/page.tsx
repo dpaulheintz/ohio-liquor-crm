@@ -19,7 +19,7 @@ export default async function EosScorecardPage() {
   ]);
 
   return (
-    <div className="px-6 py-8 text-[#F5ECD7] min-h-full">
+    <div className="px-6 py-8 text-gray-900 min-h-full">
       <div className="max-w-full">
         <ScorecardClient
           initialMetrics={metrics}

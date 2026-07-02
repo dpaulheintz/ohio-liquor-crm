@@ -10,11 +10,11 @@ import { cn } from '@/lib/utils';
 
 type Modal = 'todo' | 'opp' | 'headline' | 'meeting' | null;
 
-const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] placeholder:text-[#6B5A4A] focus:outline-none focus:border-[#16A34A] transition-colors';
+const inputCls = 'w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-600 transition-colors';
 
 function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-50/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
       <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
         {children}
       </div>
@@ -25,10 +25,10 @@ function Overlay({ onClose, children }: { onClose: () => void; children: React.R
 
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D2E1E]">
-        <h2 className="text-base font-semibold text-[#F5ECD7]">{title}</h2>
-        <button onClick={onClose} className="text-[#B8A99A] hover:text-[#F5ECD7] text-2xl w-7 h-7 flex items-center justify-center">×</button>
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center">×</button>
       </div>
       {children}
     </div>
@@ -62,8 +62,8 @@ function TodoQuickModal({ onClose }: { onClose: () => void }) {
           <input type="date" value={due} onChange={e => setDue(e.target.value)} className={inputCls} />
         </div>
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add To-Do'}
           </button>
         </div>
@@ -96,7 +96,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
         <input autoFocus type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} placeholder="What's the issue or opportunity?" />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-[#B8A99A] mb-1 block">Priority</label>
+            <label className="text-xs text-gray-500 mb-1 block">Priority</label>
             <select value={priority} onChange={e => setPriority(e.target.value)} className={inputCls}>
               <option value="critical">Critical</option>
               <option value="high">High</option>
@@ -105,12 +105,12 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
             </select>
           </div>
           <div>
-            <label className="text-xs text-[#B8A99A] mb-1 block">Term</label>
-            <div className="flex rounded-lg overflow-hidden border border-[#3D2E1E] h-[42px]">
+            <label className="text-xs text-gray-500 mb-1 block">Term</label>
+            <div className="flex rounded-lg overflow-hidden border border-gray-200 h-[42px]">
               {(['short', 'long'] as const).map(t => (
                 <button key={t} type="button" onClick={() => setTerm(t)}
                   className={cn('flex-1 text-sm font-medium capitalize transition-colors',
-                    term === t ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
+                    term === t ? 'bg-green-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-100')}>
                   {t}
                 </button>
               ))}
@@ -118,8 +118,8 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add Opportunity'}
           </button>
         </div>
@@ -163,8 +163,8 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
               className={cn(
                 'flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors border',
                 type === opt.value
-                  ? 'bg-[#16A34A] border-[#16A34A] text-white'
-                  : 'bg-[#1C1510] border-[#3D2E1E] text-[#B8A99A] hover:text-[#F5ECD7]',
+                  ? 'bg-green-600 border-green-600 text-white'
+                  : 'bg-white border-gray-200 text-gray-500 hover:text-gray-900',
               )}
             >
               {opt.label}
@@ -173,8 +173,8 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
         </div>
         <input autoFocus type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} placeholder="Share good news…" />
         <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+          <button type="submit" disabled={saving || !title.trim()} className="flex-1 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {saving ? 'Saving…' : 'Add Headline'}
           </button>
         </div>
@@ -198,10 +198,10 @@ function MeetingConfirmModal({ onClose }: { onClose: () => void }) {
   return (
     <ModalShell title="Start Level 10 Meeting" onClose={onClose}>
       <div className="px-6 py-5">
-        <p className="text-sm text-[#B8A99A] mb-5">This will create a new meeting record and open the live runner.</p>
+        <p className="text-sm text-gray-500 mb-5">This will create a new meeting record and open the live runner.</p>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+          <button onClick={handleStart} disabled={starting} className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
             {starting ? 'Starting…' : 'Start Meeting'}
           </button>
         </div>
@@ -243,7 +243,7 @@ export default function EosFab() {
             <button
               key={action.key}
               onClick={() => openModal(action.key)}
-              className="flex items-center gap-2.5 rounded-full bg-[#2A1F14] border border-[#3D2E1E] shadow-lg px-4 py-2.5 text-sm text-[#F5ECD7] font-medium hover:bg-[#3D2E1E] transition-colors"
+              className="flex items-center gap-2.5 rounded-full bg-gray-100 border border-gray-200 shadow-lg px-4 py-2.5 text-sm text-gray-900 font-medium hover:bg-gray-100 transition-colors"
             >
               <span className="text-base">{action.icon}</span>
               {action.label}
@@ -262,8 +262,8 @@ export default function EosFab() {
         onClick={() => setOpen(o => !o)}
         className={cn(
           'fixed bottom-6 right-6 z-[55] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all',
-          'bg-[#16A34A] hover:bg-[#15803D] text-white text-2xl font-light',
-          open && 'rotate-45 bg-[#15803D]',
+          'bg-green-600 hover:bg-green-700 text-white text-2xl font-light',
+          open && 'rotate-45 bg-green-700',
         )}
         aria-label="Quick actions"
       >

@@ -34,17 +34,17 @@ export default async function EosLayout({ children }: { children: React.ReactNod
   const initials = member?.initials ?? email.slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex h-screen" style={{ background: '#0E0B07' }}>
+    <div className="flex h-screen bg-gray-50">
       {/* EOS Sidebar */}
-      <aside className="hidden md:flex md:w-56 md:flex-col" style={{ background: '#1C1510', borderRight: '1px solid #3D2E1E' }}>
+      <aside className="hidden md:flex md:w-56 md:flex-col bg-white border-r border-gray-200">
         {/* Header */}
-        <div className="flex flex-col px-4 py-4" style={{ borderBottom: '1px solid #3D2E1E' }}>
-          <span className="font-serif text-sm font-bold tracking-widest uppercase" style={{ color: '#16A34A' }}>
+        <div className="flex flex-col px-4 py-4 border-b border-gray-200">
+          <span className="font-serif text-sm font-bold tracking-widest uppercase text-green-600">
             High Bank
           </span>
           <div className="flex items-center gap-2 mt-1">
-            <span className="font-serif text-lg font-bold tracking-wide" style={{ color: '#F5ECD7' }}>EOS</span>
-            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-widest uppercase" style={{ background: '#16A34A', color: 'white' }}>
+            <span className="font-serif text-lg font-bold tracking-wide text-gray-900">EOS</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase bg-green-600 text-white">
               L10
             </span>
           </div>
@@ -67,23 +67,20 @@ export default async function EosLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* User info + footer */}
-        <div className="p-3 space-y-2" style={{ borderTop: '1px solid #3D2E1E' }}>
+        <div className="p-3 space-y-2 border-t border-gray-200">
           {/* User card */}
           <div className="flex items-center gap-2.5 px-2 py-2">
-            <div
-              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
-              style={{ background: '#16A34A', color: 'white' }}
-            >
+            <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold bg-green-600 text-white">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate" style={{ color: '#F5ECD7' }}>{displayName}</p>
+              <p className="text-xs font-medium truncate text-gray-900">{displayName}</p>
               {admin ? (
-                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5" style={{ background: '#2A1F14', color: '#16A34A' }}>
+                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded-full px-2 py-0.5 mt-0.5 bg-green-600 text-white">
                   Admin
                 </span>
               ) : (
-                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5" style={{ background: '#2A1F14', color: '#B8A99A' }}>
+                <span className="inline-block text-[9px] font-bold tracking-wider uppercase rounded px-1 py-0.5 mt-0.5 bg-gray-100 text-gray-500 border border-gray-200">
                   EOS User
                 </span>
               )}
@@ -94,8 +91,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
           {admin && (
             <Link
               href="/"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs transition-colors hover:bg-[#2A1F14]"
-              style={{ color: '#B8A99A' }}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors hover:bg-gray-100"
             >
               <span>←</span>
               <span>Back to CRM</span>
@@ -105,7 +101,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-[#0E0B07] relative">
+      <main className="flex-1 overflow-y-auto bg-gray-50 relative">
         {children}
       </main>
     </div>
@@ -121,18 +117,17 @@ function EosNavLink({ href, label, emoji, activeDot }: {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[#2A1F14] hover:text-[#F5ECD7]"
-      style={{ color: '#B8A99A' }}
+      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-900"
     >
       <span className="text-base leading-none">{emoji}</span>
       <span className="flex-1">{label}</span>
       {activeDot && (
         <span className="flex items-center gap-1 shrink-0">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#16A34A] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-600 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600" />
           </span>
-          <span className="text-[10px] text-[#16A34A] font-medium">Live</span>
+          <span className="text-[10px] text-green-600 font-medium">Live</span>
         </span>
       )}
     </Link>

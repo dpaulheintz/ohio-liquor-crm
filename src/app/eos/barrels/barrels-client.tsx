@@ -14,10 +14,10 @@ type Props = { initialBarrels: BarrelWithMilestones[] };
 type Status = 'not_started' | 'on_track' | 'off_track' | 'complete';
 
 const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string }> = {
-  not_started: { label: 'Not Started', bg: 'bg-[#2A1F14]', text: 'text-[#B8A99A]' },
-  on_track:    { label: 'On Track',    bg: 'bg-[#0F2E2B]', text: 'text-[#5B9E94]' },
-  off_track:   { label: 'Off Track',   bg: 'bg-[#2E0F0F]',  text: 'text-[#C0392B]'  },
-  complete:    { label: 'Complete',    bg: 'bg-[#16A34A]', text: 'text-white' },
+  not_started: { label: 'Not Started', bg: 'bg-gray-100', text: 'text-gray-500' },
+  on_track:    { label: 'On Track',    bg: 'bg-green-50', text: 'text-green-600' },
+  off_track:   { label: 'Off Track',   bg: 'bg-red-50',  text: 'text-red-600'  },
+  complete:    { label: 'Complete',    bg: 'bg-green-600', text: 'text-white' },
 };
 
 const BOARD_COLUMNS: { status: Status; label: string }[] = [
@@ -67,29 +67,29 @@ export default function BarrelsClient({ initialBarrels }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>Barrels</h1>
-          <p className="text-[#B8A99A] mt-1 text-sm">Quarterly rocks — big goals for the company and individuals</p>
+          <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Barrels</h1>
+          <p className="text-gray-500 mt-1 text-sm">Quarterly rocks — big goals for the company and individuals</p>
         </div>
         <div className="flex items-center gap-3">
           {quarters.length > 1 && (
             <select
               value={quarterFilter}
               onChange={e => setQuarterFilter(e.target.value)}
-              className="rounded-lg border border-[#3D2E1E] bg-[#1C1510] text-[#F5ECD7] text-sm px-3 py-1.5 focus:outline-none focus:border-[#16A34A] transition-colors"
+              className="rounded-lg border border-gray-200 bg-white text-gray-900 text-sm px-3 py-1.5 focus:outline-none focus:border-green-600 transition-colors"
             >
               {quarters.map(q => (
                 <option key={q} value={q}>{q === 'all' ? 'All Quarters' : q}</option>
               ))}
             </select>
           )}
-          <div className="flex rounded-lg border border-[#3D2E1E] overflow-hidden text-sm">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
             {(['list', 'board'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}
                 className={cn(
                   'px-3 py-1.5 font-medium capitalize transition-colors',
-                  view === v ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]',
+                  view === v ? 'bg-green-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-100',
                 )}
               >
                 {v}
@@ -98,7 +98,7 @@ export default function BarrelsClient({ initialBarrels }: Props) {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
           >
             + Add Barrel
           </button>
@@ -123,8 +123,8 @@ export default function BarrelsClient({ initialBarrels }: Props) {
               <div key={status} className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <span className={cn('w-2 h-2 rounded-full', cfg.bg)} />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A]">{label}</h3>
-                  <span className="text-xs text-[#6B5A4A] ml-auto">{col.length}</span>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</h3>
+                  <span className="text-xs text-gray-400 ml-auto">{col.length}</span>
                 </div>
                 <div className="space-y-2 min-h-[60px]">
                   {col.map(barrel => {
@@ -134,29 +134,29 @@ export default function BarrelsClient({ initialBarrels }: Props) {
                       <div
                         key={barrel.id}
                         onClick={() => setSelectedBarrel(barrel)}
-                        className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-4 py-3 cursor-pointer hover:bg-[#2A1F14]/60 transition-colors"
+                        className="rounded-xl border border-gray-200 bg-white px-4 py-3 cursor-pointer hover:bg-gray-100/60 transition-colors"
                       >
-                        <p className="text-sm font-medium text-[#F5ECD7] mb-2">{barrel.title}</p>
-                        <div className="flex items-center justify-between text-xs text-[#B8A99A]">
+                        <p className="text-sm font-medium text-gray-900 mb-2">{barrel.title}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
                           <span>{barrel.owner_name ?? '—'}</span>
                           <span>{fmtDate(barrel.due_date)}</span>
                         </div>
                         {totalMs > 0 && (
                           <div className="mt-2 flex items-center gap-1.5">
-                            <div className="flex-1 h-1 rounded-full bg-[#2A1F14] overflow-hidden">
+                            <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
                               <div
-                                className="h-1 rounded-full bg-[#16A34A]"
+                                className="h-1 rounded-full bg-green-600"
                                 style={{ width: `${(doneMs / totalMs) * 100}%` }}
                               />
                             </div>
-                            <span className="text-[10px] text-[#6B5A4A]">{doneMs}/{totalMs}</span>
+                            <span className="text-[10px] text-gray-400">{doneMs}/{totalMs}</span>
                           </div>
                         )}
                       </div>
                     );
                   })}
                   {col.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-[#3D2E1E] px-4 py-6 text-center text-[#6B5A4A] text-xs">
+                    <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-gray-400 text-xs">
                       Empty
                     </div>
                   )}
@@ -168,8 +168,8 @@ export default function BarrelsClient({ initialBarrels }: Props) {
       )}
 
       {barrels.length === 0 && (
-        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-8 py-16 text-center">
-          <p className="text-[#B8A99A] text-sm">No barrels yet. Click &ldquo;+ Add Barrel&rdquo; to create your first quarterly rock.</p>
+        <div className="rounded-xl border border-gray-200 bg-white px-8 py-16 text-center">
+          <p className="text-gray-500 text-sm">No barrels yet. Click &ldquo;+ Add Barrel&rdquo; to create your first quarterly rock.</p>
         </div>
       )}
 
