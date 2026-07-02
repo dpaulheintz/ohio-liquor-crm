@@ -10,7 +10,9 @@ import { Upload, FileText, CheckCircle, AlertTriangle, Clock, X } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { resolveBrand, resolveAgency, parseAmount, parseBottles } from '@/lib/brand-taxonomy';
 import { upsertSalesRows, upsertWholesaleRows } from '@/app/actions/sales';
+import { upsertBailment } from '@/app/actions/bailment';
 import type { SalesRowInput, WholesaleRowInput, SalesHealth } from '@/app/actions/sales';
+import type { BailmentEntry } from '@/app/actions/bailment';
 
 // ─── CSV column maps ──────────────────────────────────────────────────────────
 
@@ -139,8 +141,125 @@ function FileZone({ label, file, onFile, onClear, rowCount, month, unrecognized 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
+function fmtDollar(n: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
+}
+
+function fmtMonthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+// ─── Bailment entry form ──────────────────────────────────────────────────────
+
+interface BailmentFormProps {
+  initialEntries: BailmentEntry[];
+}
+
+function BailmentForm({ initialEntries }: BailmentFormProps) {
+  const router = useRouter();
+  const [month, setMonth] = useState('');
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [entries, setEntries] = useState<BailmentEntry[]>(initialEntries);
+
+  async function handleSave() {
+    if (!month || !amount) return;
+    const parsed = parseFloat(amount.replace(/[^0-9.]/g, ''));
+    if (isNaN(parsed)) { toast.error('Invalid amount'); return; }
+    setSaving(true);
+    setConfirmation(null);
+    try {
+      await upsertBailment(month, parsed);
+      const label = fmtMonthLabel(month);
+      setConfirmation(`Bailment for ${label} saved: ${fmtDollar(parsed)}`);
+      toast.success(`Bailment for ${label} saved`);
+      // Optimistically update the list
+      setEntries(prev => {
+        const next = prev.filter(e => e.month !== month);
+        return [{ id: month, month, amount: parsed }, ...next].sort((a, b) => b.month.localeCompare(a.month));
+      });
+      setAmount('');
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Update Monthly Bailment</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Input row */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Month</label>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => { setMonth(e.target.value); setConfirmation(null); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount ($)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="e.g. 215000.50"
+              value={amount}
+              onChange={(e) => { setAmount(e.target.value); setConfirmation(null); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-44 focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <Button onClick={handleSave} disabled={saving || !month || !amount} className="shrink-0">
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
+
+        {/* Confirmation */}
+        {confirmation && (
+          <div className="flex items-center gap-2 text-sm text-emerald-600">
+            <CheckCircle className="h-4 w-4" />
+            {confirmation}
+          </div>
+        )}
+
+        {/* Existing data table */}
+        {entries.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Bailment History ({entries.length} months)
+            </p>
+            <div className="rounded-md border divide-y text-sm max-h-64 overflow-y-auto">
+              {entries.map((e) => (
+                <div key={e.month} className="flex items-center justify-between px-3 py-2">
+                  <span className="font-mono text-sm">{e.month}</span>
+                  <span className="text-muted-foreground">{fmtMonthLabel(e.month)}</span>
+                  <span className="font-mono font-medium tabular-nums">{fmtDollar(e.amount)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface Props {
   health: SalesHealth;
+  bailmentEntries: BailmentEntry[];
 }
 
 interface ParsedData {
@@ -151,7 +270,7 @@ interface ParsedData {
   wholesaleUnrecognized: number;
 }
 
-export function SalesUploadClient({ health }: Props) {
+export function SalesUploadClient({ health, bailmentEntries }: Props) {
   const router = useRouter();
   const [salesFile, setSalesFile] = useState<File | null>(null);
   const [wholesaleFile, setWholesaleFile] = useState<File | null>(null);
@@ -316,6 +435,9 @@ export function SalesUploadClient({ health }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Bailment Entry Card ── */}
+      <BailmentForm initialEntries={bailmentEntries} />
 
       {/* ── Data Health Card ── */}
       <Card>

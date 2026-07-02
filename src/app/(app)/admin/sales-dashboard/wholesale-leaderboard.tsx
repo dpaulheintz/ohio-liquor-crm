@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { WholesaleFullRow, AccountGroupData } from '@/app/actions/sales-dashboard';
+import { isHighBank } from './utils';
 import {
   ChevronUp,
   ChevronDown,
@@ -38,12 +39,6 @@ interface SkuOption {
 }
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
 
 function resolveAccount(
   wholesaler: string | null,
@@ -182,7 +177,7 @@ function fmtBtl(n: number) {
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   if (data.length < 2 || data.every((v) => v === 0)) {
-    return <span className="w-16 inline-block text-center text-zinc-700 text-xs">—</span>;
+    return <span className="w-16 inline-block text-center text-muted-foreground text-xs">—</span>;
   }
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
@@ -222,18 +217,18 @@ function AccountCell({ row }: { row: AccountRow }) {
       )}
 
       {/* Name */}
-      <span className="text-zinc-200 font-medium truncate">{row.displayName}</span>
+      <span className="text-foreground font-medium truncate">{row.displayName}</span>
 
       {/* HIGH BANK badge */}
       {row.isHighBank && (
-        <span className="shrink-0 inline-flex items-center text-[10px] font-bold rounded px-1.5 py-0.5 bg-[#C5A572]/20 text-[#C5A572] border border-[#C5A572]/40 uppercase tracking-wider">
+        <span className="shrink-0 inline-flex items-center text-[10px] font-bold rounded px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/40 uppercase tracking-wider">
           HB
         </span>
       )}
 
       {/* Group badge */}
       {row.isGroup && (
-        <span className="shrink-0 text-[10px] text-zinc-500 rounded px-1.5 py-0.5 bg-zinc-800 uppercase tracking-wider">
+        <span className="shrink-0 text-[10px] text-muted-foreground rounded px-1.5 py-0.5 bg-muted uppercase tracking-wider">
           group
         </span>
       )}
@@ -261,8 +256,8 @@ function SortableHeader({
   return (
     <th
       onClick={() => onSort(col)}
-      className={`px-3 py-2.5 text-xs font-medium cursor-pointer select-none whitespace-nowrap transition-colors hover:text-zinc-200 ${
-        active ? 'text-[#C5A572]' : 'text-zinc-500'
+      className={`px-3 py-2.5 text-xs font-medium cursor-pointer select-none whitespace-nowrap transition-colors hover:text-foreground ${
+        active ? 'text-primary' : 'text-muted-foreground'
       }`}
     >
       <span
@@ -543,13 +538,13 @@ export function WholesaleLeaderboard({
     <div className="space-y-4">
       {/* Tab strip */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-1 rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-white border border p-0.5">
           <button
             onClick={() => switchTab('overall')}
             className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'overall'
-                ? 'bg-[#C5A572] text-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
@@ -559,8 +554,8 @@ export function WholesaleLeaderboard({
             onClick={() => switchTab('by-sku')}
             className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'by-sku'
-                ? 'bg-[#C5A572] text-black'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <BarChart2 className="h-3.5 w-3.5" />
@@ -572,14 +567,14 @@ export function WholesaleLeaderboard({
         <div className="flex gap-2">
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors border border-zinc-700"
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-muted text-foreground hover:bg-muted transition-colors border border"
           >
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </button>
           <button
             onClick={exportPdf}
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors border border-zinc-700"
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium bg-muted text-foreground hover:bg-muted transition-colors border border"
           >
             <FileText className="h-3.5 w-3.5" />
             Export PDF
@@ -590,11 +585,11 @@ export function WholesaleLeaderboard({
       {/* By-SKU: product dropdown */}
       {activeTab === 'by-sku' && (
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-zinc-500 uppercase tracking-wider">Product</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Product</span>
           <select
             value={effectiveSku}
             onChange={(e) => setSelectedSkuCode(e.target.value)}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1.5 text-zinc-200 text-sm focus:outline-none focus:border-[#C5A572]/60 min-w-[240px]"
+            className="bg-white border border rounded px-2.5 py-1.5 text-foreground text-sm focus:outline-none focus:border-primary/60 min-w-[240px]"
           >
             {skuOptions.map((opt) => (
               <option key={opt.brand_code} value={opt.brand_code}>
@@ -619,19 +614,19 @@ export function WholesaleLeaderboard({
       {/* Search bar + row count */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Search accounts…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded pl-8 pr-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-[#C5A572]/60"
+            className="w-full bg-white border border rounded pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60"
           />
         </div>
-        <span className="text-xs text-zinc-600">
+        <span className="text-xs text-muted-foreground">
           {displayRows.length} account{displayRows.length !== 1 ? 's' : ''}
           {accountGroups.length > 0 && (
-            <span className="ml-1 text-zinc-700">
+            <span className="ml-1 text-muted-foreground">
               · {accountGroups.length} group{accountGroups.length !== 1 ? 's' : ''} applied
             </span>
           )}
@@ -639,11 +634,11 @@ export function WholesaleLeaderboard({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border">
         <table className="w-full text-sm border-collapse min-w-[640px]">
           <thead>
-            <tr className="bg-[#0d0d0d] border-b border-zinc-800">
-              <th className="px-3 py-2.5 text-xs font-medium text-zinc-600 w-9 text-center select-none">
+            <tr className="bg-muted border-b border">
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground w-9 text-center select-none">
                 #
               </th>
               <SortableHeader
@@ -670,11 +665,11 @@ export function WholesaleLeaderboard({
                 align="right"
               />
               {activeTab === 'overall' && (
-                <th className="px-3 py-2.5 text-xs font-medium text-zinc-500 select-none whitespace-nowrap">
+                <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground select-none whitespace-nowrap">
                   Top SKU
                 </th>
               )}
-              <th className="px-3 py-2.5 text-xs font-medium text-zinc-600 text-center whitespace-nowrap select-none">
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-center whitespace-nowrap select-none">
                 12mo Trend
               </th>
             </tr>
@@ -685,7 +680,7 @@ export function WholesaleLeaderboard({
               <tr>
                 <td
                   colSpan={activeTab === 'overall' ? 6 : 5}
-                  className="py-10 text-center text-zinc-600 text-sm"
+                  className="py-10 text-center text-muted-foreground text-sm"
                 >
                   No wholesale data for selected filters.
                 </td>
@@ -695,10 +690,10 @@ export function WholesaleLeaderboard({
                 {displayRows.map((row, i) => (
                   <tr
                     key={row.key}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-900/40 transition-colors"
+                    className="border-b border/50 hover:bg-white/40 transition-colors"
                   >
                     {/* Rank */}
-                    <td className="px-3 py-2.5 text-xs font-mono text-zinc-600 text-center">
+                    <td className="px-3 py-2.5 text-xs font-mono text-muted-foreground text-center">
                       {i + 1}
                     </td>
 
@@ -708,18 +703,18 @@ export function WholesaleLeaderboard({
                     </td>
 
                     {/* Bottles */}
-                    <td className="px-3 py-2.5 text-right font-mono font-bold text-white">
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-foreground">
                       {fmtBtl(row.bottles)}
                     </td>
 
                     {/* Revenue */}
-                    <td className="px-3 py-2.5 text-right font-mono font-bold text-[#C5A572]">
+                    <td className="px-3 py-2.5 text-right font-mono font-bold text-primary">
                       {fmtDollar(row.amount)}
                     </td>
 
                     {/* Top SKU (Overall tab only) */}
                     {activeTab === 'overall' && (
-                      <td className="px-3 py-2.5 text-zinc-400 text-xs max-w-[180px]">
+                      <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[180px]">
                         <span className="truncate block">{row.topSku}</span>
                       </td>
                     )}
@@ -732,15 +727,15 @@ export function WholesaleLeaderboard({
                 ))}
 
                 {/* Totals footer */}
-                <tr className="border-t-2 border-[#C5A572]/30 bg-[#111] font-semibold">
+                <tr className="border-t-2 border-primary/30 bg-card font-semibold">
                   <td className="px-3 py-2.5" />
-                  <td className="px-3 py-2.5 text-xs text-zinc-400 uppercase tracking-wider">
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground uppercase tracking-wider">
                     Total — {displayRows.length} account{displayRows.length !== 1 ? 's' : ''}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-sm text-white">
+                  <td className="px-3 py-2.5 text-right font-mono text-sm text-foreground">
                     {fmtBtl(totals.bottles)}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-sm text-[#C5A572]">
+                  <td className="px-3 py-2.5 text-right font-mono text-sm text-primary">
                     {fmtDollar(totals.amount)}
                   </td>
                   {activeTab === 'overall' && <td className="px-3 py-2.5" />}

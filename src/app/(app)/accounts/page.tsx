@@ -80,7 +80,7 @@ function AccountList() {
       setAccounts(result.accounts);
       setTotal(result.total);
     } catch (err) {
-      console.error('Failed to fetch accounts:', err);
+      void err;
     } finally {
       setLoading(false);
     }

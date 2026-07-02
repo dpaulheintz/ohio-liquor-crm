@@ -17,6 +17,7 @@ import {
   Legend,
 } from 'recharts';
 import type { SplitRow } from '@/app/actions/sales-dashboard';
+import { fmtDollar, fmtBottles, ChartTip } from './utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -28,40 +29,6 @@ const LOCATION_COLORS: Record<HbLocation, string> = {
   Gahanna: '#f97316',
   Westerville: '#22c55e',
 };
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
-
-function fmtBottles(n: number): string {
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?: any[]; label?: string; fmt?: (v: number) => string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 border-b border-zinc-800 pb-1">{label}</p>}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {payload.map((p: any) => (
-        <p key={p.name} className="flex justify-between gap-3">
-          <span style={{ color: p.color ?? p.fill }} className="truncate">{p.name}</span>
-          <span className="font-mono font-semibold text-white">
-            {fmt ? fmt(p.value ?? 0) : (p.value ?? 0).toLocaleString()}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -175,7 +142,7 @@ export function SectionHbLocations({
   return (
     <div className="space-y-4">
       {!hasData ? (
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-10 text-center text-zinc-600 text-sm">
+        <div className="rounded-xl border border bg-card p-10 text-center text-muted-foreground text-sm">
           No High Bank location data for the selected period.
         </div>
       ) : (
@@ -193,9 +160,9 @@ export function SectionHbLocations({
                     borderColor: activeLocation === loc
                       ? LOCATION_COLORS[loc]
                       : activeLocation
-                      ? '#27272a'
-                      : '#3f3f46',
-                    background: activeLocation === loc ? LOCATION_COLORS[loc] + '15' : '#111',
+                      ? '#e5e5e5'
+                      : '#d4d4d8',
+                    background: activeLocation === loc ? LOCATION_COLORS[loc] + '15' : 'var(--card)',
                     opacity: activeLocation && activeLocation !== loc ? 0.5 : 1,
                   }}
                 >
@@ -205,10 +172,10 @@ export function SectionHbLocations({
                   >
                     {loc}
                   </span>
-                  <span className="text-2xl font-serif font-bold text-white leading-none">
+                  <span className="text-2xl font-serif font-bold text-foreground leading-none">
                     {fmtDollar(kpi?.revenue ?? 0)}
                   </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-muted-foreground">
                     {fmtBottles(kpi?.bottles ?? 0)} bottles
                   </span>
                 </button>
@@ -219,8 +186,8 @@ export function SectionHbLocations({
           {/* Donut + Comparison bar */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Revenue donut */}
-            <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+            <div className="rounded-xl border border bg-card p-4 flex flex-col">
+              <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
                 Revenue by Location
               </h3>
               <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 180 }}>
@@ -248,38 +215,38 @@ export function SectionHbLocations({
                     </Pie>
                     <Tooltip
                       formatter={(v: number) => fmtDollar(v)}
-                      contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                      contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-lg font-bold text-white font-serif leading-none">
+                  <span className="text-lg font-bold text-foreground font-serif leading-none">
                     {fmtDollar(donutTotal)}
                   </span>
-                  <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">HB total</span>
+                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">HB total</span>
                 </div>
               </div>
               <div className="flex justify-center gap-6 mt-2">
                 {donutData.map(({ name, value }) => (
                   <div key={name} className="flex items-center gap-2 text-xs">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: LOCATION_COLORS[name as HbLocation] }} />
-                    <span className="text-zinc-400">{name}</span>
-                    <span className="font-mono text-zinc-300">{fmtDollar(value)}</span>
+                    <span className="text-muted-foreground">{name}</span>
+                    <span className="font-mono text-foreground">{fmtDollar(value)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Location comparison bar */}
-            <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-              <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+            <div className="rounded-xl border border bg-card p-4">
+              <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
                 Location Revenue Comparison
               </h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={comparisonData} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
                   <XAxis dataKey="name" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={fmtDollar} tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
+                  <YAxis tickFormatter={fmtDollar} tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
                   <Tooltip
                     content={(props) => (
                       <ChartTip
@@ -305,15 +272,15 @@ export function SectionHbLocations({
           </div>
 
           {/* Monthly trend per location */}
-          <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-            <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+          <div className="rounded-xl border border bg-card p-4">
+            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
               Monthly Revenue by HB Location
             </h3>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={fmtDollar} tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={fmtDollar} tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={52} />
                 <Tooltip
                   content={(props) => (
                     <ChartTip
@@ -325,7 +292,7 @@ export function SectionHbLocations({
                   )}
                 />
                 <Legend
-                  wrapperStyle={{ fontSize: 10, color: '#71717a', paddingTop: 8 }}
+                  wrapperStyle={{ fontSize: 10, color: '#666666', paddingTop: 8 }}
                 />
                 {HB_LOCATIONS.map(loc => (
                   <Line
@@ -353,9 +320,9 @@ export function SectionHbLocations({
               return (
                 <div
                   key={loc}
-                  className="rounded-xl border bg-[#111] p-4"
+                  className="rounded-xl border bg-card p-4"
                   style={{
-                    borderColor: activeLocation === loc ? locColor : '#3f3f46',
+                    borderColor: activeLocation === loc ? locColor : '#d4d4d8',
                     opacity: activeLocation && activeLocation !== loc ? 0.55 : 1,
                   }}
                 >
@@ -366,15 +333,15 @@ export function SectionHbLocations({
                     {loc} — Top Products
                   </h3>
                   {products.length === 0 ? (
-                    <p className="text-xs text-zinc-600 py-4 text-center">No data</p>
+                    <p className="text-xs text-muted-foreground py-4 text-center">No data</p>
                   ) : (
                     <div className="space-y-2">
                       {products.map((p, i) => (
                         <div key={p.name} className="flex items-center gap-2">
-                          <span className="text-xs text-zinc-600 w-4 shrink-0 text-right font-mono">{i + 1}</span>
+                          <span className="text-xs text-muted-foreground w-4 shrink-0 text-right font-mono">{i + 1}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-zinc-300 truncate leading-tight">{p.name}</p>
-                            <div className="mt-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                            <p className="text-xs text-foreground truncate leading-tight">{p.name}</p>
+                            <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden">
                               <div
                                 className="h-full rounded-full transition-all"
                                 style={{
@@ -385,7 +352,7 @@ export function SectionHbLocations({
                               />
                             </div>
                           </div>
-                          <span className="text-xs font-mono text-zinc-500 shrink-0">{p.bottles.toLocaleString()}</span>
+                          <span className="text-xs font-mono text-muted-foreground shrink-0">{p.bottles.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>

@@ -56,8 +56,8 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#1a1a1a] p-3 shadow-xl text-sm max-w-[220px]">
-      <p className="text-[#C5A572] font-semibold text-xs mb-2">
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] p-3 shadow-xl text-sm max-w-[220px]">
+      <p className="text-primary font-semibold text-xs mb-2">
         {(() => {
           const d = new Date(label + '-01');
           return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -99,15 +99,15 @@ export function TrendChart({ series, months, level, onLevelChange, onToggle }: T
     <div className="space-y-4">
       {/* Level toggle */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider">View:</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">View:</span>
         {(['family', 'product'] as const).map((l) => (
           <button
             key={l}
             onClick={() => onLevelChange(l)}
             className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
               level === l
-                ? 'bg-[#C5A572] text-black'
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                ? 'bg-primary text-black'
+                : 'bg-muted text-muted-foreground hover:bg-muted'
             }`}
           >
             {l === 'family' ? 'Brand Family' : 'Product'}
@@ -122,18 +122,18 @@ export function TrendChart({ series, months, level, onLevelChange, onToggle }: T
           <XAxis
             dataKey="month"
             tickFormatter={fmtAxisMonth}
-            tick={{ fill: '#71717a', fontSize: 11 }}
+            tick={{ fill: '#666666', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             interval={Math.floor(months.length / 10)}
           />
           <YAxis
-            tick={{ fill: '#71717a', fontSize: 11 }}
+            tick={{ fill: '#666666', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             width={44}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#333' }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#E5E5E5' }} />
           {visible.map((s) => (
             <Line
               key={s.key}
@@ -163,15 +163,15 @@ export function TrendChart({ series, months, level, onLevelChange, onToggle }: T
               onMouseLeave={() => setHovered(null)}
               className={`flex items-center gap-2 rounded-lg border p-2 text-left transition-all ${
                 s.visible
-                  ? 'border-zinc-700 bg-zinc-900 hover:border-zinc-600'
-                  : 'border-zinc-800 bg-zinc-950 opacity-40'
+                  ? 'border bg-white hover:border-muted-foreground'
+                  : 'border bg-zinc-950 opacity-40'
               }`}
             >
               <span
                 className="shrink-0 w-2 h-2 rounded-full"
                 style={{ backgroundColor: s.color }}
               />
-              <span className="text-xs text-zinc-300 flex-1 truncate leading-tight">{s.name}</span>
+              <span className="text-xs text-foreground flex-1 truncate leading-tight">{s.name}</span>
               <Sparkline data={s.sparkData} color={s.color} />
             </button>
           ))}

@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/toast-sync?mode=daily",
+      "schedule": "0 7 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/((?!_next/static|_next/image|favicon.ico).*)",

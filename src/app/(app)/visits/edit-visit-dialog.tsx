@@ -53,7 +53,7 @@ const MAX_PHOTOS = 5;
 
 // KPI colour map for badges
 const KPI_COLORS: Record<string, string> = {
-  Display: '#C5A572',
+  Display: '#C8102E',
   Menu:    '#60a5fa',
   Feature: '#34d399',
   Event:   '#f472b6',
@@ -197,8 +197,8 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
       onOpenChange(false);
       onSuccess();
     } catch (err) {
+      void err;
       toast.error('Failed to update visit');
-      console.error(err);
     } finally {
       setLoading(false);
     }

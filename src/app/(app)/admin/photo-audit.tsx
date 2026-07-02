@@ -82,7 +82,7 @@ export function PhotoAudit() {
       else setVisits((prev) => [...prev, ...data]);
       setTotal(result.total);
     } catch (err) {
-      console.error('Photo audit fetch failed:', err);
+      void err;
     } finally {
       setLoading(false);
     }

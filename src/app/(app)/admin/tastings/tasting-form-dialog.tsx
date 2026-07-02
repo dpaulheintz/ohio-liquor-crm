@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,11 +34,9 @@ type AgencyOption = {
 };
 
 interface BulkRow {
-  agencyIdInput: string;
   agencySearch: string;
   agencyResults: AgencyOption[];
   selectedAgency: AgencyOption | null;
-  searchMode: 'id' | 'name';
   date: string;
   startTime: string;
   endTime: string;
@@ -46,15 +44,74 @@ interface BulkRow {
 
 function emptyRow(): BulkRow {
   return {
-    agencyIdInput: '',
     agencySearch: '',
     agencyResults: [],
     selectedAgency: null,
-    searchMode: 'id',
     date: '',
     startTime: '',
     endTime: '',
   };
+}
+
+interface AgencyPickerProps {
+  selected: AgencyOption | null;
+  onClear: () => void;
+  searchVal: string;
+  onSearchChange: (v: string) => void;
+  results: AgencyOption[];
+  onResultPick: (a: AgencyOption) => void;
+}
+
+function AgencyPicker({ selected, onClear, searchVal, onSearchChange, results, onResultPick }: AgencyPickerProps) {
+  if (selected) {
+    return (
+      <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/30">
+        <div>
+          <p className="font-medium text-sm">{selected.display_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {selected.agency_id && `#${selected.agency_id} · `}
+            {selected.city}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClear}>
+          Change
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <Input
+        placeholder="Search by name, ID, or city…"
+        value={searchVal}
+        onChange={(e) => onSearchChange(e.target.value)}
+        autoComplete="off"
+      />
+      {results.length > 0 && (
+        <div className={cn(
+          'absolute top-full left-0 right-0 z-10 mt-1 rounded-md border bg-background shadow-lg',
+          'overflow-hidden max-h-48 overflow-y-auto'
+        )}>
+          {results.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => onResultPick(r)}
+            >
+              <span className="font-medium">{r.display_name}</span>
+              {r.agency_id && (
+                <span className="ml-1.5 text-muted-foreground text-xs">#{r.agency_id}</span>
+              )}
+              {r.city && (
+                <span className="ml-1.5 text-muted-foreground text-xs">{r.city}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface TastingFormDialogProps {
@@ -80,11 +137,9 @@ export function TastingFormDialog({
   const [isBulk, setIsBulk] = useState(false);
 
   // --- Single-create state ---
-  const [agencyIdInput, setAgencyIdInput] = useState('');
   const [agencySearch, setAgencySearch] = useState('');
   const [agencyResults, setAgencyResults] = useState<AgencyOption[]>([]);
   const [selectedAgency, setSelectedAgency] = useState<AgencyOption | null>(null);
-  const [searchMode, setSearchMode] = useState<'id' | 'name'>('id');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -100,6 +155,9 @@ export function TastingFormDialog({
   const [bulkStaffCategory, setBulkStaffCategory] = useState('');
   const [bulkStaffPerson, setBulkStaffPerson] = useState('');
   const [bulkNotes, setBulkNotes] = useState('');
+
+  // Per-row debounce timers for bulk search
+  const bulkTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   // Populate from tasting when editing
   useEffect(() => {
@@ -130,10 +188,8 @@ export function TastingFormDialog({
           ? { id: defaultAgencyId, display_name: defaultAgencyName, city: defaultCity ?? null, agency_id: null }
           : null
       );
-      setAgencyIdInput('');
       setAgencySearch('');
       setAgencyResults([]);
-      setSearchMode('id');
       setDate('');
       setStartTime('');
       setEndTime('');
@@ -150,9 +206,9 @@ export function TastingFormDialog({
     }
   }, [open, tasting, defaultAgencyId, defaultAgencyName, defaultCity]);
 
-  // Agency name search (debounced)
+  // Unified agency search — fires on any input, debounced 300ms
   useEffect(() => {
-    if (searchMode !== 'name' || agencySearch.length < 2) {
+    if (agencySearch.length < 1) {
       setAgencyResults([]);
       return;
     }
@@ -163,26 +219,7 @@ export function TastingFormDialog({
       } catch { /* ignore */ }
     }, 300);
     return () => clearTimeout(t);
-  }, [agencySearch, searchMode]);
-
-  async function lookupAgencyById() {
-    if (!agencyIdInput.trim()) return;
-    try {
-      const results = await searchAccounts(agencyIdInput.trim());
-      const match = results.find(
-        (r) => r.agency_id === agencyIdInput.trim() && r.type === 'agency'
-      ) as AgencyOption | undefined;
-      if (match) {
-        setSelectedAgency(match);
-        setCity(match.city ?? '');
-        toast.success(`Found: ${match.display_name}`);
-      } else {
-        toast.error('No agency found with that ID');
-      }
-    } catch {
-      toast.error('Agency lookup failed');
-    }
-  }
+  }, [agencySearch]);
 
   function handleStartTimeChange(t: string) {
     setStartTime(t);
@@ -196,23 +233,18 @@ export function TastingFormDialog({
     );
   }
 
-  async function lookupBulkAgencyById(idx: number) {
-    const row = bulkRows[idx];
-    if (!row.agencyIdInput.trim()) return;
-    try {
-      const results = await searchAccounts(row.agencyIdInput.trim());
-      const match = results.find(
-        (r) => r.agency_id === row.agencyIdInput.trim() && r.type === 'agency'
-      ) as AgencyOption | undefined;
-      if (match) {
-        updateBulkRow(idx, { selectedAgency: match });
-        toast.success(`Found: ${match.display_name}`);
-      } else {
-        toast.error('No agency found with that ID');
-      }
-    } catch {
-      toast.error('Agency lookup failed');
-    }
+  function handleBulkAgencySearch(idx: number, query: string) {
+    updateBulkRow(idx, { agencySearch: query, agencyResults: [] });
+    if (bulkTimers.current[idx]) clearTimeout(bulkTimers.current[idx]);
+    if (query.length < 1) return;
+    bulkTimers.current[idx] = setTimeout(async () => {
+      try {
+        const res = await searchAccounts(query);
+        updateBulkRow(idx, {
+          agencyResults: res.filter((r) => r.type === 'agency') as AgencyOption[],
+        });
+      } catch { /* ignore */ }
+    }, 300);
   }
 
   // --- Save single ---
@@ -287,126 +319,11 @@ export function TastingFormDialog({
   }
 
   // Auto-sync status from staff fields on CREATE only.
-  // On edit the user's existing status is preserved; they can still change it manually.
   useEffect(() => {
     if (!isEdit) {
       setStatus(deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson));
     }
   }, [staffCategory, staffPerson, isEdit]);
-
-  // ---- Agency picker sub-component (shared between single and bulk) ----
-  function AgencyPicker({
-    selected,
-    onSelect,
-    onClear,
-    searchModeState,
-    onSearchModeChange,
-    agencyIdVal,
-    onAgencyIdChange,
-    onLookup,
-    searchVal,
-    onSearchChange,
-    results,
-    onResultPick,
-  }: {
-    selected: AgencyOption | null;
-    onSelect: (a: AgencyOption) => void;
-    onClear: () => void;
-    searchModeState: 'id' | 'name';
-    onSearchModeChange: (m: 'id' | 'name') => void;
-    agencyIdVal: string;
-    onAgencyIdChange: (v: string) => void;
-    onLookup: () => void;
-    searchVal: string;
-    onSearchChange: (v: string) => void;
-    results: AgencyOption[];
-    onResultPick: (a: AgencyOption) => void;
-  }) {
-    if (selected) {
-      return (
-        <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/30">
-          <div>
-            <p className="font-medium text-sm">{selected.display_name}</p>
-            <p className="text-xs text-muted-foreground">
-              {selected.agency_id && `#${selected.agency_id} · `}
-              {selected.city}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClear}>
-            Change
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant={searchModeState === 'id' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onSearchModeChange('id')}
-          >
-            By Agency ID
-          </Button>
-          <Button
-            type="button"
-            variant={searchModeState === 'name' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onSearchModeChange('name')}
-          >
-            Search by Name
-          </Button>
-        </div>
-        {searchModeState === 'id' && (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Agency ID (e.g. 30748)"
-              value={agencyIdVal}
-              onChange={(e) => onAgencyIdChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onLookup()}
-            />
-            <Button type="button" variant="outline" onClick={onLookup}>
-              Look Up
-            </Button>
-          </div>
-        )}
-        {searchModeState === 'name' && (
-          <div className="relative">
-            <Input
-              placeholder="Search agency name..."
-              value={searchVal}
-              onChange={(e) => onSearchChange(e.target.value)}
-            />
-            {results.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-10 mt-1 rounded-md border bg-background shadow-lg overflow-hidden max-h-48 overflow-y-auto">
-                {results.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                    onClick={() => onResultPick(r)}
-                  >
-                    <span className="font-medium">{r.display_name}</span>
-                    {r.agency_id && (
-                      <span className="ml-1.5 text-muted-foreground text-xs">
-                        #{r.agency_id}
-                      </span>
-                    )}
-                    {r.city && (
-                      <span className="ml-1.5 text-muted-foreground text-xs">
-                        {r.city}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -436,17 +353,16 @@ export function TastingFormDialog({
               <Label>Agency</Label>
               <AgencyPicker
                 selected={selectedAgency}
-                onSelect={(a) => { setSelectedAgency(a); setCity(a.city ?? ''); }}
-                onClear={() => { setSelectedAgency(null); setAgencyIdInput(''); setAgencySearch(''); setAgencyResults([]); }}
-                searchModeState={searchMode}
-                onSearchModeChange={setSearchMode}
-                agencyIdVal={agencyIdInput}
-                onAgencyIdChange={setAgencyIdInput}
-                onLookup={lookupAgencyById}
+                onClear={() => { setSelectedAgency(null); setAgencySearch(''); setAgencyResults([]); }}
                 searchVal={agencySearch}
                 onSearchChange={setAgencySearch}
                 results={agencyResults}
-                onResultPick={(a) => { setSelectedAgency(a); setCity(a.city ?? ''); setAgencyResults([]); setAgencySearch(''); }}
+                onResultPick={(a) => {
+                  setSelectedAgency(a);
+                  setCity(a.city ?? '');
+                  setAgencyResults([]);
+                  setAgencySearch('');
+                }}
               />
             </div>
 
@@ -598,28 +514,66 @@ export function TastingFormDialog({
                   {/* Agency for this row */}
                   {row.selectedAgency ? (
                     <div className="flex items-center justify-between rounded border px-2 py-1.5 text-sm bg-muted/30">
-                      <span className="font-medium">{row.selectedAgency.display_name}</span>
+                      <div>
+                        <span className="font-medium">{row.selectedAgency.display_name}</span>
+                        {row.selectedAgency.agency_id && (
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            #{row.selectedAgency.agency_id}
+                          </span>
+                        )}
+                        {row.selectedAgency.city && (
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            {row.selectedAgency.city}
+                          </span>
+                        )}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 text-xs"
-                        onClick={() => updateBulkRow(idx, { selectedAgency: null, agencyIdInput: '' })}
+                        onClick={() => updateBulkRow(idx, { selectedAgency: null, agencySearch: '', agencyResults: [] })}
                       >
                         Change
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="relative">
                       <Input
-                        placeholder="Agency ID"
-                        value={row.agencyIdInput}
-                        onChange={(e) => updateBulkRow(idx, { agencyIdInput: e.target.value })}
-                        onKeyDown={(e) => e.key === 'Enter' && lookupBulkAgencyById(idx)}
-                        className="flex-1"
+                        placeholder="Search by name, ID, or city…"
+                        value={row.agencySearch}
+                        onChange={(e) => handleBulkAgencySearch(idx, e.target.value)}
+                        autoComplete="off"
                       />
-                      <Button type="button" variant="outline" size="sm" onClick={() => lookupBulkAgencyById(idx)}>
-                        Look Up
-                      </Button>
+                      {row.agencyResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-10 mt-1 rounded-md border bg-background shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+                          {row.agencyResults.map((r) => (
+                            <button
+                              key={r.id}
+                              type="button"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                              onClick={() =>
+                                updateBulkRow(idx, {
+                                  selectedAgency: r,
+                                  agencySearch: '',
+                                  agencyResults: [],
+                                })
+                              }
+                            >
+                              <span className="font-medium">{r.display_name}</span>
+                              {r.agency_id && (
+                                <span className="ml-1.5 text-muted-foreground text-xs">
+                                  #{r.agency_id}
+                                </span>
+                              )}
+                              {r.city && (
+                                <span className="ml-1.5 text-muted-foreground text-xs">
+                                  {r.city}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 

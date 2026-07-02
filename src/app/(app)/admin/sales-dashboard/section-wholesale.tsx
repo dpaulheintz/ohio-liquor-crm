@@ -19,115 +19,12 @@ import type {
   WholesaleFullRow,
   AccountGroupData,
 } from '@/app/actions/sales-dashboard';
-
-// ─── Month helpers (timezone-safe) ────────────────────────────────────────────
-
-function eachMonth(from: string, to: string): string[] {
-  const months: string[] = [];
-  let [y, m] = from.split('-').map(Number);
-  const [ey, em] = to.split('-').map(Number);
-  while (y < ey || (y === ey && m <= em)) {
-    months.push(`${y}-${String(m).padStart(2, '0')}`);
-    if (++m > 12) { m = 1; y++; }
-  }
-  return months;
-}
-
-function fmtMonthLabel(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FAMILY_COLORS: Record<string, string> = {
-  Vodka: '#3b82f6',
-  '(614) Vodka': '#06b6d4',
-  Gin: '#22c55e',
-  'Whiskey War': '#C5A572',
-  Midnight: '#8b5cf6',
-  'Midnight (Discontinued)': '#7c3aed',
-  Bourbon: '#f97316',
-  RTD: '#ec4899',
-  Unknown: '#6b7280',
-};
-const FAMILY_COLOR_DEFAULT = '#94a3b8';
-const GOLD = '#C5A572';
-
-// ─── Account-resolution helpers (same logic as WholesaleLeaderboard) ─────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
-
-function resolveAccount(
-  wholesaler: string | null,
-  dba: string | null,
-  groups: AccountGroupData[]
-): { key: string; displayName: string; groupColor?: string } {
-  const wl = (wholesaler ?? '').toLowerCase();
-  const dl = (dba ?? '').toLowerCase();
-
-  for (const group of groups) {
-    const hit = (text: string) =>
-      group.match_terms.some((term) => text.includes(term.toLowerCase()));
-    const matched =
-      group.match_columns === 'wholesaler' ? hit(wl) :
-      group.match_columns === 'dba'        ? hit(dl) :
-      hit(wl) || hit(dl);
-    if (matched) {
-      return { key: `group::${group.id}`, displayName: group.group_name, groupColor: group.color };
-    }
-  }
-  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
-  return { key: `raw::${name}`, displayName: name };
-}
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function fmtDollar(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
-
-function fmtBottles(n: number): string {
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-[#111] px-5 py-4 flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">{label}</span>
-      <span className="text-3xl font-serif font-bold text-white leading-none">{value}</span>
-      {sub && <span className="text-xs text-zinc-600">{sub}</span>}
-    </div>
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ChartTip({ active, payload, label, fmt }: { active?: boolean; payload?: any[]; label?: string; fmt?: (v: number) => string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-zinc-700 bg-[#0f0f0f] px-3 py-2 text-xs shadow-xl min-w-[130px]">
-      {label && <p className="text-zinc-400 mb-1.5 border-b border-zinc-800 pb-1">{label}</p>}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {payload.map((p: any) => (
-        <p key={p.name} className="flex justify-between gap-3">
-          <span style={{ color: p.color ?? p.fill }} className="truncate">{p.name}</span>
-          <span className="font-mono font-semibold text-white">
-            {fmt ? fmt(p.value ?? 0) : (p.value ?? 0).toLocaleString()}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
+import {
+  FAMILY_COLORS, FAMILY_COLOR_DEFAULT, GOLD,
+  fmtDollar, fmtBottles, eachMonth, fmtMonthLabel,
+  isHighBank, resolveAccount,
+  KpiCard, ChartTip,
+} from './utils';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -229,15 +126,15 @@ export function SectionWholesale({
 
       {/* Monthly bars + Family pie */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 rounded-xl border border-zinc-800 bg-[#111] p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+        <div className="lg:col-span-2 rounded-xl border border bg-card p-4">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
             Monthly Wholesale Bottles Sold
           </h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyBars} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666666', fontSize: 9 }} axisLine={false} tickLine={false} width={42} />
               <Tooltip
                 content={(props) => (
                   <ChartTip active={props.active} payload={props.payload as []} label={String(props.label)} />
@@ -249,8 +146,8 @@ export function SectionWholesale({
         </div>
 
         {/* Family pie */}
-        <div className="rounded-xl border border-zinc-800 bg-[#111] p-4 flex flex-col">
-          <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-medium">
+        <div className="rounded-xl border border bg-card p-4 flex flex-col">
+          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
             Bottles by Family
           </h3>
           <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 160 }}>
@@ -263,23 +160,23 @@ export function SectionWholesale({
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                  contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                   itemStyle={{ color: '#e4e4e7' }}
-                  labelStyle={{ color: '#71717a' }}
+                  labelStyle={{ color: '#666666' }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-base font-bold text-white font-serif leading-none">{fmtBottles(pieTotalBtl)}</span>
-              <span className="text-[9px] uppercase tracking-widest text-zinc-500 mt-0.5">bottles</span>
+              <span className="text-base font-bold text-foreground font-serif leading-none">{fmtBottles(pieTotalBtl)}</span>
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">bottles</span>
             </div>
           </div>
           <div className="space-y-1 mt-2">
             {familyPie.slice(0, 5).map(({ name, value }) => (
               <div key={name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: FAMILY_COLORS[name] ?? FAMILY_COLOR_DEFAULT }} />
-                <span className="flex-1 truncate text-zinc-400">{name}</span>
-                <span className="font-mono text-zinc-300">{value.toLocaleString()}</span>
+                <span className="flex-1 truncate text-muted-foreground">{name}</span>
+                <span className="font-mono text-foreground">{value.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -287,20 +184,20 @@ export function SectionWholesale({
       </div>
 
       {/* Top 20 accounts — grouped by actual buyer, ranked by revenue */}
-      <div className="rounded-xl border border-zinc-800 bg-[#111] p-4">
-        <h3 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-3 font-medium">
+      <div className="rounded-xl border border bg-card p-4">
+        <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 font-medium">
           Top 20 Wholesale Accounts by Revenue
         </h3>
         {topAccounts.length === 0 ? (
-          <p className="py-8 text-center text-zinc-600 text-sm">No data for selected range.</p>
+          <p className="py-8 text-center text-muted-foreground text-sm">No data for selected range.</p>
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(240, topAccounts.length * 32)}>
             <BarChart data={topAccounts} layout="vertical" margin={{ top: 0, right: 80, bottom: 0, left: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" horizontal={false} />
               <XAxis
                 type="number"
                 tickFormatter={fmtDollar}
-                tick={{ fill: '#71717a', fontSize: 9 }}
+                tick={{ fill: '#666666', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -314,7 +211,7 @@ export function SectionWholesale({
                 tickFormatter={(v: string) => v.length > 28 ? v.slice(0, 27) + '…' : v}
               />
               <Tooltip
-                contentStyle={{ background: '#0f0f0f', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: '#1C1C1C', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 11 }}
                 itemStyle={{ color: '#e4e4e7' }}
                 labelStyle={{ color: '#a1a1aa' }}
                 formatter={(v: number) => [fmtDollar(v), 'Revenue']}

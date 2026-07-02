@@ -99,7 +99,7 @@ function ActivityFeed() {
       }
       setTotal(result.total);
     } catch (err) {
-      console.error('Failed to fetch visits:', err);
+      void err;
     } finally {
       setLoading(false);
     }

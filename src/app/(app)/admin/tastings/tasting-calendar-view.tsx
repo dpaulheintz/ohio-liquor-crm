@@ -4,6 +4,11 @@ import { useState } from 'react';
 import type { Tasting } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ChevronLeft, ChevronRight, X, FileText, ExternalLink } from 'lucide-react';
 import { statusConfig, formatTime } from './tasting-utils';
 import { TastingFormDialog } from './tasting-form-dialog';
@@ -21,6 +26,7 @@ interface TastingCalendarViewProps {
 export function TastingCalendarView({ tastings, onRefresh }: TastingCalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [overflowDate, setOverflowDate] = useState<string | null>(null);
   const [editingTasting, setEditingTasting] = useState<Tasting | null>(null);
   const [completingTasting, setCompletingTasting] = useState<Tasting | null>(null);
 
@@ -157,9 +163,73 @@ export function TastingCalendarView({ tastings, onRefresh }: TastingCalendarView
                       );
                     })}
                     {dayTastings.length > 2 && (
-                      <div className="text-[10px] text-muted-foreground px-1">
-                        +{dayTastings.length - 2} more
-                      </div>
+                      <Popover
+                        open={overflowDate === dateStr}
+                        onOpenChange={(o) => { if (!o) setOverflowDate(null); }}
+                      >
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-[10px] text-muted-foreground px-1 hover:text-foreground hover:underline w-full text-left"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOverflowDate((d) => (d === dateStr ? null : dateStr));
+                            }}
+                          >
+                            +{dayTastings.length - 2} more
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-72 p-2"
+                          side="bottom"
+                          align="start"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <p className="text-xs font-medium text-muted-foreground px-1 pb-1.5">
+                            {format(parseISO(dateStr), 'EEEE, MMM d')} · {dayTastings.length} tastings
+                          </p>
+                          <div className="space-y-0.5">
+                            {dayTastings.map((t) => {
+                              const sc = statusConfig(t.status);
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  className="w-full text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOverflowDate(null);
+                                    setEditingTasting(t);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-medium shrink-0">
+                                      {formatTime(t.start_time)}
+                                    </span>
+                                    <span className="text-xs truncate flex-1 font-medium">
+                                      {t.agency?.display_name}
+                                    </span>
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0',
+                                        sc.className
+                                      )}
+                                    >
+                                      {sc.label}
+                                    </span>
+                                  </div>
+                                  {(t.staff_category || t.staff_person) && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5 pl-0">
+                                      {t.staff_category}
+                                      {t.staff_person ? ` — ${t.staff_person}` : ''}
+                                    </p>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     )}
                   </div>
 

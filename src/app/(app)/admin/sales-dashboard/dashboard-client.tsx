@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { SalesDashboardData, AccountGroupData } from '@/app/actions/sales-dashboard';
+import { useState, useMemo, useCallback } from 'react';
+import type { SalesDashboardData, AccountGroupData, BailmentRow } from '@/app/actions/sales-dashboard';
 import { SectionRevenue } from './section-revenue';
 import { SectionWholesale } from './section-wholesale';
 import { SectionRetail } from './section-retail';
@@ -9,10 +9,10 @@ import { SectionHbLocations } from './section-hb-locations';
 import { SectionHbWholesale } from './section-hb-wholesale';
 import { SectionSkuTable } from './section-sku-table';
 import { SectionBreweries } from './section-breweries';
-import { SkuLeaderboard } from './sku-leaderboard';
 import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
 import { HotAccounts, type HotAccount } from './hot-accounts';
+import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, isHighBank, resolveAccount } from './utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,51 +20,9 @@ type Channel = 'all' | 'retail' | 'wholesale';
 
 // ─── Brand families + colors ──────────────────────────────────────────────────
 
-const FAMILY_COLORS: Record<string, string> = {
-  Vodka: '#3b82f6',
-  '(614) Vodka': '#06b6d4',
-  Gin: '#22c55e',
-  'Whiskey War': '#C5A572',
-  Midnight: '#8b5cf6',
-  'Midnight (Discontinued)': '#7c3aed',
-  Bourbon: '#f97316',
-  RTD: '#ec4899',
-  Misc: '#a78bfa',
-  Unknown: '#6b7280',
-};
-const FAMILY_COLOR_DEFAULT = '#94a3b8';
-
 const ALL_FAMILIES = [
   'Vodka', '(614) Vodka', 'Gin', 'Whiskey War', 'Midnight', 'Bourbon', 'RTD', 'Misc',
 ];
-
-// ─── Account-resolution helpers (mirrors section-wholesale.tsx) ───────────────
-
-function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
-}
-
-function resolveAccount(
-  wholesaler: string | null,
-  dba: string | null,
-  groups: AccountGroupData[]
-): { key: string; displayName: string } {
-  const wl = (wholesaler ?? '').toLowerCase();
-  const dl = (dba ?? '').toLowerCase();
-  for (const group of groups) {
-    const hit = (text: string) =>
-      group.match_terms.some((term) => text.includes(term.toLowerCase()));
-    const matched =
-      group.match_columns === 'wholesaler' ? hit(wl) :
-      group.match_columns === 'dba'        ? hit(dl) :
-      hit(wl) || hit(dl);
-    if (matched) return { key: `group::${group.id}`, displayName: group.group_name };
-  }
-  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
-  return { key: `raw::${name}`, displayName: name };
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,11 +55,11 @@ function SectionHeader({ number, title, subtitle }: SectionHeaderProps) {
         </span>
       )}
       <div className="flex-1 min-w-0">
-        <h2 className="text-xl font-serif font-semibold text-white tracking-wide leading-none">
+        <h2 className="text-xl font-serif font-semibold text-foreground tracking-wide leading-none">
           {title}
         </h2>
         {subtitle && (
-          <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
       </div>
       <div className="h-px flex-1 bg-gradient-to-r from-[#C5A572]/40 to-transparent max-w-[200px] mb-1" />
@@ -128,37 +86,37 @@ function FilterBar({
   selectedFamilies, onFamilyToggle, channel, onChannel, maxMonth,
 }: FilterBarProps) {
   return (
-    <div className="sticky top-0 z-30 border-b border-[#C5A572]/15 bg-[#0a0a0a]/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
+    <div className="sticky top-0 z-30 border-b border-primary/15 bg-background/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-4 items-center">
       {/* Date range */}
       <div className="flex items-center gap-2 text-xs shrink-0">
-        <span className="text-zinc-500 uppercase tracking-wider">Range</span>
+        <span className="text-muted-foreground uppercase tracking-wider">Range</span>
         <input
           type="month"
           value={dateFrom}
           max={dateTo}
           onChange={(e) => onDateFrom(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
         />
-        <span className="text-zinc-600">→</span>
+        <span className="text-muted-foreground">→</span>
         <input
           type="month"
           value={dateTo}
           min={dateFrom}
           max={maxMonth}
           onChange={(e) => onDateTo(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs focus:outline-none focus:border-[#C5A572]/60"
+          className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
         />
       </div>
 
       {/* Brand family toggles */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs text-zinc-500 uppercase tracking-wider">Family</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">Family</span>
         <button
           onClick={() => ALL_FAMILIES.forEach(f => selectedFamilies.includes(f) && onFamilyToggle(f))}
           className={`rounded px-2 py-0.5 text-xs transition-colors ${
             selectedFamilies.length === 0
-              ? 'bg-[#C5A572] text-black font-semibold'
-              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+              ? 'bg-primary text-black font-semibold'
+              : 'bg-muted text-muted-foreground hover:bg-muted'
           }`}
         >
           All
@@ -187,15 +145,15 @@ function FilterBar({
       </div>
 
       {/* Channel toggle */}
-      <div className="flex items-center gap-1 rounded-lg bg-zinc-900 border border-zinc-800 p-0.5">
+      <div className="flex items-center gap-1 rounded-lg bg-white border border p-0.5">
         {(['all', 'retail', 'wholesale'] as Channel[]).map((c) => (
           <button
             key={c}
             onClick={() => onChannel(c)}
             className={`rounded px-3 py-1 text-xs capitalize transition-colors ${
               channel === c
-                ? 'bg-[#C5A572] text-black font-semibold'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-primary text-black font-semibold'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {c}
@@ -212,9 +170,10 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const {
     monthly, products: _products, skuMonthly, splitRows,
     wholesaleFull, accountGroups,
-    agencySkuMonthly, wholesaleSplit, lastUpdated,
+    agencySkuMonthly, wholesaleSplit: _wholesaleSplit, bailmentMonthly, lastUpdated,
   } = data;
-  void _products; // available but we pass to child sections as needed
+  void _products;        // available but we pass to child sections as needed
+  void _wholesaleSplit;  // retained in SalesDashboardData for compat
 
   // ── Filter state ─────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
@@ -230,11 +189,11 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
   const [channel, setChannel] = useState<Channel>('all');
 
-  function handleFamilyToggle(f: string) {
+  const handleFamilyToggle = useCallback((f: string) => {
     setSelectedFamilies((prev) =>
       prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f],
     );
-  }
+  }, []);
 
   // ── Derived: current year + max YTD month ────────────────────────────────
   const currentYear = useMemo(
@@ -347,7 +306,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-[#0a0a0a] min-h-full text-white">
+    <div className="bg-background min-h-full text-foreground">
       <FilterBar
         dateFrom={dateFrom}
         dateTo={dateTo}
@@ -372,7 +331,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           <SectionRevenue
             monthly={monthly}
             splitRows={splitRows}
-            wholesaleSplit={wholesaleSplit}
+            bailmentMonthly={bailmentMonthly}
             selectedFamilies={selectedFamilies}
             channel={channel}
             dateFrom={dateFrom}
@@ -477,21 +436,6 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
           />
         </section>
 
-        {/* ── SKU Leaderboard ─────────────────────────────────────────────── */}
-        <section>
-          <SectionHeader title="SKU Leaderboard" subtitle="All individual SKUs ranked by volume or revenue, with sparklines and export" />
-          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
-            <SkuLeaderboard
-              skuMonthly={skuMonthly}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              selectedFamilies={selectedFamilies}
-              channel={channel}
-              maxMonth={maxMonth}
-            />
-          </div>
-        </section>
-
         {/* ── Retail vs Wholesale Split ────────────────────────────────────── */}
         <section>
           <SectionHeader title="Retail vs Wholesale Split" subtitle="Channel breakdown by brand family with HB agency drill-down" />
@@ -506,7 +450,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
         {/* ── Wholesale Account Leaderboard ────────────────────────────────── */}
         <section>
           <SectionHeader title="Wholesale Account Leaderboard" subtitle="Ranked accounts with group rollup, HB badge, and per-SKU view" />
-          <div className="rounded-xl border border-zinc-800 bg-[#111111] p-5">
+          <div className="rounded-xl border border bg-card p-5">
             <WholesaleLeaderboard
               wholesaleFull={wholesaleFull}
               accountGroups={accountGroups}

@@ -17,9 +17,13 @@ import {
   BarChart2,
   Layers,
   TrendingUp,
+  UtensilsCrossed,
+  Package,
+  Target,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
+import { isEosAdmin } from '@/lib/eos-auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -36,10 +40,12 @@ const adminItems = [
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
   { href: '/admin/sales-dashboard', label: 'Sales Dashboard', icon: TrendingUp },
+  { href: '/admin/restaurant-analytics', label: 'Restaurant Analytics', icon: UtensilsCrossed },
   { href: '/admin/sales-upload', label: 'Sales Upload', icon: BarChart2 },
   { href: '/admin/account-groups', label: 'Account Groups', icon: Layers },
   { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
+  { href: '/admin/samples', label: 'Samples Dashboard', icon: Package },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: UserCog },
 ];
@@ -47,6 +53,7 @@ const adminItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, isAdmin } = useUser();
+  const showEos = isEosAdmin(profile?.email);
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -57,9 +64,9 @@ export function Sidebar() {
     : profile?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-background">
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="font-serif text-lg font-bold uppercase tracking-widest truncate">
+    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r border-sidebar-border md:bg-sidebar text-sidebar-foreground">
+      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <Link href="/" className="font-serif text-lg font-bold uppercase tracking-widest truncate text-sidebar-foreground">
           High Bank CRM
         </Link>
       </div>
@@ -78,8 +85,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               )}
             >
               <Icon className="h-4 w-4" />
@@ -90,7 +97,7 @@ export function Sidebar() {
 
         {isAdmin && (
           <>
-            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
               Admin
             </div>
             {adminItems.map((item) => {
@@ -103,8 +110,8 @@ export function Sidebar() {
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -114,23 +121,42 @@ export function Sidebar() {
             })}
           </>
         )}
+        {showEos && (
+          <>
+            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              EOS
+            </div>
+            <Link
+              href="/eos"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                pathname.startsWith('/eos')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Target className="h-4 w-4" />
+              EOS
+            </Link>
+          </>
+        )}
       </nav>
 
-      <div className="border-t p-3">
+      <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-sidebar-accent text-sidebar-accent-foreground">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
               {profile?.full_name || profile?.email}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-sidebar-foreground/50">
               {profile?.role}
             </p>
           </div>
           <form action={signOut}>
-            <Button variant="ghost" size="icon" type="submit" className="h-8 w-8">
+            <Button variant="ghost" size="icon" type="submit" className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
               <LogOut className="h-4 w-4" />
               <span className="sr-only">Sign out</span>
             </Button>

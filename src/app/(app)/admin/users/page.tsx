@@ -27,7 +27,7 @@ export default function UsersPage() {
       const data = await getProfiles();
       setProfiles(data);
     } catch (err) {
-      console.error('Failed to fetch profiles:', err);
+      void err;
     } finally {
       setLoading(false);
     }

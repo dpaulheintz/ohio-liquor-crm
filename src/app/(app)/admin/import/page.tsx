@@ -66,7 +66,7 @@ export default function ImportAgenciesPage() {
       setResult(importResult);
       setPreview(null);
     } catch (err) {
-      console.error('Import failed:', err);
+      void err;
       setValidationError('Import failed. Please try again.');
     } finally {
       setImporting(false);

@@ -104,6 +104,11 @@ export interface WholesaleSplitRow {
   outside_bottles: number;
 }
 
+export interface BailmentRow {
+  month: string;   // YYYY-MM
+  amount: number;
+}
+
 export interface SalesDashboardData {
   monthly: MonthlyRow[];
   products: ProductRow[];       // kept for interface compat (currently unused in UI)
@@ -114,6 +119,7 @@ export interface SalesDashboardData {
   accountGroups: AccountGroupData[];
   agencySkuMonthly: AgencySkuRow[];
   wholesaleSplit: WholesaleSplitRow[];
+  bailmentMonthly: BailmentRow[];
   lastUpdated: string | null;
 }
 
@@ -246,6 +252,18 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     outside_bottles: Number(r.outside_bottles ?? 0),
   })).sort((a: WholesaleSplitRow, b: WholesaleSplitRow) => a.month.localeCompare(b.month));
 
+  // ── bailmentMonthly (separate direct query — not in RPC) ────────────────────
+  const { data: bailmentRaw } = await supabase
+    .from('bailment_monthly')
+    .select('month, amount')
+    .order('month', { ascending: true });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bailmentMonthly: BailmentRow[] = (bailmentRaw ?? []).map((r: any) => ({
+    month:  String(r.month),
+    amount: Number(r.amount ?? 0),
+  }));
+
   // products kept for interface compat — derive from monthly (not displayed currently)
   const products: ProductRow[] = [];
 
@@ -259,6 +277,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     accountGroups,
     agencySkuMonthly,
     wholesaleSplit,
+    bailmentMonthly,
     lastUpdated,
   };
 }

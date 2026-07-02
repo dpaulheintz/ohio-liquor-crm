@@ -196,7 +196,7 @@ export default function AdminDashboard() {
       const result = await getDashboardData();
       setData(result);
     } catch (err) {
-      console.error('Dashboard load failed:', err);
+      void err;
     } finally {
       setLoading(false);
     }
