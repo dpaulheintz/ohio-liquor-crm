@@ -99,7 +99,17 @@ export interface KpiDashboardData {
   agencyDisplays:   AgencyDisplayRow[];
 }
 
-// ─── Server action ────────────────────────────────────────────────────────────
+// ─── Server actions ───────────────────────────────────────────────────────────
+
+export async function getAccountDisplay(accountId: string): Promise<{ display_type: string } | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from('agency_displays')
+    .select('id, display_type')
+    .eq('account_id', accountId)
+    .single();
+  return data ? { display_type: String(data.display_type) } : null;
+}
 
 export async function getKpiDashboardData(): Promise<KpiDashboardData> {
   const supabase = createAdminClient();
@@ -109,6 +119,20 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
   const curMonth  = currentMonthStr();
   const prevMonth = lastMonthStr();
 
+  // Step 1: Fetch displays first — need account_ids before querying visits
+  const displaysResult = await supabase
+    .from('agency_displays')
+    .select(`
+      id, account_id, agency_name, rep_id, display_type, first_confirmed,
+      monthly_status, notes,
+      rep:profiles!agency_displays_rep_id_fkey(id, full_name, email),
+      account:accounts!agency_displays_account_id_fkey(id, city, agency_id)
+    `);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const displayAccountIds = (displaysResult.data ?? []).map((d: any) => String(d.account_id));
+
+  // Step 2: All other queries in parallel, including full visit history for display accounts
   const [
     eventResult,
     countResult,
@@ -116,8 +140,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
     priorEventsResult,
     weekTastingsResult,
     priorTastingsResult,
-    displaysResult,
-    liveDisplaysResult,
+    visitsForDisplaysResult,
   ] = await Promise.all([
     // ── All KPI events ──────────────────────────────────────────────────────
     supabase
@@ -174,29 +197,21 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
       .gte('date', priorStart)
       .lte('date', priorEnd),
 
-    // ── Agency displays (historical) ────────────────────────────────────────
-    supabase
-      .from('agency_displays')
-      .select(`
-        id, account_id, agency_name, rep_id, display_type, first_confirmed,
-        monthly_status, notes,
-        rep:profiles!agency_displays_rep_id_fkey(id, full_name, email),
-        account:accounts!agency_displays_account_id_fkey(id, city, agency_id)
-      `),
-
-    // ── Live Display KPIs with photos this month (for current-month status) ─
-    supabase
-      .from('visit_kpis')
-      .select(`
-        id, display_type,
-        visit:visit_logs!visit_kpis_visit_id_fkey(
-          id, account_id, visited_at,
-          visit_photos(id, photo_url)
-        )
-      `)
-      .eq('kpi_type', 'Display')
-      .gte('created_at', monthStart(curMonth))
-      .lte('created_at', monthEnd(curMonth) + 'T23:59:59Z'),
+    // ── All in-person visits to display accounts (for computing monthly status) ─
+    // New logic: visit + Display KPI → UP; visit + no Display KPI → DOWN; no visit → assume UP
+    displayAccountIds.length > 0
+      ? supabase
+          .from('visit_logs')
+          .select(`
+            id, account_id, visited_at,
+            visit_kpis(id, kpi_type),
+            visit_photos(id, photo_url)
+          `)
+          .in('account_id', displayAccountIds)
+          .eq('visit_type', 'in_person')
+          .gte('visited_at', '2024-01-01T00:00:00Z')
+          .order('visited_at', { ascending: false })
+      : Promise.resolve({ data: [] as any[], error: null }),
   ]);
 
   if (eventResult.error)  throw new Error(`KPI fetch failed: ${eventResult.error.message}`);
@@ -243,38 +258,60 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
   const tastings            = weekTastingsResult.data?.length  ?? 0;
   const tastingsPrior       = priorTastingsResult.data?.length ?? 0;
 
-  // ── Compute live Display status for current month ─────────────────────────
-  // account_id → has live Display KPI with at least one photo
-  const liveDisplayAccounts = new Set<string>();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const r of (liveDisplaysResult.data ?? []) as any[]) {
-    const v = r.visit;
-    if (!v) continue;
-    const hasPhoto = Array.isArray(v.visit_photos) && v.visit_photos.length > 0;
-    if (hasPhoto) liveDisplayAccounts.add(String(v.account_id));
-  }
+  // ── Build per-account visit data for display status computation ───────────
+  // For each account: monthly map of { hasVisit, hasDisplayKpi } + latest Display KPI photo
+  type MonthEntry = { hasVisit: boolean; hasDisplayKpi: boolean };
+  type AcctVisitData = {
+    monthly: Map<string, MonthEntry>;
+    latestDisplayPhotoUrl: string | null;
+    latestDisplayPhotoDate: string | null;
+  };
+  const acctVisitMap = new Map<string, AcctVisitData>();
 
-  // Latest photo URL per account for Display KPIs
-  const latestDisplayPhoto = new Map<string, { url: string; date: string }>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const r of (liveDisplaysResult.data ?? []) as any[]) {
-    const v = r.visit;
-    if (!v || !Array.isArray(v.visit_photos) || v.visit_photos.length === 0) continue;
-    const existing = latestDisplayPhoto.get(v.account_id);
-    if (!existing || v.visited_at > existing.date) {
-      latestDisplayPhoto.set(v.account_id, { url: v.visit_photos[0].photo_url, date: v.visited_at });
+  for (const visit of (visitsForDisplaysResult.data ?? []) as any[]) {
+    const accountId = String(visit.account_id);
+    const month = (visit.visited_at as string).slice(0, 7); // 'YYYY-MM'
+
+    if (!acctVisitMap.has(accountId)) {
+      acctVisitMap.set(accountId, { monthly: new Map(), latestDisplayPhotoUrl: null, latestDisplayPhotoDate: null });
     }
+    const acctData = acctVisitMap.get(accountId)!;
+    const entry = acctData.monthly.get(month) ?? { hasVisit: false, hasDisplayKpi: false };
+    entry.hasVisit = true;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasDisplayKpi = Array.isArray(visit.visit_kpis) && visit.visit_kpis.some((k: any) => k.kpi_type === 'Display');
+    if (hasDisplayKpi) {
+      entry.hasDisplayKpi = true;
+      // Track latest photo from Display KPI visits
+      const photos: any[] = visit.visit_photos ?? [];
+      if (photos.length > 0 && (!acctData.latestDisplayPhotoDate || visit.visited_at > acctData.latestDisplayPhotoDate)) {
+        acctData.latestDisplayPhotoUrl = String(photos[0].photo_url);
+        acctData.latestDisplayPhotoDate = String(visit.visited_at);
+      }
+    }
+    acctData.monthly.set(month, entry);
   }
 
   // ── Build agency display rows ─────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const agencyDisplays: AgencyDisplayRow[] = (displaysResult.data ?? []).map((d: any) => {
+    // Start from stored monthly_status (covers months with no visit data)
     const ms: Record<string, 'up' | 'down'> = { ...(d.monthly_status ?? {}) };
-    // Merge in live current-month status
-    if (liveDisplayAccounts.has(d.account_id)) {
-      ms[curMonth] = 'up';
+    const acctData = acctVisitMap.get(String(d.account_id));
+
+    if (acctData) {
+      // Override with visit-derived status for every month we have data
+      for (const [month, entry] of acctData.monthly.entries()) {
+        if (entry.hasVisit) {
+          // visit + Display KPI → UP; visit + no Display KPI → DOWN
+          ms[month] = entry.hasDisplayKpi ? 'up' : 'down';
+        }
+        // No visit that month → leave stored value (defaults UP if absent)
+      }
     }
-    const livePhoto = latestDisplayPhoto.get(d.account_id);
+
     return {
       id:               String(d.id),
       account_id:       String(d.account_id),
@@ -287,14 +324,15 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
       monthly_status:   ms,
       account_city:     d.account?.city ? String(d.account.city) : null,
       account_agency_id: d.account?.agency_id ? String(d.account.agency_id) : null,
-      latest_photo_url: livePhoto?.url ?? null,
-      latest_visit_date: livePhoto?.date ?? null,
+      latest_photo_url:  acctData?.latestDisplayPhotoUrl ?? null,
+      latest_visit_date: acctData?.latestDisplayPhotoDate ?? null,
     };
   });
 
   // ── Active display counts ─────────────────────────────────────────────────
-  const activeDisplays      = agencyDisplays.filter(d => d.monthly_status[curMonth]  === 'up').length;
-  const activeDisplaysPrior = agencyDisplays.filter(d => d.monthly_status[prevMonth] === 'up').length;
+  // Active = all tracked displays except those confirmed DOWN this month
+  const activeDisplays      = agencyDisplays.filter(d => d.monthly_status[curMonth]  !== 'down').length;
+  const activeDisplaysPrior = agencyDisplays.filter(d => d.monthly_status[prevMonth] !== 'down').length;
 
   const weeklyMetrics: WeeklyMetrics = {
     weekStart, weekEnd,

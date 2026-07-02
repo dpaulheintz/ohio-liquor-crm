@@ -672,40 +672,6 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
           </div>
         </div>
 
-        {/* ── Filter-period stat cards ──────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-white border border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1.5">KPI Events</p>
-            <p className="text-3xl font-bold tabular-nums">{stats.totalEvents.toLocaleString()}</p>
-            {priorPct != null ? (
-              <p className={`text-xs mt-1.5 font-medium ${priorPct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {priorPct >= 0 ? '▲' : '▼'} {Math.abs(priorPct).toFixed(1)}% vs prior
-              </p>
-            ) : <p className="text-xs mt-1.5 text-muted-foreground">{stats.totalVisits} visits</p>}
-          </div>
-          <div className="bg-white border border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1.5">KPI Coverage</p>
-            <p className="text-3xl font-bold tabular-nums">
-              {totalVisitCount > 0 ? ((totalKpiVisits / totalVisitCount) * 100).toFixed(0) : '0'}%
-            </p>
-            <p className="text-xs mt-1.5 text-muted-foreground">{totalKpiVisits} of {totalVisitCount} visits</p>
-          </div>
-          <div className="bg-white border border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1.5">Avg Quantity</p>
-            <p className="text-3xl font-bold tabular-nums">{stats.avgQty.toFixed(1)}</p>
-            <p className="text-xs mt-1.5 text-muted-foreground">per KPI event</p>
-          </div>
-          <div className="bg-white border border rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1.5">Top KPI Type</p>
-            <p className="text-2xl font-bold" style={{ color: KPI_COLORS[stats.topType] ?? '#fff' }}>
-              {stats.totalEvents > 0 ? stats.topType : '—'}
-            </p>
-            <p className="text-xs mt-1.5 text-muted-foreground">
-              {stats.totalEvents > 0 ? `${stats.byType[stats.topType] ?? 0} events` : 'No data'}
-            </p>
-          </div>
-        </div>
-
         {/* Sold/Unsold summary */}
         {(stats.byType['Menu'] > 0 || stats.byType['Feature'] > 0) && (
           <div className="flex gap-4 text-sm">
@@ -749,39 +715,6 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                     <Bar dataKey="count" name="Events" fill={GOLD} radius={[3, 3, 0, 0]} maxBarSize={36} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="bg-white border border rounded-xl p-4">
-                <p className="text-sm font-medium text-foreground mb-3">Monthly Trend</p>
-                {trendData.length < 2 ? (
-                  <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">Not enough data</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={trendData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fill: '#666666', fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Line dataKey="count" name="Events" stroke={GOLD} strokeWidth={2}
-                        dot={{ fill: GOLD, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, strokeWidth: 0 }} connectNulls={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-              <div className="bg-white border border rounded-xl p-4">
-                <p className="text-sm font-medium text-foreground mb-3">Quantity Distribution</p>
-                {qtyDistData.length === 0 ? (
-                  <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">No data</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={qtyDistData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                      <XAxis dataKey="qty" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
-                      <Bar dataKey="count" name="Events" fill="#60a5fa" radius={[3, 3, 0, 0]} maxBarSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
               </div>
             </div>
           )}
@@ -846,10 +779,9 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm pl-5">
-                          <span className="font-medium text-foreground">{group.rep_name || group.rep_email}</span>
-                          <span className="text-muted-foreground">@</span>
-                          <span className="text-muted-foreground truncate">{group.account_name}</span>
+                        <div className="flex flex-col pl-5">
+                          <span className="font-medium text-foreground truncate">{group.account_name}</span>
+                          <span className="text-xs text-muted-foreground">{group.rep_name || group.rep_email}</span>
                         </div>
                         <p className="text-xs text-muted-foreground pl-5">{fmtDate(group.visited_at)}</p>
                       </div>
@@ -861,10 +793,10 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                         </span>
                         <span className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{fmtDate(group.visited_at)}</span>
                         <div className="min-w-0">
-                          <span className="text-sm font-medium text-foreground block truncate">{group.rep_name || group.rep_email}</span>
-                          <span className="text-xs text-muted-foreground truncate block">
-                            @ {agencyLabel(group.account_name, group.account_agency_id, group.account_city)}
+                          <span className="text-sm font-medium text-foreground block truncate">
+                            {agencyLabel(group.account_name, group.account_agency_id, group.account_city)}
                           </span>
+                          <span className="text-xs text-muted-foreground truncate block">{group.rep_name || group.rep_email}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 items-center">
                           {group.kpis.map(k => {

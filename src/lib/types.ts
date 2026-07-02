@@ -118,7 +118,7 @@ export interface VisitPhoto {
   created_at: string;
 }
 
-export type TastingStatus = 'needs_staff' | 'scheduled' | 'staffed' | 'completed' | 'cancelled';
+export type TastingStatus = 'needs_staff' | 'staffed' | 'completed' | 'cancelled';
 export type StaffCategory = 'DBC' | 'HB Internal Staff' | 'HB Sales Team';
 
 export interface Tasting {

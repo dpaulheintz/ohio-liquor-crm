@@ -218,7 +218,7 @@ export function TastingMapView({ tastings }: TastingMapViewProps) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        {(['needs_staff', 'scheduled', 'staffed'] as const).map((s) => {
+        {(['needs_staff', 'staffed'] as const).map((s) => {
           const sc = statusConfig(s);
           return (
             <span key={s} className="flex items-center gap-1">

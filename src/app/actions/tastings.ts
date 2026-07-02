@@ -18,7 +18,7 @@ const tastingSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time'),
   endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time'),
   city: z.string().max(200).optional(),
-  status: z.enum(['needs_staff', 'scheduled', 'staffed', 'completed', 'cancelled']).optional(),
+  status: z.enum(['needs_staff', 'staffed', 'completed', 'cancelled']).optional(),
   staffCategory: z.enum(['DBC', 'HB Internal Staff', 'HB Sales Team']).optional(),
   staffPerson: z.string().max(200).optional(),
   notes: z.string().max(2000).optional(),
@@ -26,7 +26,7 @@ const tastingSchema = z.object({
 
 function computeStatus(staffCategory?: string, staffPerson?: string): TastingStatus {
   if (staffPerson?.trim()) return 'staffed';
-  if (staffCategory) return 'scheduled';
+  if (staffCategory) return 'staffed';
   return 'needs_staff';
 }
 
