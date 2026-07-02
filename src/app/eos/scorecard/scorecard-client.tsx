@@ -34,18 +34,18 @@ export default function ScorecardClient({ initialMetrics, initialEntries, weekSt
     <>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>Scorecard</h1>
-        <p className="text-[#B8A99A] mt-1 text-sm">Weekly metrics — click any cell to edit</p>
+        <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Scorecard</h1>
+        <p className="text-gray-500 mt-1 text-sm">Weekly metrics — click any cell to edit</p>
       </div>
 
       {/* New-week banner */}
       {showNewWeekBanner && (
-        <div className="flex items-center gap-3 mb-5 rounded-xl border border-[#3D2E1E] bg-[#0F2E2B] px-4 py-3 text-sm text-[#5B9E94]">
+        <div className="flex items-center gap-3 mb-5 rounded-xl border border-gray-200 bg-green-50 px-4 py-3 text-sm text-green-600">
           <span className="text-base">📋</span>
           <span className="flex-1">It&apos;s a new week — don&apos;t forget to enter this week&apos;s numbers.</span>
           <button
             onClick={dismissNewWeekBanner}
-            className="shrink-0 text-[#5B9E94] hover:text-[#5B9E94] text-lg leading-none transition-colors"
+            className="shrink-0 text-green-600 hover:text-green-600 text-lg leading-none transition-colors"
           >
             ×
           </button>

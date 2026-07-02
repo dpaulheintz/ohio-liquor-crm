@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 type Status = 'not_started' | 'on_track' | 'off_track' | 'complete';
 
 const STATUS_CONFIG: Record<Status, { label: string; bg: string; text: string }> = {
-  not_started: { label: 'Not Started', bg: 'bg-[#2A1F14]', text: 'text-[#B8A99A]' },
-  on_track:    { label: 'On Track',    bg: 'bg-[#0F2E2B]', text: 'text-[#5B9E94]' },
-  off_track:   { label: 'Off Track',   bg: 'bg-[#2E0F0F]',  text: 'text-[#C0392B]'  },
-  complete:    { label: 'Complete',    bg: 'bg-[#16A34A]', text: 'text-white' },
+  not_started: { label: 'Not Started', bg: 'bg-gray-100', text: 'text-gray-500' },
+  on_track:    { label: 'On Track',    bg: 'bg-green-50', text: 'text-green-600' },
+  off_track:   { label: 'Off Track',   bg: 'bg-red-50',  text: 'text-red-600'  },
+  complete:    { label: 'Complete',    bg: 'bg-green-600', text: 'text-white' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -52,13 +52,13 @@ function BarrelGroup({
 } & Omit<Props, 'barrels'>) {
   return (
     <div>
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A] mb-3">{label}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">{label}</h2>
       {items.length === 0 ? (
-        <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-6 py-8 text-center text-[#6B5A4A] text-sm">
+        <div className="rounded-xl border border-gray-200 bg-white px-6 py-8 text-center text-gray-400 text-sm">
           No {label.toLowerCase()} yet.
         </div>
       ) : (
-        <div className="rounded-xl border border-[#3D2E1E] overflow-hidden">
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
           {items.map((barrel, idx) => {
             const completedMs = barrel.milestones.filter(m => m.completed).length;
             const totalMs = barrel.milestones.length;
@@ -71,9 +71,9 @@ function BarrelGroup({
                 onClick={() => onBarrelClick?.(barrel)}
                 className={cn(
                   'flex items-center gap-4 px-4 py-3',
-                  'group/row hover:bg-[#2A1F14]/50 transition-colors',
-                  idx < items.length - 1 && 'border-b border-[#3D2E1E]',
-                  idx % 2 === 0 ? 'bg-[#1C1510]' : 'bg-[#221A11]',
+                  'group/row hover:bg-gray-100/50 transition-colors',
+                  idx < items.length - 1 && 'border-b border-gray-200',
+                  idx % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                   onBarrelClick && 'cursor-pointer',
                 )}
               >
@@ -82,9 +82,9 @@ function BarrelGroup({
 
                 {/* Title + quarter */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#F5ECD7] truncate">{barrel.title}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{barrel.title}</p>
                   {barrel.quarter && (
-                    <p className="text-xs text-[#6B5A4A]">{barrel.quarter}</p>
+                    <p className="text-xs text-gray-400">{barrel.quarter}</p>
                   )}
                 </div>
 
@@ -92,27 +92,27 @@ function BarrelGroup({
                 <div className="shrink-0 hidden sm:flex items-center gap-2">
                   {totalMs > 0 ? (
                     <>
-                      <span className="text-xs text-[#B8A99A]">{completedMs}/{totalMs}</span>
-                      <div className="w-16 h-1 rounded-full bg-[#2A1F14] overflow-hidden">
+                      <span className="text-xs text-gray-500">{completedMs}/{totalMs}</span>
+                      <div className="w-16 h-1 rounded-full bg-gray-100 overflow-hidden">
                         <div
-                          className="h-1 rounded-full bg-[#16A34A] transition-all"
+                          className="h-1 rounded-full bg-green-600 transition-all"
                           style={{ width: `${progress * 100}%` }}
                         />
                       </div>
                     </>
                   ) : (
-                    <span className="text-xs text-[#6B5A4A]">—</span>
+                    <span className="text-xs text-gray-400">—</span>
                   )}
                 </div>
 
                 {/* Owner */}
                 <div className="shrink-0 hidden md:block text-right">
-                  <p className="text-xs text-[#B8A99A]">{barrel.owner_name ?? '—'}</p>
+                  <p className="text-xs text-gray-500">{barrel.owner_name ?? '—'}</p>
                 </div>
 
                 {/* Due date */}
                 <div className="shrink-0 text-right">
-                  <p className="text-xs text-[#B8A99A]">{fmtDate(barrel.due_date)}</p>
+                  <p className="text-xs text-gray-500">{fmtDate(barrel.due_date)}</p>
                 </div>
 
                 {/* Inline status dropdown (runner context) */}
@@ -121,7 +121,7 @@ function BarrelGroup({
                     value={barrel.status}
                     onChange={e => { e.stopPropagation(); onStatusChange(barrel.id, e.target.value); }}
                     onClick={e => e.stopPropagation()}
-                    className="text-[11px] bg-transparent border border-[#3D2E1E] rounded px-1 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#16A34A] shrink-0"
+                    className="text-[11px] bg-transparent border border-gray-200 rounded px-1 py-0.5 text-gray-500 focus:outline-none focus:border-green-600 shrink-0"
                   >
                     {Object.entries(STATUS_CONFIG).map(([v, c]) => (
                       <option key={v} value={v}>{c.label}</option>
@@ -133,13 +133,13 @@ function BarrelGroup({
                 {onFlagForIDS && !flaggedTitles.has(flagTitle) && (
                   <button
                     onClick={e => { e.stopPropagation(); onFlagForIDS(flagTitle); }}
-                    className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#15803D] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
+                    className="opacity-0 group-hover/row:opacity-100 text-[11px] text-green-700 hover:text-amber-600 transition-all whitespace-nowrap shrink-0"
                   >
                     Flag
                   </button>
                 )}
                 {onFlagForIDS && flaggedTitles.has(flagTitle) && (
-                  <span className="text-[11px] text-[#15803D] shrink-0">Flagged</span>
+                  <span className="text-[11px] text-green-700 shrink-0">Flagged</span>
                 )}
               </div>
             );
@@ -156,8 +156,8 @@ export default function BarrelsListView({ barrels, onStatusChange, onFlagForIDS,
 
   if (barrels.length === 0) {
     return (
-      <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-8 py-16 text-center">
-        <p className="text-[#B8A99A] text-sm">No barrels set for this quarter.</p>
+      <div className="rounded-xl border border-gray-200 bg-white px-8 py-16 text-center">
+        <p className="text-gray-500 text-sm">No barrels set for this quarter.</p>
       </div>
     );
   }

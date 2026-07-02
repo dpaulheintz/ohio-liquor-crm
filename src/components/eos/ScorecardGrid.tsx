@@ -187,19 +187,27 @@ export default function ScorecardGrid({
 
     if (isEditing) {
       return (
-        <td key={weekStart} className="border-b border-r border-[#3D2E1E] bg-[#2A1F14]" style={baseCellStyle}>
+        <td key={weekStart} className="border-b border-r border-gray-200 bg-gray-100" style={baseCellStyle}>
           <input
             autoFocus
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
             onBlur={handleCellBlur}
             onKeyDown={handleKeyDown}
-            className="w-full py-2 px-1 bg-transparent text-[#F5ECD7] text-xs text-center focus:outline-none placeholder:text-[#6B5A4A]"
+            className="w-full py-2 px-1 bg-transparent text-gray-900 text-xs text-center focus:outline-none placeholder:text-gray-400"
             placeholder="—"
           />
         </td>
       );
     }
+
+    const cellColor = isFlashing
+      ? '#16A34A'
+      : isError
+      ? '#DC2626'
+      : hasValue
+      ? isGoalMet ? '#16A34A' : '#DC2626'
+      : '#9CA3AF';
 
     if (metric.metric_type === 'boolean') {
       return (
@@ -207,19 +215,11 @@ export default function ScorecardGrid({
           key={weekStart}
           onClick={() => !isSaving && handleBooleanClick(metric.id, weekStart, rawValue)}
           className={cn(
-            'text-center text-xs font-medium border-b border-r border-[#3D2E1E] py-2 select-none transition-colors duration-150',
+            'text-center text-xs font-medium border-b border-r border-gray-200 bg-white py-2 select-none transition-colors duration-150 hover:bg-gray-50',
             isSaving ? 'opacity-40 cursor-wait' : 'cursor-pointer',
-            isFlashing
-              ? 'bg-[#0F2E2B] text-[#5B9E94]'
-              : isError
-              ? 'bg-[#2E0F0F] text-[#C0392B]'
-              : hasValue
-              ? isGoalMet
-                ? 'bg-[#0F2E2B] text-[#5B9E94] font-semibold hover:bg-[#0F2E2B]'
-                : 'bg-[#2E0F0F] text-[#C0392B] font-semibold hover:bg-[#2E0F0F]'
-              : 'bg-[#2A1F14] text-[#6B5A4A] hover:bg-[#2A1F14]/80',
+            hasValue && 'font-semibold',
           )}
-          style={baseCellStyle}
+          style={{ ...baseCellStyle, color: cellColor }}
         >
           {isSaving ? '…' : hasValue ? (rawValue === 'true' ? 'Yes' : 'No') : '—'}
         </td>
@@ -231,19 +231,11 @@ export default function ScorecardGrid({
         key={weekStart}
         onClick={() => !isSaving && handleCellClick(metric.id, weekStart, rawValue)}
         className={cn(
-          'text-center text-xs border-b border-r border-[#3D2E1E] py-2 px-1 select-none transition-colors duration-150',
+          'text-center text-xs border-b border-r border-gray-200 bg-white py-2 px-1 select-none transition-colors duration-150 hover:bg-gray-50',
           isSaving ? 'opacity-40 cursor-wait' : 'cursor-pointer',
-          isFlashing
-            ? 'bg-[#0F2E2B] text-[#5B9E94]'
-            : isError
-            ? 'bg-[#2E0F0F] text-[#C0392B]'
-            : hasValue
-            ? isGoalMet
-              ? 'bg-[#0F2E2B] text-[#5B9E94] font-semibold hover:bg-[#0F2E2B]'
-              : 'bg-[#2E0F0F] text-[#C0392B] font-semibold hover:bg-[#2E0F0F]'
-            : 'bg-[#2A1F14] text-[#6B5A4A] hover:bg-[#2A1F14]/80',
+          hasValue && 'font-semibold',
         )}
-        style={baseCellStyle}
+        style={{ ...baseCellStyle, color: cellColor }}
       >
         {isSaving ? '…' : hasValue ? formatValue(rawValue!, metric.metric_type) : '—'}
       </td>
@@ -254,9 +246,9 @@ export default function ScorecardGrid({
     <>
       {/* On-track summary (for runner context) */}
       {onFlagForIDS && (
-        <div className="mb-4 rounded-xl bg-[#0F2E2B] border border-[#3D2E1E] px-4 py-3">
-          <span className="text-sm text-[#5B9E94] font-medium">{onTrackCount} of {metrics.length} metrics on track this week</span>
-          {currentWeek && <span className="text-xs text-[#15803D] ml-2">(week of {new Date(currentWeek + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>}
+        <div className="mb-4 rounded-xl bg-green-50 border border-gray-200 px-4 py-3">
+          <span className="text-sm text-green-600 font-medium">{onTrackCount} of {metrics.length} metrics on track this week</span>
+          {currentWeek && <span className="text-xs text-green-700 ml-2">(week of {new Date(currentWeek + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>}
         </div>
       )}
 
@@ -265,7 +257,7 @@ export default function ScorecardGrid({
         <div className="flex justify-end mb-3">
           <button
             onClick={() => { setModalMetric(null); setShowModal(true); }}
-            className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
           >
             + Add Metric
           </button>
@@ -283,11 +275,11 @@ export default function ScorecardGrid({
           return (
             <div
               key={metric.id}
-              className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-4 py-3 flex items-center justify-between gap-3"
+              className="rounded-xl border border-gray-200 bg-white px-4 py-3 flex items-center justify-between gap-3"
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#F5ECD7] truncate">{metric.title}</p>
-                <p className="text-xs text-[#6B5A4A] mt-0.5">
+                <p className="text-sm font-medium text-gray-900 truncate">{metric.title}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
                   Goal: {formatOperator(metric.goal_operator)} {formatValue(metric.goal_value, metric.metric_type)}
                 </p>
               </div>
@@ -295,10 +287,10 @@ export default function ScorecardGrid({
                 className={cn(
                   'shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums',
                   !hasVal
-                    ? 'bg-[#2A1F14] text-[#6B5A4A]'
+                    ? 'bg-gray-100 text-gray-400'
                     : met
-                    ? 'bg-[#0F2E2B] text-[#5B9E94]'
-                    : 'bg-[#2E0F0F] text-[#C0392B]',
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-red-50 text-red-600',
                 )}
               >
                 {hasVal ? formatValue(cv!, metric.metric_type) : '—'}
@@ -310,37 +302,37 @@ export default function ScorecardGrid({
 
       {/* Empty state banner (desktop only, no current-week data) */}
       {!hasCurrentWeekData && currentWeek && (
-        <div className="hidden md:flex items-center gap-2 mb-4 rounded-xl border border-[#3D2E1E] bg-[#2E1E08] px-4 py-3 text-sm text-[#D4821A]">
+        <div className="hidden md:flex items-center gap-2 mb-4 rounded-xl border border-gray-200 bg-amber-50 px-4 py-3 text-sm text-amber-600">
           <span className="font-medium">No data entered for {formatWeekHeader(currentWeek, currentYear)} yet.</span>
-          <span className="text-[#15803D]">Click any cell in the current-week column to start.</span>
+          <span className="text-green-700">Click any cell in the current-week column to start.</span>
         </div>
       )}
 
       {/* Desktop grid */}
-      <div className="hidden md:block overflow-x-auto rounded-xl border border-[#3D2E1E]">
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full border-separate border-spacing-0">
           <thead>
             <tr>
               <th
-                className="sticky top-0 left-0 z-40 bg-[#0E0B07] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A] border-b-2 border-r border-[#3D2E1E]"
+                className="sticky top-0 left-0 z-40 bg-gray-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 border-b-2 border-r border-gray-200"
                 style={{ width: 220, minWidth: 220 }}
               >
                 Metric
               </th>
               <th
-                className="sticky top-0 left-[220px] z-40 bg-[#0E0B07] px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A] border-b-2 border-r border-[#3D2E1E]"
+                className="sticky top-0 left-[220px] z-40 bg-gray-50 px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 border-b-2 border-r border-gray-200"
                 style={{ width: 110, minWidth: 110 }}
               >
                 Goal
               </th>
               <th
-                className="sticky top-0 left-[330px] z-40 bg-[#0E0B07] px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A] border-b-2 border-r border-[#3D2E1E] whitespace-nowrap"
+                className="sticky top-0 left-[330px] z-40 bg-gray-50 px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-gray-500 border-b-2 border-r border-gray-200 whitespace-nowrap"
                 style={{ width: 88, minWidth: 88 }}
               >
                 13-wk Avg
               </th>
               <th
-                className="sticky top-0 left-[418px] z-40 bg-[#0E0B07] px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-[#B8A99A] border-b-2 border-r border-[#3D2E1E] whitespace-nowrap"
+                className="sticky top-0 left-[418px] z-40 bg-gray-50 px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-gray-500 border-b-2 border-r border-gray-200 whitespace-nowrap"
                 style={{ width: 88, minWidth: 88 }}
               >
                 13-wk Total
@@ -349,16 +341,16 @@ export default function ScorecardGrid({
                 <th
                   key={week}
                   className={cn(
-                    'sticky top-0 z-30 px-1 py-2.5 text-center text-[11px] font-semibold border-b-2 border-r border-[#3D2E1E] whitespace-nowrap',
+                    'sticky top-0 z-30 px-1 py-2.5 text-center text-[11px] font-semibold border-b-2 border-r border-gray-200 whitespace-nowrap',
                     i === 0
-                      ? 'bg-[#2A1F14] text-[#16A34A]'
-                      : 'bg-[#0E0B07] text-[#B8A99A]',
+                      ? 'bg-gray-100 text-green-600'
+                      : 'bg-gray-50 text-gray-500',
                   )}
                   style={{ width: 90, minWidth: 90 }}
                 >
                   <span className="block">{formatWeekHeader(week, currentYear)}</span>
                   {i === 0 && (
-                    <span className="block text-[9px] font-normal text-[#15803D] mt-0.5 uppercase tracking-wide">
+                    <span className="block text-[9px] font-normal text-green-700 mt-0.5 uppercase tracking-wide">
                       current
                     </span>
                   )}
@@ -368,7 +360,7 @@ export default function ScorecardGrid({
           </thead>
           <tbody>
             {metrics.map((metric, rowIdx) => {
-              const rowBg = rowIdx % 2 === 0 ? '#111111' : '#141414';
+              const rowBg = rowIdx % 2 === 0 ? '#ffffff' : '#f9fafb';
               const entries = getEntries(metric.id);
               const avgStr = calculateAverage(entries, metric.metric_type);
               const totalStr = calculateTotal(entries, metric.metric_type);
@@ -382,7 +374,7 @@ export default function ScorecardGrid({
                 <tr key={metric.id} className="group/row">
                   {/* Title — frozen */}
                   <td
-                    className="sticky left-0 border-b border-r border-[#3D2E1E] px-3 py-2"
+                    className="sticky left-0 border-b border-r border-gray-200 px-3 py-2"
                     style={{
                       width: 220,
                       minWidth: 220,
@@ -392,7 +384,7 @@ export default function ScorecardGrid({
                   >
                     <div className="flex items-center gap-1 relative">
                       <span
-                        className="flex-1 text-sm font-medium text-[#F5ECD7] truncate"
+                        className="flex-1 text-sm font-medium text-gray-900 truncate"
                         title={metric.title}
                       >
                         {metric.title}
@@ -401,13 +393,13 @@ export default function ScorecardGrid({
                       {onFlagForIDS && isOffTrack && !flaggedTitles.has(flagTitle) && (
                         <button
                           onClick={() => onFlagForIDS(flagTitle)}
-                          className="opacity-0 group-hover/row:opacity-100 text-[11px] text-[#15803D] hover:text-[#D4821A] transition-all whitespace-nowrap shrink-0"
+                          className="opacity-0 group-hover/row:opacity-100 text-[11px] text-green-700 hover:text-amber-600 transition-all whitespace-nowrap shrink-0"
                         >
                           Flag
                         </button>
                       )}
                       {onFlagForIDS && flaggedTitles.has(flagTitle) && (
-                        <span className="text-[11px] text-[#15803D] shrink-0">Flagged</span>
+                        <span className="text-[11px] text-green-700 shrink-0">Flagged</span>
                       )}
                       {/* Admin context menu */}
                       {isAdmin && (
@@ -418,7 +410,7 @@ export default function ScorecardGrid({
                               e.stopPropagation();
                               setMenuMetricId(menuMetricId === metric.id ? null : metric.id);
                             }}
-                            className="opacity-0 group-hover/row:opacity-100 text-[#6B5A4A] hover:text-[#F5ECD7] px-1 py-0.5 rounded transition-all text-base leading-none"
+                            className="opacity-0 group-hover/row:opacity-100 text-gray-400 hover:text-gray-900 px-1 py-0.5 rounded transition-all text-base leading-none"
                             title="Options"
                           >
                             ···
@@ -426,17 +418,17 @@ export default function ScorecardGrid({
                           {menuMetricId === metric.id && (
                             <div
                               data-menu
-                              className="absolute right-0 top-full mt-1 bg-[#2A1F14] border border-[#3D2E1E] rounded-xl shadow-2xl overflow-hidden w-28 z-50"
+                              className="absolute right-0 top-full mt-1 bg-gray-100 border border-gray-200 rounded-xl shadow-2xl overflow-hidden w-28 z-50"
                             >
                               <button
                                 onClick={() => openEditModal(metric)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-[#F5ECD7] hover:bg-[#3D2E1E] transition-colors"
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-100 transition-colors"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleDelete(metric.id)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-[#C0392B] hover:bg-[#3D2E1E] transition-colors"
+                                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-gray-100 transition-colors"
                               >
                                 Delete
                               </button>
@@ -449,10 +441,10 @@ export default function ScorecardGrid({
 
                   {/* Goal — frozen */}
                   <td
-                    className="sticky left-[220px] z-10 border-b border-r border-[#3D2E1E] px-3 py-2"
+                    className="sticky left-[220px] z-10 border-b border-r border-gray-200 px-3 py-2"
                     style={{ width: 110, minWidth: 110, background: rowBg }}
                   >
-                    <span className="text-xs text-[#B8A99A] whitespace-nowrap tabular-nums">
+                    <span className="text-xs text-gray-500 whitespace-nowrap tabular-nums">
                       {formatOperator(metric.goal_operator)}{' '}
                       {formatValue(metric.goal_value, metric.metric_type)}
                     </span>
@@ -460,18 +452,18 @@ export default function ScorecardGrid({
 
                   {/* Avg — frozen */}
                   <td
-                    className="sticky left-[330px] z-10 border-b border-r border-[#3D2E1E] px-2 py-2 text-center"
+                    className="sticky left-[330px] z-10 border-b border-r border-gray-200 px-2 py-2 text-center"
                     style={{ width: 88, minWidth: 88, background: rowBg }}
                   >
-                    <span className="text-xs text-[#F5ECD7] tabular-nums">{avgStr}</span>
+                    <span className="text-xs text-gray-900 tabular-nums">{avgStr}</span>
                   </td>
 
                   {/* Total — frozen */}
                   <td
-                    className="sticky left-[418px] z-10 border-b border-r border-[#3D2E1E] px-2 py-2 text-center"
+                    className="sticky left-[418px] z-10 border-b border-r border-gray-200 px-2 py-2 text-center"
                     style={{ width: 88, minWidth: 88, background: rowBg }}
                   >
-                    <span className="text-xs text-[#F5ECD7] tabular-nums">{totalStr}</span>
+                    <span className="text-xs text-gray-900 tabular-nums">{totalStr}</span>
                   </td>
 
                   {/* Week cells */}
@@ -484,7 +476,7 @@ export default function ScorecardGrid({
               <tr>
                 <td
                   colSpan={4 + weekStarts.length}
-                  className="px-6 py-16 text-center text-[#6B5A4A] text-sm"
+                  className="px-6 py-16 text-center text-gray-400 text-sm"
                 >
                   No metrics yet. Click &ldquo;+ Add Metric&rdquo; to get started.
                 </td>

@@ -12,7 +12,7 @@ export default async function EosOpportunitiesPage() {
     getActiveMeeting(),
   ]);
   return (
-    <div className="px-6 py-8 text-[#F5ECD7] min-h-full">
+    <div className="px-6 py-8 text-gray-900 min-h-full">
       <div className="max-w-4xl mx-auto">
         <OpportunitiesClient
           initialOpportunities={opportunities}

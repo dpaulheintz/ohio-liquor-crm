@@ -18,10 +18,10 @@ type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | nu
 type StatusFilter = 'open' | 'in_progress' | 'solved' | 'all';
 
 const PRIORITY_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
-  critical: { label: 'Critical', dot: 'bg-[#C0392B]',    text: 'text-[#C0392B]' },
-  high:     { label: 'High',     dot: 'bg-[#C0392B]', text: 'text-[#C0392B]' },
-  medium:   { label: 'Medium',   dot: 'bg-[#D4821A]', text: 'text-[#D4821A]' },
-  low:      { label: 'Low',      dot: 'bg-[#B8A99A]',   text: 'text-[#B8A99A]' },
+  critical: { label: 'Critical', dot: 'bg-red-600',    text: 'text-red-600' },
+  high:     { label: 'High',     dot: 'bg-red-600', text: 'text-red-600' },
+  medium:   { label: 'Medium',   dot: 'bg-amber-500', text: 'text-amber-600' },
+  low:      { label: 'Low',      dot: 'bg-gray-300',  text: 'text-gray-500' },
 };
 
 const STATUS_OPTIONS = [
@@ -74,24 +74,24 @@ function OppModal({
     catch { setError('Failed to save.'); setSaving(false); }
   }
 
-  const inputCls = 'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
+  const inputCls = 'w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-green-600 transition-colors placeholder:text-gray-400';
 
   return (
-    <div className="fixed inset-0 bg-[#0E0B07]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1C1510] border border-[#3D2E1E] rounded-2xl shadow-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D2E1E]">
-          <h2 className="text-lg font-semibold text-[#F5ECD7]">{mode === 'create' ? 'Add Opportunity' : 'Edit Opportunity'}</h2>
-          <button onClick={onClose} className="text-[#B8A99A] hover:text-[#F5ECD7] text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
+    <div className="fixed inset-0 bg-gray-50/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">{mode === 'create' ? 'Add Opportunity' : 'Edit Opportunity'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <p className="text-sm text-[#C0392B] bg-[#2E0F0F] border border-[#3D2E1E] rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-gray-200 rounded-lg px-3 py-2">{error}</p>}
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Title *</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Title *</label>
             <input autoFocus type="text" value={form.title} onChange={e => set('title', e.target.value)} className={inputCls} placeholder="What's the issue or opportunity?" />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Priority</label>
+              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Priority</label>
               <select value={form.priority} onChange={e => set('priority', e.target.value)} className={inputCls}>
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
@@ -100,18 +100,18 @@ function OppModal({
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Status</label>
+              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Status</label>
               <select value={form.status} onChange={e => set('status', e.target.value)} className={inputCls}>
                 {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Term</label>
-              <div className="flex rounded-lg overflow-hidden border border-[#3D2E1E] h-[38px]">
+              <label className="text-xs font-medium text-gray-500 mb-1.5 block">Term</label>
+              <div className="flex rounded-lg overflow-hidden border border-gray-200 h-[38px]">
                 {(['short', 'long'] as const).map(t => (
                   <button key={t} type="button" onClick={() => set('term', t)}
                     className={cn('flex-1 text-xs font-medium capitalize transition-colors',
-                      form.term === t ? 'bg-[#16A34A] text-white' : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]')}>
+                      form.term === t ? 'bg-green-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-100')}>
                     {t}
                   </button>
                 ))}
@@ -119,7 +119,7 @@ function OppModal({
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Owner</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Owner</label>
             <OwnerSelect
               ownerName={form.owner_name}
               ownerEmail={form.owner_email}
@@ -128,12 +128,12 @@ function OppModal({
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Description</label>
+            <label className="text-xs font-medium text-gray-500 mb-1.5 block">Description</label>
             <textarea value={form.description} onChange={e => set('description', e.target.value)} className={`${inputCls} resize-none`} rows={3} placeholder="More context…" />
           </div>
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-[#3D2E1E] text-[#F5ECD7] text-sm hover:bg-[#2A1F14] transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {saving ? 'Saving…' : mode === 'create' ? 'Add' : 'Save'}
             </button>
           </div>
@@ -210,16 +210,16 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#F5ECD7]" style={{ letterSpacing: '-0.02em' }}>Opportunities</h1>
-          <p className="text-[#B8A99A] mt-1 text-sm">Short and long-term issues to identify, discuss, and solve</p>
+          <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Opportunities</h1>
+          <p className="text-gray-500 mt-1 text-sm">Short and long-term issues to identify, discuss, and solve</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-medium transition-colors">
+        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
           + Add Opportunity
         </button>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 mb-5 border-b border-[#3D2E1E]">
+      <div className="flex gap-1 mb-5 border-b border-gray-200">
         {([
           { key: 'open', label: 'Open' },
           { key: 'in_progress', label: 'In Progress' },
@@ -228,7 +228,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
         ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)}
             className={cn('px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px]',
-              filter === key ? 'border-[#16A34A] text-[#16A34A]' : 'border-transparent text-[#B8A99A] hover:text-[#F5ECD7]')}>
+              filter === key ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-900')}>
             {label} <span className="text-xs opacity-60 ml-1">{counts[key as keyof typeof counts]}</span>
           </button>
         ))}
@@ -239,7 +239,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
         {filtered.map(opp => {
           const pri = PRIORITY_CONFIG[opp.priority ?? ''] ?? PRIORITY_CONFIG.medium;
           return (
-            <div key={opp.id} className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-4 py-3 hover:bg-[#2A1F14]/40 transition-colors group/row">
+            <div key={opp.id} className="rounded-xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-100/40 transition-colors group/row">
               <div className="flex items-start gap-3">
                 {/* Priority dot — click to solve/reopen */}
                 <div className="shrink-0 mt-1.5">
@@ -247,7 +247,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     <button
                       onClick={() => handleReopenOpp(opp.id)}
                       title="Re-open"
-                      className="w-4 h-4 rounded-full bg-[#16A34A] hover:bg-[#5B9E94] flex items-center justify-center text-[#F5ECD7] transition-all"
+                      className="w-4 h-4 rounded-full bg-green-600 hover:bg-green-600 flex items-center justify-center text-gray-900 transition-all"
                     >
                       <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
                         <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -258,9 +258,9 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                       onClick={() => handleMarkSolved(opp.id)}
                       title="Mark as solved"
                       className={cn(
-                        'w-4 h-4 rounded-full transition-all hover:scale-125 hover:ring-2 hover:ring-[#16A34A]/50',
+                        'w-4 h-4 rounded-full transition-all hover:scale-125 hover:ring-2 hover:ring-green-600/50',
                         flashedSolvedIds.has(opp.id)
-                          ? 'bg-[#5B9E94] scale-125 ring-2 ring-[#16A34A]/50'
+                          ? 'bg-green-600 scale-125 ring-2 ring-green-600/50'
                           : pri.dot,
                       )}
                     />
@@ -270,27 +270,27 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                 {/* Main content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-[#F5ECD7] flex-1 min-w-0">{opp.title}</p>
+                    <p className="text-sm font-medium text-gray-900 flex-1 min-w-0">{opp.title}</p>
                     {/* Term badge */}
                     <span className={cn(
                       'shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
-                      opp.term === 'long' ? 'bg-[#2A1F14] text-[#B8A99A]' : 'border border-[#16A34A] text-[#16A34A]',
+                      opp.term === 'long' ? 'bg-gray-100 text-gray-500' : 'border border-green-600 text-green-600',
                     )}>
                       {opp.term}-term
                     </span>
                   </div>
                   {opp.description && (
-                    <p className="text-xs text-[#B8A99A] mt-0.5 line-clamp-1">{opp.description}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{opp.description}</p>
                   )}
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    {opp.owner_name && <span className="text-xs text-[#6B5A4A]">{opp.owner_name}</span>}
-                    <span className="text-xs text-[#6B5A4A]">{fmtDate(opp.created_at)}</span>
+                    {opp.owner_name && <span className="text-xs text-gray-400">{opp.owner_name}</span>}
+                    <span className="text-xs text-gray-400">{fmtDate(opp.created_at)}</span>
                     {/* Quick status change */}
                     <select
                       value={opp.status}
                       onChange={e => handleStatusChange(opp.id, e.target.value)}
                       onClick={e => e.stopPropagation()}
-                      className="text-xs bg-[#2A1F14] border border-[#3D2E1E] rounded px-1.5 py-0.5 text-[#B8A99A] focus:outline-none focus:border-[#16A34A] transition-colors"
+                      className="text-xs bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 text-gray-500 focus:outline-none focus:border-green-600 transition-colors"
                     >
                       {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -303,22 +303,22 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     activeMeetingId ? (
                       <Link
                         href={`/eos/meetings/${activeMeetingId}/run?section=ids&opportunity=${opp.id}`}
-                        className="text-xs text-[#16A34A] hover:text-[#15803D] px-1.5 py-1 transition-colors whitespace-nowrap"
+                        className="text-xs text-green-600 hover:text-green-700 px-1.5 py-1 transition-colors whitespace-nowrap"
                         title="Discuss in current meeting"
                       >
                         Discuss in IDS →
                       </Link>
                     ) : (
                       <span
-                        className="text-xs text-[#6B5A4A] cursor-default px-1.5 py-1 whitespace-nowrap"
+                        className="text-xs text-gray-400 cursor-default px-1.5 py-1 whitespace-nowrap"
                         title="Start a Level 10 meeting to use IDS"
                       >
                         Discuss in IDS →
                       </span>
                     )
                   )}
-                  <button onClick={() => setEditingOpp(opp)} className="text-[#6B5A4A] hover:text-[#F5ECD7] text-xs px-1.5 py-1 transition-colors">Edit</button>
-                  <button onClick={() => handleDelete(opp.id)} className="text-[#6B5A4A] hover:text-[#C0392B] text-xs px-1.5 py-1 transition-colors">✕</button>
+                  <button onClick={() => setEditingOpp(opp)} className="text-gray-400 hover:text-gray-900 text-xs px-1.5 py-1 transition-colors">Edit</button>
+                  <button onClick={() => handleDelete(opp.id)} className="text-gray-400 hover:text-red-600 text-xs px-1.5 py-1 transition-colors">✕</button>
                 </div>
               </div>
             </div>
@@ -326,7 +326,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
         })}
 
         {filtered.length === 0 && (
-          <div className="rounded-xl border border-[#3D2E1E] bg-[#1C1510] px-6 py-12 text-center text-[#6B5A4A] text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
             {filter === 'all' ? 'No opportunities yet.' : `No ${filter.replace('_', ' ')} opportunities.`}
           </div>
         )}

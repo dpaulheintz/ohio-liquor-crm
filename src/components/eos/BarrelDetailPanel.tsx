@@ -142,14 +142,14 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
   const completedCount = milestones.filter(m => m.completed).length;
 
   const inputCls =
-    'w-full rounded-lg bg-[#1C1510] border border-[#3D2E1E] px-3 py-2 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A] transition-colors placeholder:text-[#6B5A4A]';
+    'w-full rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-green-600 transition-colors placeholder:text-gray-400';
 
   return (
     <>
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 z-30 bg-[#0E0B07]/60 transition-opacity duration-200',
+          'fixed inset-0 z-30 bg-gray-50/60 transition-opacity duration-200',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         )}
         onClick={onClose}
@@ -159,7 +159,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
       <div
         className={cn(
           'fixed right-0 top-0 h-full w-full md:w-[480px] z-40',
-          'bg-[#1C1510] border-l border-[#3D2E1E] shadow-2xl',
+          'bg-white border-l border-gray-200 shadow-2xl',
           'transform transition-transform duration-200 ease-out overflow-y-auto',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
@@ -167,13 +167,13 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
         {form && barrel && (
           <div className="flex flex-col h-full">
             {/* Panel header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#3D2E1E] shrink-0">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#B8A99A]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Barrel Detail
               </span>
               <button
                 onClick={onClose}
-                className="text-[#B8A99A] hover:text-[#F5ECD7] transition-colors w-7 h-7 flex items-center justify-center text-xl"
+                className="text-gray-500 hover:text-gray-900 transition-colors w-7 h-7 flex items-center justify-center text-xl"
               >
                 ×
               </button>
@@ -183,18 +183,18 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               {/* Title */}
               <div>
-                <label className="text-xs font-medium text-[#B8A99A] mb-1 block">Title</label>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Title</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={e => setField('title', e.target.value)}
-                  className="w-full bg-transparent border-0 border-b border-[#3D2E1E] pb-1 text-[#F5ECD7] text-lg font-semibold focus:outline-none focus:border-[#16A34A] transition-colors"
+                  className="w-full bg-transparent border-0 border-b border-gray-200 pb-1 text-gray-900 text-lg font-semibold focus:outline-none focus:border-green-600 transition-colors"
                 />
               </div>
 
               {/* Status */}
               <div>
-                <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Status</label>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Status</label>
                 <select
                   value={form.status}
                   onChange={e => setField('status', e.target.value)}
@@ -209,8 +209,8 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
               {/* Barrel type + quarter */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Type</label>
-                  <div className="flex rounded-lg overflow-hidden border border-[#3D2E1E]">
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Type</label>
+                  <div className="flex rounded-lg overflow-hidden border border-gray-200">
                     {(['company', 'individual'] as const).map(t => (
                       <button
                         key={t}
@@ -219,8 +219,8 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                         className={cn(
                           'flex-1 py-1.5 text-xs font-medium transition-colors capitalize',
                           form.barrel_type === t
-                            ? 'bg-[#16A34A] text-white'
-                            : 'bg-[#1C1510] text-[#B8A99A] hover:bg-[#2A1F14]',
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white text-gray-500 hover:bg-gray-100',
                         )}
                       >
                         {t}
@@ -229,7 +229,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Quarter</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Quarter</label>
                   <input
                     type="text"
                     value={form.quarter}
@@ -242,7 +242,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
 
               {/* Owner */}
               <div>
-                <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Owner</label>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Owner</label>
                 <OwnerSelect
                   ownerName={form.owner_name}
                   ownerEmail={form.owner_email}
@@ -253,7 +253,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
 
               {/* Due date */}
               <div>
-                <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Due Date</label>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Due Date</label>
                 <input
                   type="date"
                   value={form.due_date}
@@ -264,7 +264,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
 
               {/* Description */}
               <div>
-                <label className="text-xs font-medium text-[#B8A99A] mb-1.5 block">Description</label>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Description</label>
                 <textarea
                   value={form.description}
                   onChange={e => setField('description', e.target.value)}
@@ -277,10 +277,10 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
               {/* Milestones */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-[#B8A99A]">
+                  <label className="text-xs font-medium text-gray-500">
                     Milestones{' '}
                     {milestones.length > 0 && (
-                      <span className="text-[#6B5A4A]">
+                      <span className="text-gray-400">
                         ({completedCount}/{milestones.length})
                       </span>
                     )}
@@ -291,15 +291,15 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                   {milestones.map(m => (
                     <div
                       key={m.id}
-                      className="flex items-center gap-2 group/milestone rounded-lg px-2 py-1.5 hover:bg-[#2A1F14]/50"
+                      className="flex items-center gap-2 group/milestone rounded-lg px-2 py-1.5 hover:bg-gray-100/50"
                     >
                       <button
                         onClick={() => handleMilestoneToggle(m.id, !m.completed)}
                         className={cn(
                           'w-4 h-4 rounded shrink-0 border transition-colors flex items-center justify-center',
                           m.completed
-                            ? 'bg-[#16A34A] border-[#16A34A] text-[#F5ECD7]'
-                            : 'border-[#3D2E1E] hover:border-[#16A34A]',
+                            ? 'bg-green-600 border-green-600 text-gray-900'
+                            : 'border-gray-200 hover:border-green-600',
                         )}
                       >
                         {m.completed && (
@@ -319,7 +319,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                             if (e.key === 'Enter') handleMilestoneTitleSave(m.id);
                             if (e.key === 'Escape') setEditingMilestoneId(null);
                           }}
-                          className="flex-1 bg-transparent text-sm text-[#F5ECD7] focus:outline-none border-b border-[#3D2E1E]"
+                          className="flex-1 bg-transparent text-sm text-gray-900 focus:outline-none border-b border-gray-200"
                         />
                       ) : (
                         <span
@@ -329,7 +329,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                           }}
                           className={cn(
                             'flex-1 text-sm cursor-text',
-                            m.completed ? 'line-through text-[#6B5A4A]' : 'text-[#F5ECD7]',
+                            m.completed ? 'line-through text-gray-400' : 'text-gray-900',
                           )}
                         >
                           {m.title}
@@ -338,7 +338,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
 
                       <button
                         onClick={() => handleDeleteMilestone(m.id)}
-                        className="opacity-0 group-hover/milestone:opacity-100 text-[#6B5A4A] hover:text-[#C0392B] transition-all text-xs px-1"
+                        className="opacity-0 group-hover/milestone:opacity-100 text-gray-400 hover:text-red-600 transition-all text-xs px-1"
                         title="Delete milestone"
                       >
                         ✕
@@ -349,7 +349,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
 
                 {addingMilestone ? (
                   <div className="flex items-center gap-2 mt-2 px-2">
-                    <div className="w-4 h-4 shrink-0 rounded border border-[#3D2E1E]" />
+                    <div className="w-4 h-4 shrink-0 rounded border border-gray-200" />
                     <input
                       autoFocus
                       value={newMilestoneTitle}
@@ -366,18 +366,18 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                           setAddingMilestone(false);
                         }
                       }}
-                      className="flex-1 bg-[#1C1510] border border-[#3D2E1E] rounded px-2 py-1 text-sm text-[#F5ECD7] focus:outline-none focus:border-[#16A34A]"
+                      className="flex-1 bg-white border border-gray-200 rounded px-2 py-1 text-sm text-gray-900 focus:outline-none focus:border-green-600"
                       placeholder="Milestone title…"
                     />
                     <button
                       onClick={handleAddMilestone}
-                      className="text-[#16A34A] hover:text-[#15803D] text-sm transition-colors"
+                      className="text-green-600 hover:text-green-700 text-sm transition-colors"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => { setAddingMilestone(false); setNewMilestoneTitle(''); }}
-                      className="text-[#6B5A4A] hover:text-[#B8A99A] text-sm transition-colors"
+                      className="text-gray-400 hover:text-gray-500 text-sm transition-colors"
                     >
                       Cancel
                     </button>
@@ -385,7 +385,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
                 ) : (
                   <button
                     onClick={() => setAddingMilestone(true)}
-                    className="mt-2 px-2 text-sm text-[#6B5A4A] hover:text-[#B8A99A] transition-colors"
+                    className="mt-2 px-2 text-sm text-gray-400 hover:text-gray-500 transition-colors"
                   >
                     + Add Milestone
                   </button>
@@ -394,17 +394,17 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
             </div>
 
             {/* Footer actions */}
-            <div className="shrink-0 px-6 py-4 border-t border-[#3D2E1E] space-y-3">
+            <div className="shrink-0 px-6 py-4 border-t border-gray-200 space-y-3">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
+                className="w-full py-2.5 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
               >
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>
               <button
                 onClick={handleDelete}
-                className="w-full text-center text-sm text-[#C0392B] hover:text-[#C0392B] transition-colors py-1"
+                className="w-full text-center text-sm text-red-600 hover:text-red-600 transition-colors py-1"
               >
                 Delete Barrel
               </button>
