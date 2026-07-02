@@ -15,13 +15,6 @@ export function statusConfig(status: string): StatusConfig {
           'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
         dotClass: 'bg-red-500',
       };
-    case 'scheduled':
-      return {
-        label: 'Scheduled',
-        className:
-          'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-        dotClass: 'bg-amber-400',
-      };
     case 'staffed':
       return {
         label: 'Staffed',
@@ -66,6 +59,6 @@ export function deriveStatus(
   staffPerson: string
 ): TastingStatus {
   if (staffPerson.trim()) return 'staffed';
-  if (staffCategory) return 'scheduled';
+  if (staffCategory) return 'staffed';
   return 'needs_staff';
 }

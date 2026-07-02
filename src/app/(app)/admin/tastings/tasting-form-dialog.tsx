@@ -430,7 +430,6 @@ export function TastingFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="needs_staff">Needs Staff</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="staffed">Staffed</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>

@@ -54,7 +54,7 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
     else { setSortKey(key); setSortDir('asc'); }
   }
 
-  const ACTIVE_STATUSES = new Set(['needs_staff', 'scheduled', 'staffed']);
+  const ACTIVE_STATUSES = new Set(['needs_staff', 'staffed']);
 
   const filtered = tastings
     .filter((t) => statusFilter === 'all' || t.status === statusFilter)
@@ -143,7 +143,6 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="needs_staff">Needs Staff</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
             <SelectItem value="staffed">Staffed</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>

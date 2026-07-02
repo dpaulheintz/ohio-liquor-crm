@@ -34,6 +34,9 @@ import {
   Phone,
   MapPin,
   Plus,
+  Monitor,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nowESTDatetimeLocal } from '@/lib/date-utils';
@@ -102,7 +105,21 @@ function NewVisitForm() {
 
   const [loadingAccount, setLoadingAccount] = useState(!!presetAccountId);
 
-  // Load preset account name
+  // Display tracking state
+  const [hasTrackedDisplay, setHasTrackedDisplay] = useState(false);
+  const [trackedDisplayType, setTrackedDisplayType] = useState<string | null>(null);
+  const [displayAnswer, setDisplayAnswer] = useState<'up' | 'down' | null>(null);
+
+  function checkAccountDisplay(id: string) {
+    import('@/app/actions/kpi').then(({ getAccountDisplay }) => {
+      getAccountDisplay(id).then((display) => {
+        setHasTrackedDisplay(!!display);
+        setTrackedDisplayType(display?.display_type ?? null);
+      }).catch(() => {});
+    });
+  }
+
+  // Load preset account name + display status
   useEffect(() => {
     if (presetAccountId) {
       setLoadingAccount(true);
@@ -111,6 +128,7 @@ function NewVisitForm() {
           if (data) setAccountName(data.display_name);
         }).catch(() => {})
       ).finally(() => setLoadingAccount(false));
+      checkAccountDisplay(presetAccountId);
     }
   }, [presetAccountId]);
 
@@ -315,7 +333,7 @@ function NewVisitForm() {
               </button>
               <button
                 type="button"
-                onClick={() => { setVisitType('phone_call'); setKpis([]); setPhotos([]); }}
+                onClick={() => { setVisitType('phone_call'); setKpis([]); setPhotos([]); setDisplayAnswer(null); }}
                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors border-l border-border ${
                   visitType === 'phone_call'
                     ? 'bg-primary text-primary-foreground'
@@ -347,7 +365,14 @@ function NewVisitForm() {
                 <AccountSearchDialog
                   accountId={accountId}
                   accountName={accountName}
-                  onSelect={(id, name) => { setAccountId(id); setAccountName(name); }}
+                  onSelect={(id, name) => {
+                    setAccountId(id);
+                    setAccountName(name);
+                    setDisplayAnswer(null);
+                    setHasTrackedDisplay(false);
+                    setTrackedDisplayType(null);
+                    checkAccountDisplay(id);
+                  }}
                 />
               )}
             </div>
@@ -469,6 +494,53 @@ function NewVisitForm() {
 
             <Separator />
 
+            {/* ── Tracked Display Prompt ──────────────────────────────── */}
+            {visitType === 'in_person' && hasTrackedDisplay && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <Monitor className="h-4 w-4 text-primary shrink-0" />
+                  Tracked Display{trackedDisplayType ? ` · ${trackedDisplayType}` : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">Is the display still up at this location?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={displayAnswer === 'up' ? 'default' : 'outline'}
+                    className="gap-1.5"
+                    onClick={() => {
+                      setDisplayAnswer('up');
+                      if (!kpis.some(k => k.type === 'Display')) {
+                        setKpis(prev => [...prev, { type: 'Display', quantity: 1, soldStatus: 'sold', displayType: trackedDisplayType ?? '' }]);
+                      }
+                    }}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Yes, it&apos;s up
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={displayAnswer === 'down' ? 'destructive' : 'outline'}
+                    className="gap-1.5"
+                    onClick={() => {
+                      setDisplayAnswer('down');
+                      setKpis(prev => prev.filter(k => k.type !== 'Display'));
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    No, it&apos;s down
+                  </Button>
+                </div>
+                {displayAnswer === 'up' && (
+                  <p className="text-xs text-emerald-600">Display KPI added below — confirm the display type.</p>
+                )}
+                {displayAnswer === 'down' && (
+                  <p className="text-xs text-muted-foreground">Display will be marked down for this month.</p>
+                )}
+              </div>
+            )}
+
             {/* ── Photos (in-person only) ──────────────────────────────── */}
             {visitType === 'in_person' && (
               <div className="space-y-1.5">
@@ -586,12 +658,6 @@ function NewVisitForm() {
                   <Plus className="h-3.5 w-3.5" />
                   {kpis.length === 0 ? 'Add a KPI' : 'Add another KPI'}
                 </button>
-                {hasDisplayKpi && photos.length === 0 && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                    <Camera className="h-3 w-3 shrink-0" />
-                    Display KPIs require a photo to confirm the display is up.
-                  </p>
-                )}
               </div>
             )}
 
