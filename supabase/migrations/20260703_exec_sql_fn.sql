@@ -1,6 +1,7 @@
 -- Safe read-only SQL executor for the AI assistant.
 -- Accepts a SELECT query and returns results as a JSON array.
 -- SECURITY DEFINER runs with owner privileges (service role context only).
+-- Note: no LIMIT is applied here — callers are responsible for keeping queries bounded.
 CREATE OR REPLACE FUNCTION exec_sql(query_text text)
 RETURNS json
 LANGUAGE plpgsql
@@ -10,7 +11,7 @@ AS $$
 DECLARE
   result json;
 BEGIN
-  EXECUTE format('SELECT json_agg(t) FROM (%s LIMIT 200) AS t', query_text)
+  EXECUTE format('SELECT json_agg(t) FROM (%s) AS t', query_text)
     INTO result;
   RETURN COALESCE(result, '[]'::json);
 END;
