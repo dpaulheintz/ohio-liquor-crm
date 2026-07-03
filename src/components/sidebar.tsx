@@ -20,6 +20,7 @@ import {
   UtensilsCrossed,
   Package,
   Target,
+  Sparkles,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -36,6 +37,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { href: '/admin/assistant', label: 'AI Assistant', icon: Sparkles },
   { href: '/admin', label: 'Admin Dashboard', icon: Shield },
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
