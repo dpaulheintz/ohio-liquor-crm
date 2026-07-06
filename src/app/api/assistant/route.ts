@@ -30,7 +30,7 @@ tastings (id uuid, agency_id uuid FK accounts, date date, start_time time, end_t
 
 agency_displays (id uuid, account_id uuid FK accounts, agency_name text, rep_id uuid FK profiles, display_type text [Wood/Box/Shelves], first_confirmed date, monthly_status jsonb, notes text)
 
-sales_monthly (id uuid, month text [YYYY-MM format e.g. '2026-01' — filter with month LIKE '2026-%' for a full year, or month >= '2026-01' AND month <= '2026-05' for a range], agency_id text, agency_name text, district text, vendor text, brand_code text, product_name text [specific product e.g. 'Statehouse Gin' — use ILIKE for flexible matching], category text, brand_family text [e.g. 'Gin'], sub_product text [variant descriptor, not primary product name], size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
+sales_monthly (id uuid, month text [YYYY-MM format e.g. '2026-01' — filter with month LIKE '2026-%' for a full year, or month >= '2026-01' AND month <= '2026-05' for a range], agency_id text, agency_name text, district text, vendor text, brand_code text, product_name text [see PRODUCT NAME ALIASES below], category text, brand_family text, sub_product text [only 3 values: 'HIGH BANK MIDNIGHT CASK', 'Masters Blend', 'Midnight Cask (Discontinued)' — all other products have sub_product = null; always search by product_name instead], size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
 
 wholesale_detail (id uuid, month text [YYYY-MM format], agency_id text, agency_name text, brand_code text, brand_family text, sub_product text, size text, is_hb_agency boolean, hb_location text, permit_number text, wholesaler_name text, dba text, bottles_sold int, amount numeric)
 
@@ -40,7 +40,53 @@ sample_pulls (id uuid, pull_type text [spirits/swag], person_name text, category
 
 sample_pull_items (id uuid, pull_id uuid FK sample_pulls, item_name text, item_category text, size text, quantity int)
 
-account_groups (id uuid, group_name text, match_terms text[], match_columns text[], color text)`;
+account_groups (id uuid, group_name text, match_terms text[], match_columns text[], color text)
+
+---
+
+CRITICAL QUERY PATTERNS:
+
+1. Finding visits by rep name — ALWAYS JOIN visit_logs with profiles on rep_id:
+   SELECT COUNT(DISTINCT vl.account_id)
+   FROM visit_logs vl
+   JOIN profiles p ON p.id = vl.rep_id
+   JOIN accounts a ON a.id = vl.account_id
+   WHERE p.full_name ILIKE '%Samantha%'
+     AND a.type = 'agency'
+     AND vl.visited_at >= '2025-06-01' AND vl.visited_at < '2025-07-01'
+
+   Never filter visits by rep name without this JOIN — visit_logs has no name column, only rep_id.
+
+2. "Agencies visited" means distinct accounts WHERE accounts.type = 'agency'. Always JOIN accounts and filter type.
+
+3. Date ranges for months: use >= first day AND < first day of next month (e.g. June 2025: >= '2025-06-01' AND < '2025-07-01').
+
+4. "This year" means month >= '2026-01' AND month <= '2026-12' for sales_monthly, or visited_at >= '2026-01-01' for visit_logs.
+
+---
+
+COMPLETE product_name VALUES in sales_monthly (exact spelling):
+'(614) Vodka x High Bank', 'Barrel Proof Bourbon', 'HIGH BANK MIDNIGHT CASK',
+'High Bank Vodka', 'Midnight Cask (Discontinued)', 'Midnight Cask Barrel Proof',
+'Midnight Manhattan', 'Old Fashioned RTD', 'Small Batch Bourbon',
+'Statehouse Gin', 'Statehouse Gin Barrel Select', 'Whiskey War',
+'Whiskey War Barrel Proof', 'Whiskey War Barrel Select', 'Whiskey War Cigar Cask',
+'Whiskey War Cigar Cask Single Barrel', 'Whiskey War Double Double Oaked',
+'Whiskey War Double Double Oaked Single Barrel', 'Whiskey War Double Oaked',
+'Whiskey War Double Oaked Single Barrel', 'Whiskey War Master Blend'
+
+PRODUCT NAME ALIASES — map casual phrasing to product_name ILIKE patterns:
+- "double double" → product_name ILIKE '%Double Double%'
+- "double oaked" (but NOT double double) → product_name ILIKE '%Double Oaked%' AND product_name NOT ILIKE '%Double Double%'
+- "barrel proof" → product_name ILIKE '%Barrel Proof%'
+- "cigar cask" → product_name ILIKE '%Cigar Cask%'
+- "statehouse gin" / "gin" → product_name ILIKE '%Statehouse Gin%' OR brand_family = 'Gin'
+- "vodka" → brand_family = 'Vodka'
+- "whiskey war" (generic) → brand_family = 'Whiskey War'
+- "midnight cask" → product_name ILIKE '%Midnight Cask%'
+- "masters blend" / "master blend" → product_name ILIKE '%Master Blend%'
+- "small batch" → product_name ILIKE '%Small Batch%'
+- "barrel select" → product_name ILIKE '%Barrel Select%'`;
 
 // Block any non-SELECT SQL (keyword at word boundary)
 const DISALLOWED = /\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|copy)\b/i;
@@ -120,7 +166,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ answer: "I wasn't able to answer that. Try rephrasing." });
     }
 
-    console.log(`${TAG} exec_sql result type: ${typeof results}, isArray: ${Array.isArray(results)}, raw: ${JSON.stringify(results)?.slice(0, 300)}`);
+    console.log(`${TAG} exec_sql result type: ${typeof results}, isArray: ${Array.isArray(results)}, raw: ${JSON.stringify(results)?.slice(0, 2000)}`);
 
     // exec_sql returns json — may come back as string or already-parsed array
     let rows: unknown[];
@@ -140,7 +186,7 @@ export async function POST(req: NextRequest) {
       rows = [];
     }
 
-    console.log(`${TAG} rows count: ${rows.length}`);
+    console.log(`${TAG} rows count: ${rows.length}, raw rows (pre-format): ${JSON.stringify(rows.slice(0, 20))?.slice(0, 3000)}`);
 
     if (rows.length === 0) {
       return NextResponse.json({ answer: "No data found. Try a different time period or criteria." });
