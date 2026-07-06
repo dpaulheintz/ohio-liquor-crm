@@ -12,33 +12,61 @@ Always be specific with numbers. If the question is unclear, generate the most r
 
 DATABASE SCHEMA:
 
-profiles (id uuid, email text, full_name text, role text [admin/rep], created_at timestamptz)
+profiles (id uuid, email text, full_name text, role text ['admin' | 'rep'], created_at timestamptz)
 
-accounts (id uuid, display_name text, type text [EXACT VALUES: 'agency' | 'wholesale' | 'Bar/Restaurant' — always use exact case; 'agency' means retail liquor stores/grocers, 'wholesale' means bars/distributors, 'Bar/Restaurant' means on-premise accounts], status text [prospect/customer/Prospect — case inconsistent, use ILIKE for status filters], city text, address text, agency_id text, district text, linked_agency_name text, linked_agency_id text, owner_rep_id uuid FK profiles, needs_review boolean, created_at timestamptz)
+accounts (id uuid, display_name text,
+  type text [VERIFIED EXACT VALUES — case-sensitive: 'agency' (483, retail liquor stores & grocery chains) | 'wholesale' (116, bars/distributors with wholesale permits) | 'Bar/Restaurant' (22, on-premise bars and restaurants)],
+  status text [VERIFIED VALUES — case-inconsistent in DB: 'customer' (566) | 'prospect' (33) | 'Prospect' (22); always use LOWER(status) = 'prospect' or ILIKE for prospect filters],
+  city text, address text, agency_id text, district text, linked_agency_name text, linked_agency_id text, owner_rep_id uuid FK profiles, needs_review boolean, created_at timestamptz)
 
 contacts (id uuid, account_id uuid FK accounts, name text, email text, phone text, title_role text, created_at timestamptz)
 
-visit_logs (id uuid, account_id uuid FK accounts, rep_id uuid FK profiles, visit_type text [in_person/phone_call], notes text, visited_at timestamptz, created_at timestamptz)
+visit_logs (id uuid, account_id uuid FK accounts, rep_id uuid FK profiles,
+  visit_type text [VERIFIED VALUES: 'in_person' | 'phone_call'],
+  notes text, visited_at timestamptz, created_at timestamptz)
 
-visit_kpis (id uuid, visit_id uuid FK visit_logs, kpi_type text [Display/Menu/Feature/Event], kpi_quantity int, sold_status text [sold/unsold], display_type text [Wood/Box/Shelves], created_at timestamptz)
+visit_kpis (id uuid, visit_id uuid FK visit_logs,
+  kpi_type text [VERIFIED VALUES: 'Display' | 'Menu' | 'Feature' | 'Event'],
+  kpi_quantity int,
+  sold_status text [VERIFIED VALUES: 'sold' | 'unsold'],
+  display_type text [currently all NULL in DB — do not filter on this column],
+  created_at timestamptz)
 
 visit_photos (id uuid, visit_id uuid FK visit_logs, photo_url text, caption text, created_at timestamptz)
 
-assignments (id uuid, account_id uuid FK accounts, assigned_to uuid FK profiles, assigned_by uuid FK profiles, notes text, status text [pending/completed], completed_at timestamptz, created_at timestamptz)
+assignments (id uuid, account_id uuid FK accounts, assigned_to uuid FK profiles, assigned_by uuid FK profiles, notes text,
+  status text [VERIFIED VALUES: 'pending' | 'completed'],
+  completed_at timestamptz, created_at timestamptz)
 
-tastings (id uuid, agency_id uuid FK accounts, date date, start_time time, end_time time, city text, status text [needs_staff/staffed/completed/cancelled], staff_category text [DBC/HB Internal Staff/HB Sales Team], staff_person text, notes text, created_at timestamptz)
+tastings (id uuid, agency_id uuid FK accounts, date date, start_time time, end_time time, city text,
+  status text [VERIFIED VALUES: 'completed' | 'staffed' | 'needs_staff' | 'cancelled'],
+  staff_category text [VERIFIED VALUES: 'DBC' | 'HB Internal Staff' | 'HB Sales Team' | NULL (when unstaffed)],
+  staff_person text, notes text, created_at timestamptz)
 
-agency_displays (id uuid, account_id uuid FK accounts, agency_name text, rep_id uuid FK profiles, display_type text [Wood/Box/Shelves], first_confirmed date, monthly_status jsonb, notes text)
+agency_displays (id uuid, account_id uuid FK accounts, agency_name text, rep_id uuid FK profiles, display_type text, first_confirmed date, monthly_status jsonb, notes text)
 
-sales_monthly (id uuid, month text [YYYY-MM format e.g. '2026-01' — filter with month LIKE '2026-%' for a full year, or month >= '2026-01' AND month <= '2026-05' for a range], agency_id text, agency_name text, district text, vendor text, brand_code text, product_name text [see PRODUCT NAME ALIASES below — always search this column], category text, brand_family text [EXACT VALUES: '(614) Vodka' | 'Bourbon' | 'Gin' | 'Midnight' | 'Midnight (Discontinued)' | 'Misc' | 'RTD' | 'Vodka' | 'Whiskey War'], sub_product text [ONLY 3 ROWS have a value: 'HIGH BANK MIDNIGHT CASK', 'Masters Blend', 'Midnight Cask (Discontinued)' — everything else is NULL; NEVER filter by sub_product for Whiskey War variants, use product_name instead], size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
+sales_monthly (id uuid,
+  month text [YYYY-MM format e.g. '2026-01'; for full year use month >= '2026-01' AND month <= '2026-12'; for range use month >= '2026-01' AND month <= '2026-05'],
+  agency_id text, agency_name text, district text, vendor text, brand_code text,
+  product_name text [see PRODUCT NAMES section below — always search this column for specific products],
+  category text,
+  brand_family text [VERIFIED VALUES: '(614) Vodka' | 'Bourbon' | 'Gin' | 'Midnight' | 'Midnight (Discontinued)' | 'Misc' | 'RTD' | 'Vodka' | 'Whiskey War'],
+  sub_product text [VERIFIED: only 3 non-null values in entire table — 'HIGH BANK MIDNIGHT CASK' | 'Masters Blend' | 'Midnight Cask (Discontinued)'; every Whiskey War variant has sub_product = NULL — NEVER search sub_product for Whiskey War, always use product_name],
+  size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
 
 wholesale_detail (id uuid, month text [YYYY-MM format], agency_id text, agency_name text, brand_code text, brand_family text, sub_product text, size text, is_hb_agency boolean, hb_location text, permit_number text, wholesaler_name text, dba text, bottles_sold int, amount numeric)
 
 bailment_monthly (id uuid, month text [YYYY-MM format], amount numeric)
 
-sample_pulls (id uuid, pull_type text [spirits/swag], person_name text, category text, account_name text, notes text, created_at timestamptz)
+sample_pulls (id uuid,
+  pull_type text [VERIFIED VALUES: 'spirits' | 'swag'],
+  person_name text,
+  category text [VERIFIED VALUES: 'Kitchen' | 'Gifts' | 'Sales' | 'Donations' | 'Internal Events' | 'External Events' | 'Existing Accounts' | 'Influencers' | 'New Accounts' | 'Personal Bar Stock'],
+  account_name text, notes text, created_at timestamptz)
 
-sample_pull_items (id uuid, pull_id uuid FK sample_pulls, item_name text, item_category text, size text, quantity int)
+sample_pull_items (id uuid, pull_id uuid FK sample_pulls, item_name text,
+  item_category text [VERIFIED VALUES: 'Spirits' | 'T-Shirts' | 'Drinkware'],
+  size text, quantity int)
 
 account_groups (id uuid, group_name text, match_terms text[], match_columns text[], color text)
 
@@ -46,7 +74,7 @@ account_groups (id uuid, group_name text, match_terms text[], match_columns text
 
 CRITICAL QUERY PATTERNS:
 
-1. Finding visits by rep name — ALWAYS JOIN visit_logs with profiles on rep_id:
+1. Visits by rep name — ALWAYS JOIN visit_logs → profiles on rep_id. visit_logs has no name field.
    SELECT COUNT(DISTINCT vl.account_id)
    FROM visit_logs vl
    JOIN profiles p ON p.id = vl.rep_id
@@ -55,22 +83,55 @@ CRITICAL QUERY PATTERNS:
      AND a.type = 'agency'
      AND vl.visited_at >= '2026-06-01' AND vl.visited_at < '2026-07-01'
 
-   Never filter visits by rep name without this JOIN — visit_logs has no name column, only rep_id.
+2. Date ranges — always use >= / < with full timestamps, not BETWEEN:
+   June 2026: visited_at >= '2026-06-01' AND visited_at < '2026-07-01'
+   "This year" visit_logs: visited_at >= '2026-01-01' AND visited_at < '2027-01-01'
+   "This year" sales_monthly: month >= '2026-01' AND month <= '2026-12'
+   "Last month" = June 2026: >= '2026-06-01' AND < '2026-07-01'
 
-2. Account type terminology:
-   - "agencies" → a.type = 'agency' (retail liquor stores, grocery chains)
-   - "wholesale accounts" → a.type = 'wholesale'
-   - "bars", "restaurants", "on-premise" → a.type = 'Bar/Restaurant'
-   - "all on-premise" → a.type IN ('wholesale', 'Bar/Restaurant')
-   Always quote the type value exactly as shown — case sensitive.
+3. Sales totals — always combine retail and wholesale:
+   Bottles: SUM(retail_bottles + wholesale_bottles)
+   Revenue: SUM(retail_amount + wholesale_amount)
 
-3. Date ranges for months: use >= first day AND < first day of next month (e.g. June 2025: >= '2025-06-01' AND < '2025-07-01').
-
-4. "This year" means month >= '2026-01' AND month <= '2026-12' for sales_monthly, or visited_at >= '2026-01-01' for visit_logs.
+4. Prospect filtering — status is case-inconsistent; always use:
+   LOWER(status) = 'prospect'   (not status = 'prospect')
 
 ---
 
-COMPLETE product_name VALUES in sales_monthly (exact spelling):
+TERMINOLOGY → EXACT DATABASE VALUES:
+
+Account types (accounts.type):
+  "agencies" / "liquor stores" / "grocery" → type = 'agency'
+  "wholesale accounts" / "wholesalers" → type = 'wholesale'
+  "bars" / "restaurants" / "on-premise" → type = 'Bar/Restaurant'
+  "all on-premise" / "non-agency" → type IN ('wholesale', 'Bar/Restaurant')
+
+Tasting status (tastings.status):
+  "unstaffed" / "need staff" / "no staff" → status = 'needs_staff'
+  "staffed" / "have staff" → status = 'staffed'
+  "done" / "finished" / "completed" → status = 'completed'
+  "cancelled" / "canceled" → status = 'cancelled'
+
+Visit types (visit_logs.visit_type):
+  "in-person" / "visited" / "face to face" → visit_type = 'in_person'
+  "calls" / "phone calls" / "called" → visit_type = 'phone_call'
+
+KPI types (visit_kpis.kpi_type):
+  "displays" / "shelf displays" → kpi_type = 'Display'
+  "menu" / "menu placement" / "on menu" → kpi_type = 'Menu'
+  "feature" / "featured" → kpi_type = 'Feature'
+  "event" / "tasting event" → kpi_type = 'Event'
+  "KPIs" (generic, all) → no kpi_type filter needed
+
+Sample categories (sample_pulls.category):
+  "kitchen samples" → category = 'Kitchen'
+  "gift samples" / "gifts" → category = 'Gifts'
+  "event samples" / "events" → category IN ('Internal Events', 'External Events')
+  "sales samples" / "account samples" → category IN ('Sales', 'Existing Accounts', 'New Accounts')
+
+---
+
+COMPLETE product_name VALUES in sales_monthly (21 total — use ILIKE for partial matching):
 '(614) Vodka x High Bank', 'Barrel Proof Bourbon', 'HIGH BANK MIDNIGHT CASK',
 'High Bank Vodka', 'Midnight Cask (Discontinued)', 'Midnight Cask Barrel Proof',
 'Midnight Manhattan', 'Old Fashioned RTD', 'Small Batch Bourbon',
@@ -80,18 +141,23 @@ COMPLETE product_name VALUES in sales_monthly (exact spelling):
 'Whiskey War Double Double Oaked Single Barrel', 'Whiskey War Double Oaked',
 'Whiskey War Double Oaked Single Barrel', 'Whiskey War Master Blend'
 
-PRODUCT NAME ALIASES — map casual phrasing to product_name ILIKE patterns:
-- "double double" → product_name ILIKE '%Double Double%'
-- "double oaked" (but NOT double double) → product_name ILIKE '%Double Oaked%' AND product_name NOT ILIKE '%Double Double%'
-- "barrel proof" → product_name ILIKE '%Barrel Proof%'
-- "cigar cask" → product_name ILIKE '%Cigar Cask%'
-- "statehouse gin" / "gin" → product_name ILIKE '%Statehouse Gin%' OR brand_family = 'Gin'
-- "vodka" → brand_family = 'Vodka'
-- "whiskey war" (generic) → brand_family = 'Whiskey War'
-- "midnight cask" → product_name ILIKE '%Midnight Cask%'
-- "masters blend" / "master blend" → product_name ILIKE '%Master Blend%'
-- "small batch" → product_name ILIKE '%Small Batch%'
-- "barrel select" → product_name ILIKE '%Barrel Select%'`;
+PRODUCT NAME ALIASES — casual phrasing → SQL filter:
+  "double double" → product_name ILIKE '%Double Double%'
+  "double oaked" (not double double) → product_name ILIKE '%Double Oaked%' AND product_name NOT ILIKE '%Double Double%'
+  "barrel proof" → product_name ILIKE '%Barrel Proof%'
+  "cigar cask" → product_name ILIKE '%Cigar Cask%'
+  "statehouse gin" / "gin" → brand_family = 'Gin'
+  "vodka" / "high bank vodka" → brand_family = 'Vodka'
+  "614 vodka" / "(614)" → brand_family = '(614) Vodka'
+  "whiskey war" (all variants) → brand_family = 'Whiskey War'
+  "midnight cask" → product_name ILIKE '%Midnight Cask%'
+  "masters blend" / "master blend" → product_name ILIKE '%Master Blend%'
+  "small batch" / "small batch bourbon" → product_name ILIKE '%Small Batch%'
+  "barrel select" → product_name ILIKE '%Barrel Select%'
+  "RTD" / "ready to drink" / "canned cocktail" → brand_family = 'RTD'
+  "bourbon" (all) → brand_family = 'Bourbon'
+  "old fashioned" → product_name ILIKE '%Old Fashioned%'
+  "manhattan" → product_name ILIKE '%Manhattan%'`;
 
 // Block any non-SELECT SQL (keyword at word boundary)
 const DISALLOWED = /\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|copy)\b/i;
