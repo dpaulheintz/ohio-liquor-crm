@@ -14,7 +14,7 @@ DATABASE SCHEMA:
 
 profiles (id uuid, email text, full_name text, role text [admin/rep], created_at timestamptz)
 
-accounts (id uuid, display_name text, type text [agency/wholesale], status text [prospect/customer], city text, address text, agency_id text, district text, linked_agency_name text, linked_agency_id text, owner_rep_id uuid FK profiles, needs_review boolean, created_at timestamptz)
+accounts (id uuid, display_name text, type text [EXACT VALUES: 'agency' | 'wholesale' | 'Bar/Restaurant' — always use exact case; 'agency' means retail liquor stores/grocers, 'wholesale' means bars/distributors, 'Bar/Restaurant' means on-premise accounts], status text [prospect/customer/Prospect — case inconsistent, use ILIKE for status filters], city text, address text, agency_id text, district text, linked_agency_name text, linked_agency_id text, owner_rep_id uuid FK profiles, needs_review boolean, created_at timestamptz)
 
 contacts (id uuid, account_id uuid FK accounts, name text, email text, phone text, title_role text, created_at timestamptz)
 
@@ -30,7 +30,7 @@ tastings (id uuid, agency_id uuid FK accounts, date date, start_time time, end_t
 
 agency_displays (id uuid, account_id uuid FK accounts, agency_name text, rep_id uuid FK profiles, display_type text [Wood/Box/Shelves], first_confirmed date, monthly_status jsonb, notes text)
 
-sales_monthly (id uuid, month text [YYYY-MM format e.g. '2026-01' — filter with month LIKE '2026-%' for a full year, or month >= '2026-01' AND month <= '2026-05' for a range], agency_id text, agency_name text, district text, vendor text, brand_code text, product_name text [see PRODUCT NAME ALIASES below], category text, brand_family text, sub_product text [only 3 values: 'HIGH BANK MIDNIGHT CASK', 'Masters Blend', 'Midnight Cask (Discontinued)' — all other products have sub_product = null; always search by product_name instead], size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
+sales_monthly (id uuid, month text [YYYY-MM format e.g. '2026-01' — filter with month LIKE '2026-%' for a full year, or month >= '2026-01' AND month <= '2026-05' for a range], agency_id text, agency_name text, district text, vendor text, brand_code text, product_name text [see PRODUCT NAME ALIASES below — always search this column], category text, brand_family text [EXACT VALUES: '(614) Vodka' | 'Bourbon' | 'Gin' | 'Midnight' | 'Midnight (Discontinued)' | 'Misc' | 'RTD' | 'Vodka' | 'Whiskey War'], sub_product text [ONLY 3 ROWS have a value: 'HIGH BANK MIDNIGHT CASK', 'Masters Blend', 'Midnight Cask (Discontinued)' — everything else is NULL; NEVER filter by sub_product for Whiskey War variants, use product_name instead], size text, is_hb_agency boolean, hb_location text, retail_bottles int, retail_amount numeric, wholesale_bottles int, wholesale_amount numeric)
 
 wholesale_detail (id uuid, month text [YYYY-MM format], agency_id text, agency_name text, brand_code text, brand_family text, sub_product text, size text, is_hb_agency boolean, hb_location text, permit_number text, wholesaler_name text, dba text, bottles_sold int, amount numeric)
 
@@ -53,11 +53,16 @@ CRITICAL QUERY PATTERNS:
    JOIN accounts a ON a.id = vl.account_id
    WHERE p.full_name ILIKE '%Samantha%'
      AND a.type = 'agency'
-     AND vl.visited_at >= '2025-06-01' AND vl.visited_at < '2025-07-01'
+     AND vl.visited_at >= '2026-06-01' AND vl.visited_at < '2026-07-01'
 
    Never filter visits by rep name without this JOIN — visit_logs has no name column, only rep_id.
 
-2. "Agencies visited" means distinct accounts WHERE accounts.type = 'agency'. Always JOIN accounts and filter type.
+2. Account type terminology:
+   - "agencies" → a.type = 'agency' (retail liquor stores, grocery chains)
+   - "wholesale accounts" → a.type = 'wholesale'
+   - "bars", "restaurants", "on-premise" → a.type = 'Bar/Restaurant'
+   - "all on-premise" → a.type IN ('wholesale', 'Bar/Restaurant')
+   Always quote the type value exactly as shown — case sensitive.
 
 3. Date ranges for months: use >= first day AND < first day of next month (e.g. June 2025: >= '2025-06-01' AND < '2025-07-01').
 
