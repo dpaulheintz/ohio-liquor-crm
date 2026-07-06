@@ -1,306 +1,284 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Section01Revenue } from './section-01-revenue';
-import type { Section01Data } from './section-01-revenue';
-import { Section02Scorecard } from './section-02-scorecard';
-import { Section03MenuMatrix } from './section-03-menu-matrix';
-import { Section04PrimeCost } from './section-04-prime-cost';
-import { Section05Profitability } from './section-05-profitability';
-import { Section06Comps } from './section-06-comps';
-import { Section07Insights } from './section-07-insights';
+import { useState, useMemo } from 'react';
+import {
+  GOLD, LOCATIONS, monthsBetween, shiftMonth, monthLabelYear, monthLabelFull, ymOf,
+  type DailyRow, type LocationTab,
+} from './lib';
+import { KpiCards, type KpiData } from './kpi-cards';
+import { RevenueChart, type MonthPoint } from './revenue-chart';
+import { LocationScorecard, type LocationStat } from './location-scorecard';
+import { DailyHeatmap } from './daily-heatmap';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const LOCATIONS = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21'] as const;
-type LocationName = (typeof LOCATIONS)[number];
-
-type Preset =
-  | 'today'
-  | 'yesterday'
-  | 'last7'
-  | 'last30'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'thisQuarter'
-  | 'ytd'
-  | 'custom';
-
-const GOLD = '#C5A572';
-
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function computeRange(preset: Preset): { from: string; to: string } {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const today = toDateStr(now);
-
-  switch (preset) {
-    case 'today':
-      return { from: today, to: today };
-    case 'yesterday': {
-      const yd = new Date(now); yd.setDate(yd.getDate() - 1);
-      const s = toDateStr(yd);
-      return { from: s, to: s };
-    }
-    case 'last7': {
-      const d = new Date(now); d.setDate(d.getDate() - 6);
-      return { from: toDateStr(d), to: today };
-    }
-    case 'last30': {
-      const d = new Date(now); d.setDate(d.getDate() - 29);
-      return { from: toDateStr(d), to: today };
-    }
-    case 'thisMonth':
-      return { from: `${y}-${String(m + 1).padStart(2, '0')}-01`, to: today };
-    case 'lastMonth': {
-      const lm = new Date(y, m, 0);
-      return {
-        from: `${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, '0')}-01`,
-        to: toDateStr(lm),
-      };
-    }
-    case 'thisQuarter': {
-      const qStart = new Date(y, Math.floor(m / 3) * 3, 1);
-      return { from: toDateStr(qStart), to: today };
-    }
-    case 'ytd':
-      return { from: `${y}-01-01`, to: today };
-    case 'custom':
-    default:
-      return { from: `${y}-01-01`, to: today };
-  }
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ num, title }: { num: string; title: string }) {
   return (
     <div className="flex items-center gap-4 mb-4">
       <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground shrink-0">{num}</span>
-      <h2 className="font-serif text-base font-semibold text-white tracking-wide">{title}</h2>
-      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${GOLD}33, transparent)` }} />
+      <h2 className="font-serif text-base font-semibold text-foreground tracking-wide">{title}</h2>
+      <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, ${GOLD}55, transparent)` }} />
     </div>
   );
+}
+
+// ─── Aggregation helpers ──────────────────────────────────────────────────────
+
+function sumField(rows: DailyRow[], field: 'total' | 'fnb' | 'guests' | 'checks'): number {
+  let s = 0;
+  for (const r of rows) s += r[field];
+  return s;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface RestaurantDashboardClientProps {
-  section01Data: Section01Data;
+  rows: DailyRow[];
+  dataThrough: string | null;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+const TABS: LocationTab[] = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21', 'All'];
 
-export function RestaurantDashboardClient({ section01Data }: RestaurantDashboardClientProps) {
-  const dataThrough = section01Data.dataThrough;
-  // Date range state
-  const [preset, setPreset] = useState<Preset>('custom');
-  const [dateFrom, setDateFrom] = useState<string>(() => computeRange('custom').from);
-  const [dateTo, setDateTo]     = useState<string>(() => computeRange('custom').to);
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
-  // Location filter state — empty = All
-  const [selectedLocations, setSelectedLocations] = useState<LocationName[]>([]);
+export function RestaurantDashboardClient({ rows, dataThrough }: RestaurantDashboardClientProps) {
+  // All distinct months present, ascending.
+  const allMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) set.add(ymOf(r.date));
+    return [...set].sort();
+  }, [rows]);
 
-  const applyPreset = useCallback((p: Preset) => {
-    setPreset(p);
-    if (p !== 'custom') {
-      const { from, to } = computeRange(p);
-      setDateFrom(from);
-      setDateTo(to);
+  const latestMonth = allMonths[allMonths.length - 1] ?? '2026-01';
+  const earliestMonth = allMonths[0] ?? '2024-01';
+
+  // ── State ──
+  const [location, setLocation] = useState<LocationTab>('All');
+  const [rangeFrom, setRangeFrom] = useState<string>(() => {
+    const start = shiftMonth(latestMonth, -11);
+    return start < earliestMonth ? earliestMonth : start;
+  });
+  const [rangeTo, setRangeTo] = useState<string>(latestMonth);
+  const [heatmapMonth, setHeatmapMonth] = useState<string>(latestMonth);
+
+  // Months spanned by the active range.
+  const rangeMonths = useMemo(() => monthsBetween(rangeFrom, rangeTo), [rangeFrom, rangeTo]);
+
+  // Keep the heatmap month inside the active range. `heatmapMonth` is only ever
+  // set from the in-range <select>, so falling back here (rather than in an
+  // effect) covers the case where the range shrinks past the current selection.
+  const effHeatmapMonth = rangeMonths.includes(heatmapMonth)
+    ? heatmapMonth
+    : rangeMonths[rangeMonths.length - 1];
+
+  // Rows filtered by the selected location (not by date — date filtering per section).
+  const locRows = useMemo(
+    () => (location === 'All' ? rows : rows.filter((r) => r.location === location)),
+    [rows, location],
+  );
+
+  // ── KPI aggregates (current range vs same range prior year) ──
+  const kpi: KpiData = useMemo(() => {
+    const inRange = (ym: string) => ym >= rangeFrom && ym <= rangeTo;
+    const priorFrom = shiftMonth(rangeFrom, -12);
+    const priorTo = shiftMonth(rangeTo, -12);
+    const inPrior = (ym: string) => ym >= priorFrom && ym <= priorTo;
+
+    const cur = locRows.filter((r) => inRange(ymOf(r.date)));
+    const prior = locRows.filter((r) => inPrior(ymOf(r.date)));
+
+    const totalRevenue = sumField(cur, 'total');
+    const fnbRevenue = sumField(cur, 'fnb');
+    const guestCount = sumField(cur, 'guests');
+    const priorRevenueRaw = sumField(prior, 'total');
+    const priorGuestRaw = sumField(prior, 'guests');
+
+    return {
+      totalRevenue,
+      priorRevenue: prior.length > 0 ? priorRevenueRaw : null,
+      guestCount,
+      priorGuestCount: prior.length > 0 ? priorGuestRaw : null,
+      avgCheck: guestCount > 0 ? totalRevenue / guestCount : 0,
+      fnbRevenue,
+      retailRevenue: Math.max(0, totalRevenue - fnbRevenue),
+    };
+  }, [locRows, rangeFrom, rangeTo]);
+
+  // ── Monthly chart points (current vs prior-year) ──
+  const chartPoints: MonthPoint[] = useMemo(() => {
+    // Pre-bucket revenue by month for the selected location.
+    const byMonth: Record<string, number> = {};
+    for (const r of locRows) {
+      const ym = ymOf(r.date);
+      byMonth[ym] = (byMonth[ym] ?? 0) + r.total;
     }
-  }, []);
+    return rangeMonths.map((ym) => {
+      const priorYm = shiftMonth(ym, -12);
+      return {
+        label: monthLabelYear(ym),
+        cur: byMonth[ym] ?? null,
+        prior: byMonth[priorYm] ?? null,
+      };
+    });
+  }, [locRows, rangeMonths]);
 
-  const toggleLocation = useCallback((loc: LocationName) => {
-    setSelectedLocations((prev) =>
-      prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc]
-    );
-  }, []);
+  // ── Location scorecard (all locations over the range) ──
+  const scorecard: LocationStat[] = useMemo(() => {
+    const inRange = (ym: string) => ym >= rangeFrom && ym <= rangeTo;
+    return LOCATIONS.map((loc) => {
+      const r = rows.filter((row) => row.location === loc && inRange(ymOf(row.date)));
+      const revenue = sumField(r, 'total');
+      const guests = sumField(r, 'guests');
+      return { location: loc, revenue, guests, avgCheck: guests > 0 ? revenue / guests : 0 };
+    });
+  }, [rows, rangeFrom, rangeTo]);
 
-  const PRESETS: { key: Preset; label: string }[] = [
-    { key: 'today',       label: 'Today' },
-    { key: 'yesterday',   label: 'Yesterday' },
-    { key: 'last7',       label: 'Last 7 Days' },
-    { key: 'last30',      label: 'Last 30 Days' },
-    { key: 'thisMonth',   label: 'This Month' },
-    { key: 'lastMonth',   label: 'Last Month' },
-    { key: 'thisQuarter', label: 'This Quarter' },
-    { key: 'ytd',         label: 'YTD' },
-    { key: 'custom',      label: 'Custom' },
-  ];
+  // ── Daily heatmap data for the chosen month ──
+  const { dayRevenue, maxRevenue } = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const r of locRows) {
+      if (ymOf(r.date) !== effHeatmapMonth) continue;
+      const day = Number(r.date.slice(8, 10));
+      map[day] = (map[day] ?? 0) + r.total;
+    }
+    const max = Object.values(map).reduce((m, v) => (v > m ? v : m), 0);
+    return { dayRevenue: map, maxRevenue: max };
+  }, [locRows, effHeatmapMonth]);
 
+  const dataThroughLabel = dataThrough
+    ? new Date(dataThrough + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  // ── Render ──
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      {/* Page header */}
       <div className="border-b border-primary/15 px-6 py-5">
         <div className="flex items-baseline justify-between flex-wrap gap-3">
           <div>
-            <h1 className="font-serif text-2xl font-bold tracking-wide text-white">
+            <h1 className="font-serif text-2xl font-bold tracking-wide text-foreground">
               Restaurant Analytics
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">
-              High Bank Distillery — Operations Intelligence
+              High Bank Distillery — Sales Performance
             </p>
           </div>
-          {dataThrough && (
+          {dataThroughLabel && (
             <span className="text-xs text-muted-foreground font-mono">
-              Data through{' '}
-              <span className="text-muted-foreground">
-                {new Date(dataThrough + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
+              Data through {dataThroughLabel}
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Sticky controls ──────────────────────────────────────────────────── */}
+      {/* Sticky controls */}
       <div className="sticky top-0 z-30 border-b border-primary/15 bg-background/95 backdrop-blur-sm px-6 py-3 space-y-2.5">
-
-        {/* Preset pills + Custom date pickers */}
+        {/* Location tabs */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">Range</span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0 w-16">Location</span>
           <div className="flex items-center gap-1 flex-wrap">
-            {PRESETS.map(({ key, label }) => (
+            {TABS.map((tab) => {
+              const active = location === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setLocation(tab)}
+                  className="rounded px-3 py-1 text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: active ? GOLD : 'var(--muted, #f1f1f1)',
+                    color: active ? '#000' : '#71717a',
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    borderColor: active ? GOLD : 'transparent',
+                  }}
+                >
+                  {tab === 'All' ? 'All Locations' : tab}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Month range */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0 w-16">Range</span>
+          <div className="flex items-center gap-2 text-xs">
+            <select
+              value={rangeFrom}
+              onChange={(e) => setRangeFrom(e.target.value > rangeTo ? rangeTo : e.target.value)}
+              className="bg-white border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
+            >
+              {allMonths.map((m) => (
+                <option key={m} value={m}>{monthLabelFull(m)}</option>
+              ))}
+            </select>
+            <span className="text-muted-foreground">→</span>
+            <select
+              value={rangeTo}
+              onChange={(e) => setRangeTo(e.target.value < rangeFrom ? rangeFrom : e.target.value)}
+              className="bg-white border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
+            >
+              {allMonths.map((m) => (
+                <option key={m} value={m}>{monthLabelFull(m)}</option>
+              ))}
+            </select>
+          </div>
+          {/* Quick range presets */}
+          <div className="flex items-center gap-1">
+            {([['12M', 11], ['6M', 5], ['3M', 2]] as const).map(([label, back]) => (
               <button
-                key={key}
-                onClick={() => applyPreset(key)}
-                className={`rounded px-2.5 py-1 text-xs transition-colors font-medium ${
-                  preset === key
-                    ? 'bg-primary text-black'
-                    : 'bg-muted text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
+                key={label}
+                onClick={() => {
+                  const start = shiftMonth(latestMonth, -back);
+                  setRangeFrom(start < earliestMonth ? earliestMonth : start);
+                  setRangeTo(latestMonth);
+                }}
+                className="rounded px-2 py-1 text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
               >
                 {label}
               </button>
             ))}
+            <button
+              onClick={() => { setRangeFrom(earliestMonth); setRangeTo(latestMonth); }}
+              className="rounded px-2 py-1 text-[11px] font-medium bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              All Time
+            </button>
           </div>
-          {preset === 'custom' && (
-            <div className="flex items-center gap-2 text-xs">
-              <input
-                type="date"
-                value={dateFrom}
-                max={dateTo}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
-              />
-              <span className="text-muted-foreground">→</span>
-              <input
-                type="date"
-                value={dateTo}
-                min={dateFrom}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="bg-white border border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:border-primary/60"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Location pills */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium shrink-0">Location</span>
-          <button
-            onClick={() => setSelectedLocations([])}
-            className={`rounded px-2.5 py-0.5 text-xs transition-colors font-medium ${
-              selectedLocations.length === 0
-                ? 'bg-primary text-black'
-                : 'bg-muted text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            All
-          </button>
-          {LOCATIONS.map((loc) => {
-            const active = selectedLocations.includes(loc);
-            return (
-              <button
-                key={loc}
-                onClick={() => toggleLocation(loc)}
-                className="rounded px-2.5 py-0.5 text-xs transition-all font-medium"
-                style={{
-                  backgroundColor: active ? GOLD + '28' : 'rgb(39,39,42)',
-                  color: active ? GOLD : '#a1a1aa',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  borderColor: active ? GOLD + '70' : 'transparent',
-                }}
-              >
-                {loc}
-              </button>
-            );
-          })}
         </div>
       </div>
 
-      {/* ── Sections ─────────────────────────────────────────────────────────── */}
+      {/* Sections */}
       <div className="px-6 py-6 space-y-8 max-w-screen-2xl mx-auto">
-
-        {/* 01 — Revenue Overview (FIXED — does not reflow with date picker) */}
         <section>
-          <SectionHeader num="01" title="Revenue Overview" />
-          <Section01Revenue data={section01Data} />
+          <SectionHeader num="01" title="Key Metrics" />
+          <KpiCards data={kpi} />
         </section>
 
-        {/* 02 — Location Scorecard (reflows) */}
         <section>
-          <SectionHeader num="02" title="Location Scorecard" />
-          <Section02Scorecard
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
+          <SectionHeader num="02" title="Monthly Revenue" />
+          <RevenueChart
+            points={chartPoints}
+            curLabel={location === 'All' ? 'All Locations' : location}
+            priorLabel="Prior year"
           />
         </section>
 
-        {/* 03 — Menu Engineering Matrix (reflows) */}
-        <section>
-          <SectionHeader num="03" title="Menu Engineering Matrix" />
-          <Section03MenuMatrix
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
-          />
-        </section>
+        {location === 'All' && (
+          <section>
+            <SectionHeader num="03" title="Location Scorecard" />
+            <LocationScorecard stats={scorecard} />
+          </section>
+        )}
 
-        {/* 04 — Prime Cost (reflows) */}
         <section>
-          <SectionHeader num="04" title="Prime Cost" />
-          <Section04PrimeCost
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
-          />
-        </section>
-
-        {/* 05 — Profitability (reflows) */}
-        <section>
-          <SectionHeader num="05" title="Profitability" />
-          <Section05Profitability
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
-          />
-        </section>
-
-        {/* 06 — Comps & Voids (reflows) */}
-        <section>
-          <SectionHeader num="06" title="Comps &amp; Voids" />
-          <Section06Comps
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
-          />
-        </section>
-
-        {/* 07 — This Week at High Bank (reflows) */}
-        <section>
-          <SectionHeader num="07" title="This Week at High Bank" />
-          <Section07Insights
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            selectedLocations={selectedLocations}
+          <SectionHeader num={location === 'All' ? '04' : '03'} title="Daily Revenue" />
+          <DailyHeatmap
+            month={effHeatmapMonth}
+            monthOptions={rangeMonths}
+            onSelectMonth={setHeatmapMonth}
+            dayRevenue={dayRevenue}
+            maxRevenue={maxRevenue}
           />
         </section>
       </div>
