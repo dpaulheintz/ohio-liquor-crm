@@ -9,6 +9,8 @@ export type LocationName = (typeof LOCATIONS)[number];
 export type LocationTab = LocationName | 'All';
 
 // One row of daily_sales, denormalized with its location name attached.
+// labor comes from daily_sales.labor_cost; foodCost from daily_costs (MarginEdge
+// purchase-based proxy) joined on location+date (null when no invoice data).
 export interface DailyRow {
   date: string;       // YYYY-MM-DD
   location: LocationName;
@@ -16,6 +18,18 @@ export interface DailyRow {
   total: number;      // total_revenue (validated against Toast ground truth)
   guests: number;     // guest_count
   checks: number;     // check_count
+  labor: number;      // labor_cost
+  foodCost: number | null; // daily_costs.food_cost (purchase proxy), null if absent
+}
+
+// One month of invoice_summary for a location (MarginEdge invoice spend).
+// food/bev split is an approximate vendor-name classification.
+export interface InvoiceMonth {
+  location: LocationName;
+  month: string;      // YYYY-MM
+  total: number;      // total_invoices
+  food: number;       // food_invoices (approx)
+  bev: number;        // bev_invoices (approx)
 }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
