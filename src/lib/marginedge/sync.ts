@@ -1,12 +1,13 @@
 /**
  * MarginEdge → Supabase sync (hybrid cost model).
  *
- *  - daily_costs   : total daily invoice PURCHASES from the cheap /orders list
- *                    (proxy for COGS; includes OPEX — labeled as purchases).
- *  - invoice_summary: food vs beverage split, derived from per-invoice line-item
- *                    detail joined to a product→category→categoryType map.
- *                    Expensive (one /orders/{id} call per invoice) — run as a
- *                    one-time historical backfill + bounded nightly (current month).
+ *  - daily_costs    : total daily invoice PURCHASES from the /orders list
+ *                     (proxy for COGS; includes everything — labeled as purchases).
+ *  - invoice_summary: food / beverage / unclassified split, derived from the
+ *                     /orders list's vendorName (no category field exists on
+ *                     that endpoint — confirmed via ?step=field-diag). Every
+ *                     order lands in exactly one bucket so
+ *                     total = food + bev + unclassified always reconciles.
  */
 
 import { createAdminClient } from '@/lib/supabase/server';
@@ -18,11 +19,19 @@ function normalizeName(s: string): string {
 
 // Approximate food vs beverage classification by vendor name. The /orders list
 // carries vendorName + orderTotal, so this needs no per-invoice detail calls.
-// (Line-item categoryId is null and the /products catalog is unpageable, so a
-// precise split isn't derivable from this API — this keyword heuristic covers
-// the major vendors and is labeled "approximate" in the UI.)
-const BEV_VENDOR_RE = /\b(wine|spirit|liquor|beer|brew|distribut|beverage|vintner|cellar|heidelberg|cavalier|vintage|winery|superior beverage)\b/i;
-const FOOD_VENDOR_RE = /\b(food|produce|meat|seafood|fish|bakery|bread|dairy|farm|provision|sysco|gordon|hillcrest|us foods|restaurant depot|grocery|butcher|poultry|coffee)\b/i;
+// (Line-item categoryId is null, the /products catalog is unpageable, and the
+// /orders list has NO category field at all — confirmed via ?step=field-diag,
+// only vendorName/paymentAccount/status exist — so a precise API-driven split
+// isn't possible. This keyword heuristic covers the major vendors.)
+//
+// Stems use \w* (not a trailing \b) so inflected/compound vendor names still
+// match — e.g. "brew" must also catch "Brewing", "meat" must catch "Meats",
+// "produce" must catch "ProduceOne", "distribut" must catch "Distributing".
+// A field-diag run against real Sept 2025 invoices found these stems fixed
+// ~97% of the vendor-name "unclassified" bucket (see OHLQ, Southern Glazer's,
+// and *Brewing* vendors below).
+const BEV_VENDOR_RE = /\b(wine|spirits?|liquor|ohlq|beer|brew\w*|distribut\w*|beverage|vintner|cellar|heidelberg|cavalier|vintage|winery|glazer\w*)/i;
+const FOOD_VENDOR_RE = /\b(food|produce\w*|meat\w*|seafood|fish|bak\w*|bread|dairy|farm\w*|provision|sysco|gordon|hillcrest|us foods|restaurant depot|grocery|butcher|poultry|coffee|giant eagle|market district)/i;
 
 export function classifyVendor(vendorName: string): 'FOOD' | 'BEV' | 'UNCLASSIFIED' {
   if (BEV_VENDOR_RE.test(vendorName)) return 'BEV';
@@ -116,6 +125,9 @@ export async function syncCosts(startDate: string, endDate: string, locationName
 }
 
 // ─── Step: invoice_summary from /orders list (fast; vendor-based food/bev) ───────
+// Every order is classified into EXACTLY ONE of food/bev/unclassified, so
+// total_invoices = food_invoices + bev_invoices + unclassified_invoices always
+// reconciles exactly (no independent totaling, no rounding drift).
 export async function syncInvoices(startDate: string, endDate: string, locationName?: string) {
   const supabase = createAdminClient();
   const locations = await mappedLocations(locationName);
@@ -127,26 +139,32 @@ export async function syncInvoices(startDate: string, endDate: string, locationN
       startDate, endDate, restaurantUnitId: loc.marginedge_id,
     })) as Array<Record<string, unknown>>;
 
-    // month → { total, food, bev } — food/bev split approximated by vendor name
-    const byMonth: Record<string, { total: number; food: number; bev: number }> = {};
+    // month → { food, bev, unclassified } — vendor-name classification
+    const byMonth: Record<string, { food: number; bev: number; unclassified: number }> = {};
     for (const o of orders) {
       const invDate = String(o.invoiceDate ?? '').slice(0, 10);
       if (!invDate) continue;
       const ym = invDate.slice(0, 7);
       const amt = Number(o.orderTotal ?? 0);
-      const m = (byMonth[ym] ??= { total: 0, food: 0, bev: 0 });
-      m.total += amt;
+      const m = (byMonth[ym] ??= { food: 0, bev: 0, unclassified: 0 });
       const type = classifyVendor(String(o.vendorName ?? ''));
       if (type === 'FOOD') m.food += amt;
       else if (type === 'BEV') m.bev += amt;
+      else m.unclassified += amt;
     }
 
-    const rows = Object.entries(byMonth).map(([month, v]) => ({
-      location_id: loc.id, month,
-      total_invoices: Math.round(v.total * 100) / 100,
-      food_invoices: Math.round(v.food * 100) / 100,
-      bev_invoices: Math.round(v.bev * 100) / 100,
-    }));
+    const rows = Object.entries(byMonth).map(([month, v]) => {
+      const food = Math.round(v.food * 100) / 100;
+      const bev = Math.round(v.bev * 100) / 100;
+      const unclassified = Math.round(v.unclassified * 100) / 100;
+      return {
+        location_id: loc.id, month,
+        food_invoices: food,
+        bev_invoices: bev,
+        unclassified_invoices: unclassified,
+        total_invoices: Math.round((food + bev + unclassified) * 100) / 100,
+      };
+    });
     if (rows.length > 0) {
       await supabase.from('invoice_summary').upsert(rows, { onConflict: 'location_id,month' });
     }

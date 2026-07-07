@@ -36,7 +36,9 @@ export default async function RestaurantAnalyticsPage() {
     if (data.length < PAGE_SIZE) break;
   }
 
-  // ── daily_costs (MarginEdge purchase proxy) → map by location|date ──
+  // ── daily_costs (MarginEdge purchase proxy, unfiltered daily total) →
+  // map by location|date. Kept for potential daily-granularity use; Prime Cost
+  // itself is now driven by invoice_summary (monthly, food/bev/unclassified split).
   const foodCostByKey = new Map<string, number>();
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
@@ -49,12 +51,12 @@ export default async function RestaurantAnalyticsPage() {
     if (data.length < PAGE_SIZE) break;
   }
 
-  // ── invoice_summary (monthly spend, approx food/bev) ──
+  // ── invoice_summary (monthly spend, food/bev/unclassified) — drives Prime Cost ──
   const invoiceMonths: InvoiceMonth[] = [];
   {
     const { data } = await supabase
       .from('invoice_summary')
-      .select('location_id, month, total_invoices, food_invoices, bev_invoices');
+      .select('location_id, month, total_invoices, food_invoices, bev_invoices, unclassified_invoices');
     for (const r of data ?? []) {
       const location = idToName.get(r.location_id as string);
       if (!location) continue;
@@ -63,6 +65,7 @@ export default async function RestaurantAnalyticsPage() {
         total: Number(r.total_invoices ?? 0),
         food: Number(r.food_invoices ?? 0),
         bev: Number(r.bev_invoices ?? 0),
+        unclassified: Number(r.unclassified_invoices ?? 0),
       });
     }
   }

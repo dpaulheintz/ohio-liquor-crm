@@ -11,8 +11,9 @@ export interface PrimeCostData {
   // period aggregates (combined over the selected location(s))
   revenue: number;
   labor: number;
-  food: number;                 // purchase-based proxy
-  foodAvailable: boolean;       // any daily_costs present in the period
+  food: number;                 // purchase-based proxy; INCLUDES unclassified invoices
+  bev: number;                  // classified beverage invoices
+  foodAvailable: boolean;       // any invoice_summary data present in the period
   // monthly trend of prime cost %
   trend: Array<{ label: string; prime: number | null; food: number | null; labor: number | null }>;
   // current vs prior month vs same month last year (prime cost %)
@@ -76,7 +77,8 @@ function TrendTip({ active, payload, label }: { active?: boolean; payload?: any[
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function PrimeCostPanel({ data }: { data: PrimeCostData }) {
-  const primePct = data.revenue > 0 && data.foodAvailable ? ((data.labor + data.food) / data.revenue) * 100 : null;
+  const cogs = data.food + data.bev; // food already includes unclassified invoices
+  const primePct = data.revenue > 0 && data.foodAvailable ? ((data.labor + cogs) / data.revenue) * 100 : null;
   const foodPct = data.revenue > 0 && data.foodAvailable ? (data.food / data.revenue) * 100 : null;
   const laborPct = data.revenue > 0 ? (data.labor / data.revenue) * 100 : null;
 
@@ -99,15 +101,17 @@ export function PrimeCostPanel({ data }: { data: PrimeCostData }) {
         <MetricTile label="Labor % of Sales" value={pct(laborPct)} hint="From Toast labor" />
         <MetricTile
           label="Prime Cost $"
-          value={data.foodAvailable ? fmtMoney(data.labor + data.food) : '—'}
-          hint={`Labor ${fmtMoney(data.labor)} + Food ${data.foodAvailable ? fmtMoney(data.food) : '—'}`}
+          value={data.foodAvailable ? fmtMoney(data.labor + cogs) : '—'}
+          hint={`Labor ${fmtMoney(data.labor)} + Food ${data.foodAvailable ? fmtMoney(data.food) : '—'} + Bev ${data.foodAvailable ? fmtMoney(data.bev) : '—'}`}
         />
       </div>
 
       {/* Purchases-based disclaimer */}
       <p className="text-[11px] text-muted-foreground -mt-1">
         Food cost is a <span className="text-foreground">purchases-based proxy</span> from MarginEdge invoices (not true COGS —
-        no inventory counts). Best read at monthly granularity.
+        no inventory counts), and includes <span className="text-foreground">unclassified invoices</span> (vendor spend that
+        didn&apos;t match a food/beverage keyword — assumed food-equivalent since it&apos;s overwhelmingly food/bev, not overhead).
+        See Invoice Spend below for the raw Food / Beverage / Unclassified split. Best read at monthly granularity.
       </p>
 
       {/* Prime cost trend + comparison */}

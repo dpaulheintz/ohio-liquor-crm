@@ -138,7 +138,7 @@ async function fieldDiag(startDate: string, endDate: string, locationName?: stri
   const paymentAccountTotals: Record<string, { count: number; amount: number }> = {};
   const statusTotals: Record<string, { count: number; amount: number }> = {};
   const unclassifiedVendors: Record<string, { count: number; amount: number }> = {};
-  let allKeys = new Set<string>();
+  const allKeys = new Set<string>();
 
   for (const loc of locations) {
     const orders = (await getOrders({
