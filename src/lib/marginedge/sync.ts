@@ -80,23 +80,29 @@ export async function syncCosts(startDate: string, endDate: string, locationName
       byDay[d] = (byDay[d] ?? 0) + Number(o.orderTotal ?? 0);
     }
 
-    const rows = Object.entries(byDay).map(([date, total]) => ({
-      location_id: loc.id, date, food_cost: total, cogs_total: total,
-    }));
+    // Revenue per day (for food_cost_pct) from daily_sales — computed in JS
+    // because exec_sql wraps queries in SELECT and can't run an UPDATE.
+    const { data: sales } = await supabase
+      .from('daily_sales')
+      .select('business_date, total_revenue')
+      .eq('location_id', loc.id)
+      .gte('business_date', startDate)
+      .lte('business_date', endDate);
+    const revByDay = new Map<string, number>();
+    for (const s of sales ?? []) revByDay.set(String(s.business_date), Number(s.total_revenue ?? 0));
+
+    const rows = Object.entries(byDay).map(([date, total]) => {
+      const rev = revByDay.get(date) ?? 0;
+      return {
+        location_id: loc.id, date, food_cost: total, cogs_total: total,
+        food_cost_pct: rev > 0 ? Math.round((total / rev) * 10000) / 100 : null,
+      };
+    });
     if (rows.length > 0) {
       await supabase.from('daily_costs').upsert(rows, { onConflict: 'location_id,date' });
     }
     results.push({ location: loc.name, orders: orders.length, days: rows.length });
   }
-
-  // food_cost_pct = daily purchases / daily revenue (from daily_sales)
-  await supabase.rpc('exec_sql', {
-    query_text: `UPDATE daily_costs dc SET food_cost_pct =
-       CASE WHEN ds.total_revenue > 0 THEN ROUND((dc.food_cost / ds.total_revenue * 100)::numeric, 2) ELSE NULL END
-       FROM daily_sales ds
-       WHERE ds.location_id = dc.location_id AND ds.business_date = dc.date
-         AND dc.date >= '${startDate}' AND dc.date <= '${endDate}'`,
-  });
 
   return { range: { startDate, endDate }, results };
 }
@@ -108,22 +114,17 @@ async function buildProductTypeMap(unitId: string): Promise<Map<string, Category
   const catType = new Map<string, CategoryType>();
   for (const c of cats) catType.set(String(c.categoryId), String(c.categoryType ?? 'UNKNOWN') as CategoryType);
 
-  // product → dominant categoryId → type. Advance by actual batch size and stop
-  // only on an empty page (the API caps page size regardless of the limit asked).
+  // product → dominant categoryId → type. The /products endpoint ignores offset
+  // (same as /orders), so a single fetch is all we can get; products not in the
+  // map fall back to UNKNOWN and are simply excluded from the food/bev split.
   const productType = new Map<string, CategoryType>();
-  let offset = 0;
-  for (let page = 0; page < 300; page++) {
-    const batch = toArray(await getProducts(unitId, 500, offset), 'products') as Array<Record<string, unknown>>;
-    if (batch.length === 0) break;
-    for (const p of batch) {
-      const pid = String(p.companyConceptProductId ?? '');
-      const cats2 = toArray(p.categories) as Array<Record<string, unknown>>;
-      if (!pid || cats2.length === 0) continue;
-      // dominant category by percentAllocation
-      const dominant = cats2.reduce((a, b) => (Number(b.percentAllocation ?? 0) > Number(a.percentAllocation ?? 0) ? b : a));
-      productType.set(pid, catType.get(String(dominant.categoryId)) ?? 'UNKNOWN');
-    }
-    offset += batch.length;
+  const batch = toArray(await getProducts(unitId, 500), 'products') as Array<Record<string, unknown>>;
+  for (const p of batch) {
+    const pid = String(p.companyConceptProductId ?? '');
+    const cats2 = toArray(p.categories) as Array<Record<string, unknown>>;
+    if (!pid || cats2.length === 0) continue;
+    const dominant = cats2.reduce((a, b) => (Number(b.percentAllocation ?? 0) > Number(a.percentAllocation ?? 0) ? b : a));
+    productType.set(pid, catType.get(String(dominant.categoryId)) ?? 'UNKNOWN');
   }
   return productType;
 }
