@@ -91,9 +91,9 @@ export async function getRestaurantUnits(): Promise<unknown> {
   return meGet('/restaurantUnits');
 }
 
-/** GET /categories — spend/GL categories used to classify invoices. */
-export async function getCategories(): Promise<unknown> {
-  return meGet('/categories');
+/** GET /categories — spend/GL categories (requires restaurantUnitId). */
+export async function getCategories(restaurantUnitId: string): Promise<unknown> {
+  return meGet('/categories', { restaurantUnitId });
 }
 
 /**

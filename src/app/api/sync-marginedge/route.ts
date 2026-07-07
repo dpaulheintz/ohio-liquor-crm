@@ -81,38 +81,59 @@ function resolveRange(sp: URLSearchParams, step: string): { startDate: string; e
 }
 
 // ─── discover: dry-run to verify live shapes ────────────────────────────────────
+// Fully defensive: each endpoint is probed independently and its result OR error
+// is captured, so one call surfaces every shape even when some endpoints fail.
 async function discover(): Promise<NextResponse> {
-  const units = await getRestaurantUnits();
-  const categories = await getCategories();
-
-  // Small orders sample: last 14 days, first page only.
-  const end = new Date().toISOString().slice(0, 10);
-  const startD = new Date();
-  startD.setDate(startD.getDate() - 14);
-  const start = startD.toISOString().slice(0, 10);
-  const orders = await getOrders({ startDate: start, endDate: end, pageSize: 5, maxPages: 1 });
-
-  const unitList = toArray(units, 'restaurantUnits');
-  const catList = toArray(categories, 'categories');
-
-  return NextResponse.json({
-    ok: true,
+  const out: Record<string, unknown> = {
     hint: 'DRY RUN — verify field names, then run ?step=locations then ?step=backfill',
-    restaurantUnits: {
-      count: unitList.length,
-      sample: unitList.slice(0, 10),
-      rawKeys: firstKeys(units),
-    },
-    categories: {
-      count: catList.length,
-      sample: catList.slice(0, 30),
-    },
-    ordersSample: {
-      count: orders.length,
-      range: { start, end },
-      sample: orders.slice(0, 3),
-    },
-  });
+  };
+
+  // 1. restaurantUnits (no params)
+  let firstUnitId: string | undefined;
+  const unitsProbe = await probe(() => getRestaurantUnits());
+  if (unitsProbe.ok) {
+    const list = toArray(unitsProbe.value, 'restaurantUnits') as Array<Record<string, unknown>>;
+    firstUnitId = list[0] ? String(list[0].restaurantUnitId ?? list[0].id ?? '') || undefined : undefined;
+    out.restaurantUnits = { count: list.length, sample: list.slice(0, 10), rawKeys: firstKeys(unitsProbe.value) };
+  } else {
+    out.restaurantUnits = { error: unitsProbe.error };
+  }
+
+  // 2. categories (requires restaurantUnitId)
+  if (firstUnitId) {
+    const catProbe = await probe(() => getCategories(firstUnitId!));
+    out.categories = catProbe.ok
+      ? { usingUnitId: firstUnitId, count: toArray(catProbe.value, 'categories').length, sample: toArray(catProbe.value, 'categories').slice(0, 40) }
+      : { usingUnitId: firstUnitId, error: catProbe.error };
+  } else {
+    out.categories = { skipped: 'no restaurantUnitId available' };
+  }
+
+  // 3. orders sample (pass restaurantUnitId — likely required too)
+  if (firstUnitId) {
+    const end = new Date().toISOString().slice(0, 10);
+    const startD = new Date(); startD.setDate(startD.getDate() - 30);
+    const start = startD.toISOString().slice(0, 10);
+    const ordProbe = await probe(() => getOrders({ startDate: start, endDate: end, restaurantUnitId: firstUnitId, pageSize: 5, maxPages: 1 }));
+    out.ordersSample = ordProbe.ok
+      ? { usingUnitId: firstUnitId, range: { start, end }, count: (ordProbe.value as unknown[]).length, sample: (ordProbe.value as unknown[]).slice(0, 3) }
+      : { usingUnitId: firstUnitId, range: { start, end }, error: ordProbe.error };
+  } else {
+    out.ordersSample = { skipped: 'no restaurantUnitId available' };
+  }
+
+  return NextResponse.json({ ok: true, ...out });
+}
+
+async function probe<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  try {
+    return { ok: true, value: await fn() };
+  } catch (err) {
+    const msg = err instanceof MarginEdgeError
+      ? `${err.message}${err.body ? ` :: ${err.body}` : ''}`
+      : err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
 }
 
 function firstKeys(payload: unknown): string[] {
