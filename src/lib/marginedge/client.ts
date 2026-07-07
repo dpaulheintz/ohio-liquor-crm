@@ -38,8 +38,10 @@ async function meGet(
     if (v !== undefined) url.searchParams.set(k, String(v));
   }
 
-  const maxAttempts = 4;
+  const maxAttempts = 5;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // Global pacing: small delay before every call to stay under the rate limit.
+    await new Promise((r) => setTimeout(r, 150));
     const res = await fetch(url.toString(), {
       headers: { 'X-Api-Key': apiKey(), Accept: 'application/json' },
     });
@@ -110,32 +112,57 @@ export async function getProducts(restaurantUnitId: string, limit = 20, offset =
  * GET /orders — invoices, filterable by date. Paginated via limit/offset.
  * Fetches every page and returns the concatenated raw records.
  */
+// The API caps a response at 100 rows and IGNORES offset (paging by offset just
+// re-returns the same first 100). So instead of offset pagination we fetch a
+// date window; if it hits the 100 cap we split the window in half and recurse.
+// Results are de-duplicated by orderId. Invoice volume is low (~1-3/day) so most
+// windows resolve in a single call.
+const ORDERS_CAP = 100;
+
 export async function getOrders(opts: {
   startDate: string;            // YYYY-MM-DD
   endDate: string;              // YYYY-MM-DD
   restaurantUnitId?: string;
-  pageSize?: number;
-  maxPages?: number;
+  pageSize?: number;            // unused (kept for call-site compatibility)
+  maxPages?: number;            // unused
 }): Promise<unknown[]> {
-  // The API caps pages (observed at 100) regardless of the requested limit, so
-  // advance the offset by the ACTUAL batch size and stop only on an empty page.
-  const pageSize = opts.pageSize ?? 500;
-  const maxPages = opts.maxPages ?? 300;
-  const all: unknown[] = [];
-  let offset = 0;
+  const seen = new Map<string, Record<string, unknown>>();
+  await collectOrders(opts.startDate, opts.endDate, opts.restaurantUnitId, seen, 0);
+  return [...seen.values()];
+}
 
-  for (let page = 0; page < maxPages; page++) {
-    const payload = await meGet('/orders', {
-      startDate: opts.startDate,
-      endDate: opts.endDate,
-      restaurantUnitId: opts.restaurantUnitId,
-      limit: pageSize,
-      offset,
-    });
-    const batch = toArray(payload, 'orders');
-    if (batch.length === 0) break;
-    all.push(...batch);
-    offset += batch.length;
+async function collectOrders(
+  start: string,
+  end: string,
+  restaurantUnitId: string | undefined,
+  seen: Map<string, Record<string, unknown>>,
+  depth: number,
+): Promise<void> {
+  const payload = await meGet('/orders', { startDate: start, endDate: end, restaurantUnitId, limit: 500 });
+  const batch = toArray(payload, 'orders') as Array<Record<string, unknown>>;
+
+  // Under the cap (or window is a single day, or too deep) — take what we got.
+  if (batch.length < ORDERS_CAP || start >= end || depth >= 12) {
+    for (const o of batch) {
+      const id = String(o.orderId ?? '');
+      if (id) seen.set(id, o);
+    }
+    return;
   }
-  return all;
+
+  // Cap hit — split the window at the midpoint date and recurse into both halves.
+  const mid = midpointDate(start, end);
+  const nextDay = addDays(mid, 1);
+  await collectOrders(start, mid, restaurantUnitId, seen, depth + 1);
+  await collectOrders(nextDay, end, restaurantUnitId, seen, depth + 1);
+}
+
+function midpointDate(start: string, end: string): string {
+  const s = Date.parse(`${start}T00:00:00Z`);
+  const e = Date.parse(`${end}T00:00:00Z`);
+  return new Date(s + Math.floor((e - s) / 2)).toISOString().slice(0, 10);
+}
+
+function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 }
