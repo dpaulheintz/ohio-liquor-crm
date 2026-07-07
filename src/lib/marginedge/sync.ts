@@ -108,13 +108,14 @@ async function buildProductTypeMap(unitId: string): Promise<Map<string, Category
   const catType = new Map<string, CategoryType>();
   for (const c of cats) catType.set(String(c.categoryId), String(c.categoryType ?? 'UNKNOWN') as CategoryType);
 
-  // product → dominant categoryId → type (paginate full catalog)
+  // product → dominant categoryId → type. Advance by actual batch size and stop
+  // only on an empty page (the API caps page size regardless of the limit asked).
   const productType = new Map<string, CategoryType>();
-  const pageSize = 500;
-  for (let offset = 0; offset < 20000; offset += pageSize) {
-    const page = toArray(await getProducts(unitId, pageSize, offset), 'products') as Array<Record<string, unknown>>;
-    if (page.length === 0) break;
-    for (const p of page) {
+  let offset = 0;
+  for (let page = 0; page < 300; page++) {
+    const batch = toArray(await getProducts(unitId, 500, offset), 'products') as Array<Record<string, unknown>>;
+    if (batch.length === 0) break;
+    for (const p of batch) {
       const pid = String(p.companyConceptProductId ?? '');
       const cats2 = toArray(p.categories) as Array<Record<string, unknown>>;
       if (!pid || cats2.length === 0) continue;
@@ -122,7 +123,7 @@ async function buildProductTypeMap(unitId: string): Promise<Map<string, Category
       const dominant = cats2.reduce((a, b) => (Number(b.percentAllocation ?? 0) > Number(a.percentAllocation ?? 0) ? b : a));
       productType.set(pid, catType.get(String(dominant.categoryId)) ?? 'UNKNOWN');
     }
-    if (page.length < pageSize) break;
+    offset += batch.length;
   }
   return productType;
 }

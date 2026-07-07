@@ -117,9 +117,12 @@ export async function getOrders(opts: {
   pageSize?: number;
   maxPages?: number;
 }): Promise<unknown[]> {
-  const pageSize = opts.pageSize ?? 200;
-  const maxPages = opts.maxPages ?? 100;
+  // The API caps pages (observed at 100) regardless of the requested limit, so
+  // advance the offset by the ACTUAL batch size and stop only on an empty page.
+  const pageSize = opts.pageSize ?? 500;
+  const maxPages = opts.maxPages ?? 300;
   const all: unknown[] = [];
+  let offset = 0;
 
   for (let page = 0; page < maxPages; page++) {
     const payload = await meGet('/orders', {
@@ -127,11 +130,12 @@ export async function getOrders(opts: {
       endDate: opts.endDate,
       restaurantUnitId: opts.restaurantUnitId,
       limit: pageSize,
-      offset: page * pageSize,
+      offset,
     });
     const batch = toArray(payload, 'orders');
+    if (batch.length === 0) break;
     all.push(...batch);
-    if (batch.length < pageSize) break;
+    offset += batch.length;
   }
   return all;
 }
