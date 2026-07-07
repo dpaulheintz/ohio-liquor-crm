@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import {
-  getRestaurantUnits, getCategories, getOrders, getOrderDetail, toArray, MarginEdgeError,
+  getRestaurantUnits, getCategories, getOrders, getOrderDetail, getProducts, toArray, MarginEdgeError,
 } from '@/lib/marginedge/client';
 
 export const maxDuration = 300;
@@ -142,6 +142,51 @@ async function discover(): Promise<NextResponse> {
       : { orderId: firstOrderId, error: detProbe.error };
   } else {
     out.orderDetail = { skipped: 'no orderId available' };
+  }
+
+  // 5. products (does the product carry a category?)
+  if (firstUnitId) {
+    const prodProbe = await probe(() => getProducts(firstUnitId!, 10));
+    const list = prodProbe.ok ? toArray(prodProbe.value, 'products') : [];
+    out.products = prodProbe.ok
+      ? { count: list.length, productObjectKeys: firstKeys(list[0] ?? {}), sample: list.slice(0, 5) }
+      : { error: prodProbe.error };
+  } else {
+    out.products = { skipped: 'no restaurantUnitId available' };
+  }
+
+  // 6. categoryId coverage — sample recent orders, fetch details, tally how many
+  //    line items actually carry a categoryId (determines if food/bev split is viable)
+  if (firstUnitId) {
+    const end = new Date().toISOString().slice(0, 10);
+    const startD = new Date(); startD.setDate(startD.getDate() - 30);
+    const start = startD.toISOString().slice(0, 10);
+    const sampleOrders = await probe(() => getOrders({ startDate: start, endDate: end, restaurantUnitId: firstUnitId, pageSize: 12, maxPages: 1 }));
+    if (sampleOrders.ok) {
+      const orders = (sampleOrders.value as Array<Record<string, unknown>>).slice(0, 12);
+      let lineItems = 0, withCategory = 0;
+      const catIds = new Set<string>();
+      for (const o of orders) {
+        const oid = String(o.orderId ?? '');
+        if (!oid) continue;
+        const det = await probe(() => getOrderDetail(oid, firstUnitId));
+        if (!det.ok) continue;
+        const items = toArray((det.value as Record<string, unknown>).lineItems);
+        for (const li of items as Array<Record<string, unknown>>) {
+          lineItems++;
+          if (li.categoryId != null && li.categoryId !== '') { withCategory++; catIds.add(String(li.categoryId)); }
+        }
+      }
+      out.categoryCoverage = {
+        ordersSampled: orders.length,
+        lineItems,
+        withCategoryId: withCategory,
+        pct: lineItems > 0 ? Math.round((withCategory / lineItems) * 100) : 0,
+        distinctCategoryIds: [...catIds].slice(0, 20),
+      };
+    } else {
+      out.categoryCoverage = { error: sampleOrders.error };
+    }
   }
 
   return NextResponse.json({ ok: true, ...out });
