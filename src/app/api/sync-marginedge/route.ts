@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   getRestaurantUnits, getCategories, getOrders, getOrderDetail, getProducts, toArray, MarginEdgeError,
 } from '@/lib/marginedge/client';
-import { mapLocations, syncCosts, syncInvoices } from '@/lib/marginedge/sync';
+import { mapLocations, syncCosts, syncInvoices, classifyVendor } from '@/lib/marginedge/sync';
 
 export const maxDuration = 300;
 
@@ -12,8 +13,11 @@ export const maxDuration = 300;
  * Optional shared-secret auth via SYNC_SECRET / CRON_SECRET (matches toast-sync).
  *
  * ?step=
- *   discover  — DRY RUN: live shapes for units/categories/orders/order-detail. No writes.
- *   locations — map MarginEdge restaurants → locations.marginedge_id by name.
+ *   discover   — DRY RUN: live shapes for units/categories/orders/order-detail. No writes.
+ *   field-diag — DIAGNOSTIC: tallies distinct order field values (paymentAccount,
+ *                status) and lists top vendors landing in the UNCLASSIFIED bucket
+ *                by dollar amount. No writes.
+ *   locations  — map MarginEdge restaurants → locations.marginedge_id by name.
  *   costs     — daily_costs from the /orders list totals over [startDate,endDate] (cheap).
  *   invoices  — invoice_summary food/bev split via line-item detail (expensive; run per month).
  *   daily     — nightly: costs for yesterday + invoices for the current month.
@@ -39,6 +43,10 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
   try {
     if (step === 'discover') return await discover();
+    if (step === 'field-diag') {
+      const { startDate, endDate } = range(sp);
+      return await fieldDiag(startDate, endDate, location);
+    }
     if (step === 'locations') return NextResponse.json({ ok: true, ...(await mapLocations()) });
 
     if (step === 'costs') {
@@ -110,6 +118,80 @@ async function discover(): Promise<NextResponse> {
   }
 
   return NextResponse.json({ ok: true, ...out });
+}
+
+// ─── field-diag: what does MarginEdge actually return for "category"? ───────────
+// The /orders list has no category field at all (only vendorName/orderTotal/
+// paymentAccount/status). This tallies every distinct value of every field on a
+// real order sample, plus $ totals for vendors our vendor-name classifier leaves
+// UNCLASSIFIED, so we can see exactly what's being lumped into that bucket.
+async function fieldDiag(startDate: string, endDate: string, locationName?: string): Promise<NextResponse> {
+  const supabase = createAdminClient();
+  let q = supabase.from('locations').select('id, name, marginedge_id').not('marginedge_id', 'is', null);
+  if (locationName) q = q.eq('name', locationName);
+  const { data: locations } = await q;
+  if (!locations || locations.length === 0) {
+    return NextResponse.json({ error: 'No mapped locations.' }, { status: 400 });
+  }
+
+  const perLocation: Array<Record<string, unknown>> = [];
+  const paymentAccountTotals: Record<string, { count: number; amount: number }> = {};
+  const statusTotals: Record<string, { count: number; amount: number }> = {};
+  const unclassifiedVendors: Record<string, { count: number; amount: number }> = {};
+  let allKeys = new Set<string>();
+
+  for (const loc of locations) {
+    const orders = (await getOrders({
+      startDate, endDate, restaurantUnitId: String(loc.marginedge_id),
+    })) as Array<Record<string, unknown>>;
+
+    let food = 0, bev = 0, unclassified = 0, total = 0;
+    for (const o of orders) {
+      for (const k of Object.keys(o)) allKeys.add(k);
+
+      const amt = Number(o.orderTotal ?? 0);
+      total += amt;
+
+      const pa = String(o.paymentAccount ?? '(none)');
+      const paT = (paymentAccountTotals[pa] ??= { count: 0, amount: 0 });
+      paT.count++; paT.amount += amt;
+
+      const st = String(o.status ?? '(none)');
+      const stT = (statusTotals[st] ??= { count: 0, amount: 0 });
+      stT.count++; stT.amount += amt;
+
+      const vendor = String(o.vendorName ?? '(none)');
+      const type = classifyVendor(vendor);
+      if (type === 'FOOD') food += amt;
+      else if (type === 'BEV') bev += amt;
+      else {
+        unclassified += amt;
+        const uv = (unclassifiedVendors[vendor] ??= { count: 0, amount: 0 });
+        uv.count++; uv.amount += amt;
+      }
+    }
+    perLocation.push({ location: loc.name, orders: orders.length, total: round2(total), food: round2(food), bev: round2(bev), unclassified: round2(unclassified) });
+  }
+
+  const topUnclassifiedVendors = Object.entries(unclassifiedVendors)
+    .map(([vendor, v]) => ({ vendor, count: v.count, amount: round2(v.amount) }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 30);
+
+  return NextResponse.json({
+    ok: true,
+    range: { startDate, endDate },
+    note: 'No dedicated "category" field exists on /orders — only vendorName/paymentAccount/status. This shows every distinct value found.',
+    allOrderFieldNames: [...allKeys].sort(),
+    distinctPaymentAccount: Object.entries(paymentAccountTotals).map(([k, v]) => ({ value: k, count: v.count, amount: round2(v.amount) })),
+    distinctStatus: Object.entries(statusTotals).map(([k, v]) => ({ value: k, count: v.count, amount: round2(v.amount) })),
+    perLocation,
+    topUnclassifiedVendorsByAmount: topUnclassifiedVendors,
+  });
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 async function probe<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
