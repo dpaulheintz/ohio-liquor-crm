@@ -88,13 +88,20 @@ async function discover(): Promise<NextResponse> {
     hint: 'DRY RUN — verify field names, then run ?step=locations then ?step=backfill',
   };
 
-  // 1. restaurantUnits (no params)
+  // 1. restaurantUnits (no params). Envelope key is "restaurants".
   let firstUnitId: string | undefined;
   const unitsProbe = await probe(() => getRestaurantUnits());
   if (unitsProbe.ok) {
-    const list = toArray(unitsProbe.value, 'restaurantUnits') as Array<Record<string, unknown>>;
-    firstUnitId = list[0] ? String(list[0].restaurantUnitId ?? list[0].id ?? '') || undefined : undefined;
-    out.restaurantUnits = { count: list.length, sample: list.slice(0, 10), rawKeys: firstKeys(unitsProbe.value) };
+    const list = toArray(unitsProbe.value, 'restaurants') as Array<Record<string, unknown>>;
+    const u0 = list[0] ?? {};
+    firstUnitId =
+      String(u0.restaurantUnitId ?? u0.restaurantId ?? u0.unitId ?? u0.id ?? '') || undefined;
+    out.restaurantUnits = {
+      count: list.length,
+      sample: list.slice(0, 10),
+      unitObjectKeys: firstKeys(u0),
+      rawKeys: firstKeys(unitsProbe.value),
+    };
   } else {
     out.restaurantUnits = { error: unitsProbe.error };
   }
@@ -148,7 +155,12 @@ async function mapLocations(): Promise<NextResponse> {
   const supabase = createAdminClient();
   const { data: locations } = await supabase.from('locations').select('id, name');
   const unitsPayload = await getRestaurantUnits();
-  const units = toArray(unitsPayload, 'restaurantUnits') as Array<Record<string, unknown>>;
+  const units = toArray(unitsPayload, 'restaurants') as Array<Record<string, unknown>>;
+
+  const unitId = (u: Record<string, unknown>) =>
+    String(u.restaurantUnitId ?? u.restaurantId ?? u.unitId ?? u.id ?? '');
+  const unitName = (u: Record<string, unknown>) =>
+    String(u.unitName ?? u.name ?? u.restaurantName ?? '');
 
   const mapped: Array<{ location: string; marginedge_id: string; unitName: string }> = [];
   const unmatched: Array<{ location: string }> = [];
@@ -156,13 +168,13 @@ async function mapLocations(): Promise<NextResponse> {
   for (const loc of locations ?? []) {
     const locNorm = normalizeName(String(loc.name));
     const match = units.find((u) => {
-      const un = normalizeName(String(u.unitName ?? u.name ?? ''));
-      return un.includes(locNorm) || locNorm.includes(un);
+      const un = normalizeName(unitName(u));
+      return un.length > 0 && (un.includes(locNorm) || locNorm.includes(un));
     });
-    const meId = match ? String(match.restaurantUnitId ?? match.id ?? '') : '';
+    const meId = match ? unitId(match) : '';
     if (match && meId) {
       await supabase.from('locations').update({ marginedge_id: meId }).eq('id', loc.id);
-      mapped.push({ location: String(loc.name), marginedge_id: meId, unitName: String(match.unitName ?? '') });
+      mapped.push({ location: String(loc.name), marginedge_id: meId, unitName: unitName(match) });
     } else {
       unmatched.push({ location: String(loc.name) });
     }
@@ -172,7 +184,7 @@ async function mapLocations(): Promise<NextResponse> {
     ok: true,
     mapped,
     unmatched,
-    availableUnits: units.map((u) => ({ id: u.restaurantUnitId, name: u.unitName })),
+    availableUnits: units.map((u) => ({ id: unitId(u), name: unitName(u) })),
   });
 }
 
