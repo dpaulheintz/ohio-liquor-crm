@@ -96,6 +96,11 @@ export async function getCategories(restaurantUnitId: string): Promise<unknown> 
   return meGet('/categories', { restaurantUnitId });
 }
 
+/** GET /orders/{orderId} — single invoice with line items (category detail). */
+export async function getOrderDetail(orderId: string, restaurantUnitId?: string): Promise<unknown> {
+  return meGet(`/orders/${orderId}`, { restaurantUnitId });
+}
+
 /**
  * GET /orders — invoices, filterable by date. Paginated via limit/offset.
  * Fetches every page and returns the concatenated raw records.
