@@ -23,13 +23,15 @@ export interface DailyRow {
 }
 
 // One month of invoice_summary for a location (MarginEdge invoice spend).
-// food/bev split is an approximate vendor-name classification.
+// food/bev/unclassified split is an approximate vendor-name classification;
+// every invoice lands in exactly one bucket so total = food + bev + unclassified.
 export interface InvoiceMonth {
   location: LocationName;
-  month: string;      // YYYY-MM
-  total: number;      // total_invoices
-  food: number;       // food_invoices (approx)
-  bev: number;        // bev_invoices (approx)
+  month: string;        // YYYY-MM
+  total: number;        // total_invoices (= food + bev + unclassified)
+  food: number;         // food_invoices (approx, vendor-name classified)
+  bev: number;          // bev_invoices (approx, vendor-name classified)
+  unclassified: number; // unclassified_invoices — vendor name didn't match either
 }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────

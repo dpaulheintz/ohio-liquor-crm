@@ -32,22 +32,17 @@ function sumField(rows: DailyRow[], field: 'total' | 'fnb' | 'guests' | 'checks'
   return s;
 }
 
-// Cost aggregate over a set of daily rows.
-function costAgg(rows: DailyRow[]): { revenue: number; labor: number; food: number; foodAvailable: boolean } {
-  let revenue = 0, labor = 0, food = 0, foodAvailable = false;
-  for (const r of rows) {
-    revenue += r.total;
-    labor += r.labor;
-    if (r.foodCost != null) { food += r.foodCost; foodAvailable = true; }
-  }
-  return { revenue, labor, food, foodAvailable };
-}
+// Prime-cost aggregate for a set of (location, month) cells, combining daily_sales
+// revenue/labor with invoice_summary food/bev/unclassified. `food` here already
+// includes unclassified — per business decision, unclassified vendor spend is
+// treated as food-equivalent cost since it's overwhelmingly food/bev, not overhead.
+interface CostCell { revenue: number; labor: number; food: number; bev: number; cogsAvailable: boolean }
 
-function primePctOf(a: { revenue: number; labor: number; food: number; foodAvailable: boolean }): number | null {
-  return a.foodAvailable && a.revenue > 0 ? ((a.labor + a.food) / a.revenue) * 100 : null;
+function primePctOf(a: CostCell): number | null {
+  return a.cogsAvailable && a.revenue > 0 ? ((a.labor + a.food + a.bev) / a.revenue) * 100 : null;
 }
-function foodPctOf(a: { revenue: number; food: number; foodAvailable: boolean }): number | null {
-  return a.foodAvailable && a.revenue > 0 ? (a.food / a.revenue) * 100 : null;
+function foodPctOf(a: CostCell): number | null {
+  return a.cogsAvailable && a.revenue > 0 ? (a.food / a.revenue) * 100 : null;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -154,17 +149,48 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
     });
   }, [rows, rangeFrom, rangeTo]);
 
+  // Revenue+labor per (location, month), from daily_sales.
+  const revLaborByCell = useMemo(() => {
+    const m = new Map<string, { revenue: number; labor: number }>();
+    for (const r of rows) {
+      const key = `${r.location}|${ymOf(r.date)}`;
+      const e = m.get(key) ?? { revenue: 0, labor: 0 };
+      e.revenue += r.total; e.labor += r.labor;
+      m.set(key, e);
+    }
+    return m;
+  }, [rows]);
+
+  // Food(+unclassified)/bev per (location, month), from invoice_summary.
+  const costByCell = useMemo(() => {
+    const m = new Map<string, { food: number; bev: number }>();
+    for (const i of invoiceMonths) {
+      m.set(`${i.location}|${i.month}`, { food: i.food + i.unclassified, bev: i.bev });
+    }
+    return m;
+  }, [invoiceMonths]);
+
+  const cellAgg = useMemo(() => (locs: readonly string[], months: string[]): CostCell => {
+    let revenue = 0, labor = 0, food = 0, bev = 0, cogsAvailable = false;
+    for (const loc of locs) {
+      for (const ym of months) {
+        const key = `${loc}|${ym}`;
+        const rl = revLaborByCell.get(key);
+        if (rl) { revenue += rl.revenue; labor += rl.labor; }
+        const c = costByCell.get(key);
+        if (c) { food += c.food; bev += c.bev; cogsAvailable = true; }
+      }
+    }
+    return { revenue, labor, food, bev, cogsAvailable };
+  }, [revLaborByCell, costByCell]);
+
   // ── Prime cost panel ──
   const primeCost: PrimeCostData = useMemo(() => {
-    const inRange = (ym: string) => ym >= rangeFrom && ym <= rangeTo;
-    const cur = locRows.filter((r) => inRange(ymOf(r.date)));
-    const agg = costAgg(cur);
+    const selectedLocs: readonly LocationName[] = location === 'All' ? LOCATIONS : [location];
+    const agg = cellAgg(selectedLocs, rangeMonths);
 
-    // Monthly trend
-    const byMonth: Record<string, DailyRow[]> = {};
-    for (const r of locRows) (byMonth[ymOf(r.date)] ??= []).push(r);
     const trend = rangeMonths.map((ym) => {
-      const a = costAgg(byMonth[ym] ?? []);
+      const a = cellAgg(selectedLocs, [ym]);
       return {
         label: monthLabelYear(ym),
         prime: primePctOf(a),
@@ -174,7 +200,7 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
     });
 
     // Current vs prior month vs same month last year (prime %)
-    const primeForMonth = (ym: string) => primePctOf(costAgg(byMonth[ym] ?? []));
+    const primeForMonth = (ym: string) => primePctOf(cellAgg(selectedLocs, [ym]));
     const compare = {
       currentLabel: monthLabelFull(rangeTo),
       current: primeForMonth(rangeTo),
@@ -184,7 +210,7 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
 
     // Per-location breakdown (over range)
     const perLocation = LOCATIONS.map((loc) => {
-      const a = costAgg(rows.filter((r) => r.location === loc && inRange(ymOf(r.date))));
+      const a = cellAgg([loc], rangeMonths);
       return {
         location: loc as LocationName,
         prime: primePctOf(a),
@@ -194,8 +220,11 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
       };
     }).filter((r) => r.revenue > 0);
 
-    return { ...agg, trend, compare, perLocation };
-  }, [locRows, rows, rangeFrom, rangeTo, rangeMonths]);
+    return {
+      revenue: agg.revenue, labor: agg.labor, food: agg.food, bev: agg.bev,
+      foodAvailable: agg.cogsAvailable, trend, compare, perLocation,
+    };
+  }, [cellAgg, location, rangeTo, rangeMonths]);
 
   // ── Invoice spend ──
   const invoiceSpend: InvoiceSpendData = useMemo(() => {
@@ -203,14 +232,14 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
     const relevant = invoiceMonths.filter(
       (i) => inRange(i.month) && (location === 'All' || i.location === location),
     );
-    const byMonth: Record<string, { food: number; bev: number; total: number }> = {};
+    const byMonth: Record<string, { food: number; bev: number; unclassified: number; total: number }> = {};
     for (const i of relevant) {
-      const m = (byMonth[i.month] ??= { food: 0, bev: 0, total: 0 });
-      m.food += i.food; m.bev += i.bev; m.total += i.total;
+      const m = (byMonth[i.month] ??= { food: 0, bev: 0, unclassified: 0, total: 0 });
+      m.food += i.food; m.bev += i.bev; m.unclassified += i.unclassified; m.total += i.total;
     }
     const monthly = rangeMonths.map((ym) => {
-      const m = byMonth[ym] ?? { food: 0, bev: 0, total: 0 };
-      return { label: monthLabelYear(ym), food: m.food, bev: m.bev, other: Math.max(0, m.total - m.food - m.bev), total: m.total };
+      const m = byMonth[ym] ?? { food: 0, bev: 0, unclassified: 0, total: 0 };
+      return { label: monthLabelYear(ym), food: m.food, bev: m.bev, other: m.unclassified, total: m.total };
     });
     const ytd = monthly.reduce(
       (s, m) => ({ food: s.food + m.food, bev: s.bev + m.bev, other: s.other + m.other, total: s.total + m.total }),
