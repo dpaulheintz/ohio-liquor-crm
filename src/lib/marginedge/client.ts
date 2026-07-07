@@ -101,6 +101,11 @@ export async function getOrderDetail(orderId: string, restaurantUnitId?: string)
   return meGet(`/orders/${orderId}`, { restaurantUnitId });
 }
 
+/** GET /products — product catalog (may carry category per product). */
+export async function getProducts(restaurantUnitId: string, limit = 20, offset = 0): Promise<unknown> {
+  return meGet('/products', { restaurantUnitId, limit, offset });
+}
+
 /**
  * GET /orders — invoices, filterable by date. Paginated via limit/offset.
  * Fetches every page and returns the concatenated raw records.
