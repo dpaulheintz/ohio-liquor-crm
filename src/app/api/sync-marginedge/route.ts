@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import {
-  getRestaurantUnits, getCategories, getOrders, toArray, MarginEdgeError,
+  getRestaurantUnits, getCategories, getOrders, getOrderDetail, toArray, MarginEdgeError,
 } from '@/lib/marginedge/client';
 
 export const maxDuration = 300;
@@ -117,16 +117,31 @@ async function discover(): Promise<NextResponse> {
   }
 
   // 3. orders sample (pass restaurantUnitId — likely required too)
+  let firstOrderId: string | undefined;
   if (firstUnitId) {
     const end = new Date().toISOString().slice(0, 10);
     const startD = new Date(); startD.setDate(startD.getDate() - 30);
     const start = startD.toISOString().slice(0, 10);
     const ordProbe = await probe(() => getOrders({ startDate: start, endDate: end, restaurantUnitId: firstUnitId, pageSize: 5, maxPages: 1 }));
-    out.ordersSample = ordProbe.ok
-      ? { usingUnitId: firstUnitId, range: { start, end }, count: (ordProbe.value as unknown[]).length, sample: (ordProbe.value as unknown[]).slice(0, 3) }
-      : { usingUnitId: firstUnitId, range: { start, end }, error: ordProbe.error };
+    if (ordProbe.ok) {
+      const list = ordProbe.value as Array<Record<string, unknown>>;
+      firstOrderId = list[0] ? String(list[0].orderId ?? list[0].id ?? '') || undefined : undefined;
+      out.ordersSample = { usingUnitId: firstUnitId, range: { start, end }, count: list.length, sample: list.slice(0, 3) };
+    } else {
+      out.ordersSample = { usingUnitId: firstUnitId, range: { start, end }, error: ordProbe.error };
+    }
   } else {
     out.ordersSample = { skipped: 'no restaurantUnitId available' };
+  }
+
+  // 4. order detail (line items → category classification)
+  if (firstOrderId) {
+    const detProbe = await probe(() => getOrderDetail(firstOrderId!, firstUnitId));
+    out.orderDetail = detProbe.ok
+      ? { orderId: firstOrderId, rawKeys: firstKeys(detProbe.value), value: detProbe.value }
+      : { orderId: firstOrderId, error: detProbe.error };
+  } else {
+    out.orderDetail = { skipped: 'no orderId available' };
   }
 
   return NextResponse.json({ ok: true, ...out });
