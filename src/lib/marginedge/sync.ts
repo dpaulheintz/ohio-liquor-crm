@@ -10,16 +10,24 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/server';
-import {
-  getRestaurantUnits, getCategories, getOrders, getOrderDetail, getProducts, toArray,
-} from './client';
-
-type CategoryType = 'FOOD' | 'LIQUOR' | 'BEER' | 'NA_BEVERAGES' | 'LABOR' | 'OTHER' | 'UNKNOWN';
-
-const BEV_TYPES = new Set<CategoryType>(['LIQUOR', 'BEER', 'NA_BEVERAGES']);
+import { getRestaurantUnits, getOrders, toArray } from './client';
 
 function normalizeName(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Approximate food vs beverage classification by vendor name. The /orders list
+// carries vendorName + orderTotal, so this needs no per-invoice detail calls.
+// (Line-item categoryId is null and the /products catalog is unpageable, so a
+// precise split isn't derivable from this API — this keyword heuristic covers
+// the major vendors and is labeled "approximate" in the UI.)
+const BEV_VENDOR_RE = /\b(wine|spirit|liquor|beer|brew|distribut|beverage|vintner|cellar|heidelberg|cavalier|vintage|winery|superior beverage)\b/i;
+const FOOD_VENDOR_RE = /\b(food|produce|meat|seafood|fish|bakery|bread|dairy|farm|provision|sysco|gordon|hillcrest|us foods|restaurant depot|grocery|butcher|poultry|coffee)\b/i;
+
+function classifyVendor(vendorName: string): 'FOOD' | 'BEV' | 'UNKNOWN' {
+  if (BEV_VENDOR_RE.test(vendorName)) return 'BEV';
+  if (FOOD_VENDOR_RE.test(vendorName)) return 'FOOD';
+  return 'UNKNOWN';
 }
 
 interface MappedLocation { id: string; name: string; marginedge_id: string }
@@ -107,29 +115,7 @@ export async function syncCosts(startDate: string, endDate: string, locationName
   return { range: { startDate, endDate }, results };
 }
 
-// Build companyConceptProductId → CategoryType for one unit.
-async function buildProductTypeMap(unitId: string): Promise<Map<string, CategoryType>> {
-  // categoryId → categoryType
-  const cats = toArray(await getCategories(unitId), 'categories') as Array<Record<string, unknown>>;
-  const catType = new Map<string, CategoryType>();
-  for (const c of cats) catType.set(String(c.categoryId), String(c.categoryType ?? 'UNKNOWN') as CategoryType);
-
-  // product → dominant categoryId → type. The /products endpoint ignores offset
-  // (same as /orders), so a single fetch is all we can get; products not in the
-  // map fall back to UNKNOWN and are simply excluded from the food/bev split.
-  const productType = new Map<string, CategoryType>();
-  const batch = toArray(await getProducts(unitId, 500), 'products') as Array<Record<string, unknown>>;
-  for (const p of batch) {
-    const pid = String(p.companyConceptProductId ?? '');
-    const cats2 = toArray(p.categories) as Array<Record<string, unknown>>;
-    if (!pid || cats2.length === 0) continue;
-    const dominant = cats2.reduce((a, b) => (Number(b.percentAllocation ?? 0) > Number(a.percentAllocation ?? 0) ? b : a));
-    productType.set(pid, catType.get(String(dominant.categoryId)) ?? 'UNKNOWN');
-  }
-  return productType;
-}
-
-// ─── Step: invoice_summary via line-item detail (expensive) ─────────────────────
+// ─── Step: invoice_summary from /orders list (fast; vendor-based food/bev) ───────
 export async function syncInvoices(startDate: string, endDate: string, locationName?: string) {
   const supabase = createAdminClient();
   const locations = await mappedLocations(locationName);
@@ -137,29 +123,22 @@ export async function syncInvoices(startDate: string, endDate: string, locationN
 
   const results: Array<Record<string, unknown>> = [];
   for (const loc of locations) {
-    const productType = await buildProductTypeMap(loc.marginedge_id);
     const orders = (await getOrders({
       startDate, endDate, restaurantUnitId: loc.marginedge_id,
     })) as Array<Record<string, unknown>>;
 
-    // month → { total, food, bev }
+    // month → { total, food, bev } — food/bev split approximated by vendor name
     const byMonth: Record<string, { total: number; food: number; bev: number }> = {};
-
     for (const o of orders) {
       const invDate = String(o.invoiceDate ?? '').slice(0, 10);
       if (!invDate) continue;
       const ym = invDate.slice(0, 7);
+      const amt = Number(o.orderTotal ?? 0);
       const m = (byMonth[ym] ??= { total: 0, food: 0, bev: 0 });
-      m.total += Number(o.orderTotal ?? 0);
-
-      const detail = await getOrderDetail(String(o.orderId), loc.marginedge_id) as Record<string, unknown>;
-      const items = toArray(detail.lineItems) as Array<Record<string, unknown>>;
-      for (const li of items) {
-        const type = productType.get(String(li.companyConceptProductId ?? '')) ?? 'UNKNOWN';
-        const amt = Number(li.linePrice ?? 0);
-        if (type === 'FOOD') m.food += amt;
-        else if (BEV_TYPES.has(type)) m.bev += amt;
-      }
+      m.total += amt;
+      const type = classifyVendor(String(o.vendorName ?? ''));
+      if (type === 'FOOD') m.food += amt;
+      else if (type === 'BEV') m.bev += amt;
     }
 
     const rows = Object.entries(byMonth).map(([month, v]) => ({
