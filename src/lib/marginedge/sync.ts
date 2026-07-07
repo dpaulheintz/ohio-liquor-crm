@@ -24,10 +24,10 @@ function normalizeName(s: string): string {
 const BEV_VENDOR_RE = /\b(wine|spirit|liquor|beer|brew|distribut|beverage|vintner|cellar|heidelberg|cavalier|vintage|winery|superior beverage)\b/i;
 const FOOD_VENDOR_RE = /\b(food|produce|meat|seafood|fish|bakery|bread|dairy|farm|provision|sysco|gordon|hillcrest|us foods|restaurant depot|grocery|butcher|poultry|coffee)\b/i;
 
-function classifyVendor(vendorName: string): 'FOOD' | 'BEV' | 'UNKNOWN' {
+export function classifyVendor(vendorName: string): 'FOOD' | 'BEV' | 'UNCLASSIFIED' {
   if (BEV_VENDOR_RE.test(vendorName)) return 'BEV';
   if (FOOD_VENDOR_RE.test(vendorName)) return 'FOOD';
-  return 'UNKNOWN';
+  return 'UNCLASSIFIED';
 }
 
 interface MappedLocation { id: string; name: string; marginedge_id: string }
