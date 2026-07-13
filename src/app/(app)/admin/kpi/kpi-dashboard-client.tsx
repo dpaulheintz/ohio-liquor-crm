@@ -9,7 +9,7 @@ import { Camera, ChevronDown, ChevronRight, Download, ExternalLink, TrendingUp, 
 import Link from 'next/link';
 import { KPI_OPTIONS } from '@/lib/types';
 import { type KpiEventRow, type KpiDashboardData, type AgencyDisplayRow } from '@/app/actions/kpi';
-import { computePayouts, quarterRange, fmtPayout } from '@/lib/kpi-payouts';
+import { computePayouts, quarterRange, quarterOf, fmtPayout } from '@/lib/kpi-payouts';
 import { PayoutTracker } from './payout-tracker';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -118,6 +118,29 @@ function exportCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filena
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
   a.download = `kpi-report-${filenameSuffix}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/**
+ * Lean CSV export for the Visit Log table's own download button — no
+ * Display Type column, no per-rep summary block, Photos as a numeric count.
+ */
+function exportVisitLogCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filenameSuffix: string) {
+  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Payout', 'Photos (count)', 'Notes'];
+  const rows = events.map(e => [
+    fmtDate(e.visited_at), e.rep_name || e.rep_email,
+    e.account_name, e.account_agency_id ?? '', e.account_city ?? '',
+    e.kpi, String(e.kpi_quantity), e.sold_status,
+    (payoutMap.get(e.id) ?? 0).toFixed(2),
+    String(e.photo_count), e.notes ?? '',
+  ]);
+  const csv = [headers, ...rows]
+    .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `kpi-visit-log-${filenameSuffix}.csv`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
@@ -497,6 +520,12 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
   const [exportCustomFrom, setExportCustomFrom] = useState('');
   const [exportCustomTo, setExportCustomTo]     = useState('');
 
+  // ── Visit Log table's own CSV export (scoped to the table's current filters) ──
+  type VisitLogExportRange = 'this_quarter' | 'last_quarter' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'custom';
+  const [visitLogExportRange, setVisitLogExportRange]         = useState<VisitLogExportRange>('this_quarter');
+  const [visitLogExportCustomFrom, setVisitLogExportCustomFrom] = useState('');
+  const [visitLogExportCustomTo, setVisitLogExportCustomTo]     = useState('');
+
   const handleExportCsv = useCallback(() => {
     const year = new Date().getFullYear();
     let from = '', to = '';
@@ -578,6 +607,39 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
   }, [visitGroups, hasPhotos, qtyGt1]);
 
   const visibleEvents = useMemo(() => visibleGroups.flatMap(g => g.kpis), [visibleGroups]);
+
+  // Exports whatever the Visit Log table is currently showing (respects its
+  // rep/type/search/photo/qty/sold filters), further scoped by its own
+  // quarter selector.
+  const handleExportVisitLogCsv = useCallback(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const curQ = quarterOf(now);
+
+    let from = '', to = '', suffix = '';
+    if (visitLogExportRange === 'custom') {
+      from = visitLogExportCustomFrom; to = visitLogExportCustomTo;
+      suffix = `${visitLogExportCustomFrom || 'start'}_to_${visitLogExportCustomTo || 'end'}`;
+    } else if (visitLogExportRange === 'this_quarter') {
+      ({ from, to } = quarterRange(year, curQ));
+      suffix = `Q${curQ}-${year}`;
+    } else if (visitLogExportRange === 'last_quarter') {
+      const lastQ = curQ === 1 ? 4 : ((curQ - 1) as 1 | 2 | 3 | 4);
+      const lastYear = curQ === 1 ? year - 1 : year;
+      ({ from, to } = quarterRange(lastYear, lastQ));
+      suffix = `Q${lastQ}-${lastYear}`;
+    } else {
+      const q = Number(visitLogExportRange.slice(1)) as 1 | 2 | 3 | 4;
+      ({ from, to } = quarterRange(year, q));
+      suffix = `Q${q}-${year}`;
+    }
+
+    const scoped = visibleEvents.filter(e => {
+      const d = e.visited_at.slice(0, 10);
+      return d >= from && d <= to;
+    });
+    exportVisitLogCsv(scoped, payoutMap, suffix);
+  }, [visitLogExportRange, visitLogExportCustomFrom, visitLogExportCustomTo, visibleEvents, payoutMap]);
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -826,9 +888,40 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
 
         {/* ── KPI Visits Table ───────────────────────────────────────── */}
         <div className="bg-white border border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border flex items-center justify-between">
+          <div className="px-4 py-3 border-b border flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm font-medium text-foreground">KPI Visit Log</p>
-            <p className="text-xs text-muted-foreground">{visibleGroups.length.toLocaleString()} visits</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs text-muted-foreground">{visibleGroups.length.toLocaleString()} visits</p>
+              <select
+                value={visitLogExportRange}
+                onChange={e => setVisitLogExportRange(e.target.value as VisitLogExportRange)}
+                className="h-7 bg-white border border rounded px-2 text-xs text-foreground"
+                aria-label="Visit log CSV date range"
+              >
+                <option value="this_quarter">This Quarter</option>
+                <option value="last_quarter">Last Quarter</option>
+                <option value="Q1">Q1 (Jan–Mar)</option>
+                <option value="Q2">Q2 (Apr–Jun)</option>
+                <option value="Q3">Q3 (Jul–Sep)</option>
+                <option value="Q4">Q4 (Oct–Dec)</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              {visitLogExportRange === 'custom' && (
+                <div className="flex items-center gap-1.5">
+                  <input type="date" value={visitLogExportCustomFrom} onChange={e => setVisitLogExportCustomFrom(e.target.value)}
+                    className="h-7 bg-white border border rounded px-2 text-xs text-foreground w-[122px]" />
+                  <span className="text-muted-foreground text-xs">→</span>
+                  <input type="date" value={visitLogExportCustomTo} onChange={e => setVisitLogExportCustomTo(e.target.value)}
+                    className="h-7 bg-white border border rounded px-2 text-xs text-foreground w-[122px]" />
+                </div>
+              )}
+              <button
+                onClick={handleExportVisitLogCsv}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border bg-white text-xs text-foreground hover:bg-muted transition-colors shrink-0"
+              >
+                <Download className="h-3.5 w-3.5" /> CSV
+              </button>
+            </div>
           </div>
 
           {/* Desktop column header */}
