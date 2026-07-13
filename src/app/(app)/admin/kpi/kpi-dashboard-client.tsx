@@ -9,6 +9,8 @@ import { Camera, ChevronDown, ChevronRight, Download, ExternalLink, TrendingUp, 
 import Link from 'next/link';
 import { KPI_OPTIONS } from '@/lib/types';
 import { type KpiEventRow, type KpiDashboardData, type AgencyDisplayRow } from '@/app/actions/kpi';
+import { computePayouts, quarterRange, fmtPayout } from '@/lib/kpi-payouts';
+import { PayoutTracker } from './payout-tracker';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -77,19 +79,45 @@ function agencyLabel(name: string, agencyId: string | null, city: string | null)
   return parts.join(' — ');
 }
 
-function exportCsv(events: KpiEventRow[]) {
-  const headers = ['Date','Rep','Account','Agency ID','City','KPI Type','Display Type','Quantity','Sold/Unsold','Photos','Notes'];
-  const rows = events.map(e => [
-    fmtDate(e.visited_at), e.rep_name || e.rep_email,
-    e.account_name, e.account_agency_id ?? '', e.account_city ?? '',
-    e.kpi, e.display_type ?? '', String(e.kpi_quantity), e.sold_status,
-    String(e.photo_count), (e.notes ?? '').replace(/"/g, '""'),
-  ]);
-  const csv  = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+/**
+ * Exports KPI events to CSV with a per-row Payout column, plus a per-rep
+ * payout summary block appended after a blank separator row.
+ */
+function exportCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filenameSuffix: string) {
+  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Display Type', 'Photos (Y/N)', 'Notes', 'Payout'];
+  const rows = events.map(e => {
+    const payout = payoutMap.get(e.id) ?? 0;
+    return [
+      fmtDate(e.visited_at), e.rep_name || e.rep_email,
+      e.account_name, e.account_agency_id ?? '', e.account_city ?? '',
+      e.kpi, String(e.kpi_quantity), e.sold_status, e.display_type ?? '',
+      e.photo_count > 0 ? 'Y' : 'N', e.notes ?? '',
+      payout.toFixed(2),
+    ];
+  });
+
+  // Per-rep payout totals for the exported period
+  const repTotals = new Map<string, number>();
+  for (const e of events) {
+    const name = e.rep_name || e.rep_email;
+    repTotals.set(name, (repTotals.get(name) ?? 0) + (payoutMap.get(e.id) ?? 0));
+  }
+  const grandTotal = [...repTotals.values()].reduce((s, v) => s + v, 0);
+  const summaryRows: (string | number)[][] = [
+    [],
+    ['Payout Summary'],
+    ['Rep', 'Total Payout'],
+    ...[...repTotals.entries()].sort((a, b) => b[1] - a[1]).map(([name, total]) => [name, total.toFixed(2)]),
+    ['TOTAL', grandTotal.toFixed(2)],
+  ];
+
+  const csv = [headers, ...rows, ...summaryRows]
+    .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = `kpi-report-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `kpi-report-${filenameSuffix}.csv`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
@@ -456,6 +484,40 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
   const [qtyGt1, setQtyGt1]               = useState(false);
   const [soldStatusFilter, setSoldStatusFilter] = useState<'all' | 'sold' | 'unsold'>('all');
   const [expandedId, setExpandedId]       = useState<string | null>(null);
+
+  // ── Payouts ──────────────────────────────────────────────────────────────────
+  // Computed once over the FULL unfiltered event set — the Display $50/mo dedup
+  // must consider every rep's logs for an account+month, not just what's
+  // currently visible under the visit-log table's filters.
+  const payoutMap = useMemo(() => computePayouts(kpiEvents), [kpiEvents]);
+
+  // ── CSV export range ─────────────────────────────────────────────────────────
+  type ExportRange = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'custom' | 'all';
+  const [exportRange, setExportRange]         = useState<ExportRange>('all');
+  const [exportCustomFrom, setExportCustomFrom] = useState('');
+  const [exportCustomTo, setExportCustomTo]     = useState('');
+
+  const handleExportCsv = useCallback(() => {
+    const year = new Date().getFullYear();
+    let from = '', to = '';
+    if (exportRange === 'custom') {
+      from = exportCustomFrom; to = exportCustomTo;
+    } else if (exportRange !== 'all') {
+      const q = Number(exportRange.slice(1)) as 1 | 2 | 3 | 4;
+      const r = quarterRange(year, q);
+      from = r.from; to = r.to;
+    }
+    let scoped = kpiEvents;
+    if (from) scoped = scoped.filter(e => e.visited_at.slice(0, 10) >= from);
+    if (to)   scoped = scoped.filter(e => e.visited_at.slice(0, 10) <= to);
+
+    const suffix = exportRange === 'all'
+      ? 'all-time'
+      : exportRange === 'custom'
+      ? `${exportCustomFrom || 'start'}_to_${exportCustomTo || 'end'}`
+      : `${exportRange}-${year}`;
+    exportCsv(scoped, payoutMap, suffix);
+  }, [exportRange, exportCustomFrom, exportCustomTo, kpiEvents, payoutMap]);
   const [showCharts, setShowCharts]       = useState(true);
   const [showDisplays, setShowDisplays]   = useState(true);
 
@@ -591,20 +653,47 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">KPI Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {kpiEvents.length.toLocaleString()} KPI events · {totalKpiVisits.toLocaleString()} KPI visits · {totalVisitCount.toLocaleString()} total visits
             </p>
           </div>
-          <button
-            onClick={() => exportCsv(visibleEvents)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border bg-white text-xs text-foreground hover:bg-muted transition-colors shrink-0"
-          >
-            <Download className="h-3.5 w-3.5" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={exportRange}
+              onChange={e => setExportRange(e.target.value as ExportRange)}
+              className="h-8 bg-white border border rounded px-2 text-xs text-foreground"
+              aria-label="CSV export time range"
+            >
+              <option value="Q1">Q1 (Jan–Mar)</option>
+              <option value="Q2">Q2 (Apr–Jun)</option>
+              <option value="Q3">Q3 (Jul–Sep)</option>
+              <option value="Q4">Q4 (Oct–Dec)</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Time</option>
+            </select>
+            {exportRange === 'custom' && (
+              <div className="flex items-center gap-1.5">
+                <input type="date" value={exportCustomFrom} onChange={e => setExportCustomFrom(e.target.value)}
+                  className="h-8 bg-white border border rounded px-2 text-xs text-foreground w-[130px]" />
+                <span className="text-muted-foreground text-xs">→</span>
+                <input type="date" value={exportCustomTo} onChange={e => setExportCustomTo(e.target.value)}
+                  className="h-8 bg-white border border rounded px-2 text-xs text-foreground w-[130px]" />
+              </div>
+            )}
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border bg-white text-xs text-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </button>
+          </div>
         </div>
+
+        {/* ── QTD Payout Tracker ─────────────────────────────────────── */}
+        <PayoutTracker kpiEvents={kpiEvents} />
 
         {/* ── Weekly metric cards ────────────────────────────────────── */}
         <div>
@@ -743,8 +832,8 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
           </div>
 
           {/* Desktop column header */}
-          <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_auto] gap-3 px-4 py-2 border-b border text-xs text-muted-foreground font-medium uppercase tracking-wide">
-            <span /><span>Date</span><span>Rep · Account</span><span>KPIs</span><span className="text-right pr-1">Photos</span>
+          <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_80px_auto] gap-3 px-4 py-2 border-b border text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            <span /><span>Date</span><span>Rep · Account</span><span>KPIs</span><span className="text-right">Payout</span><span className="text-right pr-1">Photos</span>
           </div>
 
           <div className="divide-y divide-border">
@@ -766,10 +855,11 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                           </span>
                           {group.kpis.map(k => {
                             const color = KPI_COLORS[k.kpi] ?? '#888';
+                            const payout = payoutMap.get(k.id) ?? 0;
                             return (
                               <span key={k.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
                                 style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>
-                                {k.kpi}{k.display_type ? ` (${k.display_type})` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''}
+                                {k.kpi}{k.display_type ? ` (${k.display_type})` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
                               </span>
                             );
                           })}
@@ -787,7 +877,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                       </div>
 
                       {/* Desktop */}
-                      <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_auto] gap-3 items-start">
+                      <div className="hidden md:grid grid-cols-[24px_100px_1fr_1fr_80px_auto] gap-3 items-start">
                         <span className="text-muted-foreground mt-0.5">
                           {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </span>
@@ -801,13 +891,17 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                         <div className="flex flex-wrap gap-1.5 items-center">
                           {group.kpis.map(k => {
                             const color = KPI_COLORS[k.kpi] ?? '#888';
+                            const payout = payoutMap.get(k.id) ?? 0;
                             return (
                               <span key={k.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                                 style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>
-                                {k.kpi}{k.display_type ? ` · ${k.display_type}` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''}
+                                {k.kpi}{k.display_type ? ` · ${k.display_type}` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
                               </span>
                             );
                           })}
+                        </div>
+                        <div className="text-right text-xs font-semibold text-foreground mt-0.5 tabular-nums">
+                          {fmtPayout(group.kpis.reduce((s, k) => s + (payoutMap.get(k.id) ?? 0), 0))}
                         </div>
                         <div className="text-right">
                           {group.photo_count > 0 && (
@@ -836,10 +930,13 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                             </span>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">KPIs</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+                              KPIs · Total Payout: <span className="text-foreground font-semibold">{fmtPayout(group.kpis.reduce((s, k) => s + (payoutMap.get(k.id) ?? 0), 0))}</span>
+                            </p>
                             <div className="flex flex-wrap gap-2">
                               {group.kpis.map(k => {
                                 const color = KPI_COLORS[k.kpi] ?? '#888';
+                                const payout = payoutMap.get(k.id) ?? 0;
                                 return (
                                   <div key={k.id} className="flex items-center gap-1.5">
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
@@ -853,6 +950,10 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${k.sold_status === 'sold' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                         {k.sold_status}
                                       </span>
+                                    )}
+                                    <span className="text-xs font-mono text-foreground">{fmtPayout(payout)}</span>
+                                    {k.kpi === 'Display' && payout === 0 && (
+                                      <span className="text-[10px] text-muted-foreground">(already paid this month)</span>
                                     )}
                                   </div>
                                 );

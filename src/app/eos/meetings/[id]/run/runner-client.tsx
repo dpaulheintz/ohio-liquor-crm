@@ -127,6 +127,17 @@ export default function RunnerClient({
   const [headlines, setHeadlines] = useState(initialHeadlines);
   const [meetingTodos, setMeetingTodos] = useState<Todo[]>([]);
 
+  // Re-sync local copies whenever the server gives us fresh props. This is the
+  // path items created via SmartAddButton take: its modals call a *different*
+  // server action than the runner's own inline forms, then router.refresh() —
+  // which re-fetches this page's server data and passes new props down, but a
+  // useState(initial…) only reads its argument once at mount, so without this
+  // effect the runner's local lists would silently stay stale after a refresh.
+  useEffect(() => { setBarrels(initialBarrels); }, [initialBarrels]);
+  useEffect(() => { setTodos(initialTodos); }, [initialTodos]);
+  useEffect(() => { setOpportunities(initialOpportunities); }, [initialOpportunities]);
+  useEffect(() => { setHeadlines(initialHeadlines); }, [initialHeadlines]);
+
   // ── UI state ──
   const [sharedHeadlines, setSharedHeadlines] = useState<Set<string>>(new Set());
   const [readHeadlines, setReadHeadlines] = useState<Set<string>>(new Set());
@@ -866,12 +877,16 @@ export default function RunnerClient({
       </div>
 
       {/* ── Section content ── */}
+      {/* Scorecard gets the full content width — its 13-week grid (~1700px)
+          was being squeezed into the 896px prose column below, so almost
+          the whole table sat behind a horizontal scrollbar. Every other
+          section is prose/forms and stays narrow for readability. */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6">
-        <div className="max-w-4xl mx-auto">
+        <div className={section.key === 'scorecard' ? 'w-full' : 'max-w-4xl mx-auto'}>
           {renderSectionContent()}
 
           {/* Section notes */}
-          <div className="mt-6">
+          <div className={cn('mt-6', section.key === 'scorecard' && 'max-w-4xl mx-auto')}>
             <textarea
               value={notes[section.key] ?? ''}
               onChange={e => setNotes(prev => ({ ...prev, [section.key]: e.target.value }))}
