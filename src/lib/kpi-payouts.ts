@@ -17,20 +17,22 @@ export const PAYOUT_RATES = {
 // ─── Per-event payout ─────────────────────────────────────────────────────────
 
 /**
- * Payout for one KPI event, in isolation — flat rate by type + sold/unsold
- * status. Does NOT apply the Display monthly dedup (that requires the full
- * event set); use `computePayouts` for a real payout figure on Display rows.
+ * Payout for one KPI event, in isolation — rate × quantity by type +
+ * sold/unsold status. Does NOT apply the Display monthly dedup (that requires
+ * the full event set); use `computePayouts` for a real payout figure on
+ * Display rows, which always pay a flat $50/month regardless of quantity.
  */
-function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status'>): number {
+function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status' | 'kpi_quantity'>): number {
+  const qty = e.kpi_quantity > 0 ? e.kpi_quantity : 1;
   switch (e.kpi) {
     case 'Menu':
-      return e.sold_status === 'sold' ? PAYOUT_RATES.Menu.sold : PAYOUT_RATES.Menu.unsold;
+      return (e.sold_status === 'sold' ? PAYOUT_RATES.Menu.sold : PAYOUT_RATES.Menu.unsold) * qty;
     case 'Feature':
-      return e.sold_status === 'sold' ? PAYOUT_RATES.Feature.sold : PAYOUT_RATES.Feature.unsold;
+      return (e.sold_status === 'sold' ? PAYOUT_RATES.Feature.sold : PAYOUT_RATES.Feature.unsold) * qty;
     case 'Event':
-      return PAYOUT_RATES.Event.flat;
+      return PAYOUT_RATES.Event.flat * qty;
     case 'Display':
-      return PAYOUT_RATES.Display.perMonth;
+      return PAYOUT_RATES.Display.perMonth; // flat — quantity never applies
     default:
       return 0;
   }
@@ -39,10 +41,11 @@ function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status'>): number {
 /**
  * Computes the real payout for every event in the set, keyed by event id.
  *
- * Display KPIs pay $50/account/month regardless of how many times logged —
- * only the earliest-visited Display event for a given (account, month) pair
- * earns the $50; every later log of the same display that month pays $0.
- * Menu/Feature/Event pay per row (flat rate by type + sold/unsold status).
+ * Display KPIs pay $50/account/month regardless of how many times logged or
+ * their quantity — only the earliest-visited Display event for a given
+ * (account, month) pair earns the $50; every later log of the same display
+ * that month pays $0. Menu/Feature/Event pay rate × kpi_quantity (sold/unsold
+ * status sets the rate for Menu/Feature; Event is always the flat rate).
  */
 export function computePayouts(events: readonly KpiEventRow[]): Map<string, number> {
   // Earliest Display event per (account_id, month) wins the month's $50.
