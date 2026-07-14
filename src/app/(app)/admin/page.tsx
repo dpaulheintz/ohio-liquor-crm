@@ -41,6 +41,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { formatVisitDate } from '@/lib/date-utils';
 import { PhotoAudit } from './photo-audit';
+import { RepActivityTables } from './rep-activity-tables';
 
 // ---------- Chart configs ----------
 
@@ -518,7 +519,12 @@ export default function AdminDashboard() {
 
       <Separator />
 
-      {/* ========== 5.5 Photo Audit ========== */}
+      {/* ========== 5.5 Rep Activity Tables ========== */}
+      <RepActivityTables />
+
+      <Separator />
+
+      {/* ========== 5.6 Photo Audit ========== */}
       <PhotoAudit />
 
       <Separator />
