@@ -71,11 +71,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   const prevMonthStart = startOfMonth(subMonths(now, 1));
   const sixtyDaysAgo = subDays(now, 60);
 
-  const [visitsResult, repsResult, reviewCountResult, recentResult] =
+  const [visitsResult, repsResult, reviewCountResult, recentResult, kpiEventsResult] =
     await Promise.all([
       supabase
         .from('visit_logs')
-        .select('rep_id, visited_at, account_id, kpi')
+        .select('rep_id, visited_at, account_id')
         .gte('visited_at', sixtyDaysAgo.toISOString())
         .order('visited_at', { ascending: false }),
 
@@ -96,6 +96,14 @@ export async function getDashboardData(): Promise<DashboardData> {
         )
         .order('visited_at', { ascending: false })
         .limit(10),
+
+      // KPI counts read from visit_kpis (current source of truth — a visit can
+      // have multiple KPI rows) rather than the legacy visit_logs.kpi column,
+      // which only covers a fraction of actual KPI entries.
+      supabase
+        .from('visit_kpis')
+        .select('kpi_type, visit:visit_logs!visit_kpis_visit_id_fkey(visited_at)')
+        .gte('created_at', sixtyDaysAgo.toISOString()),
     ]);
 
   const allVisits = visitsResult.data ?? [];
@@ -126,8 +134,19 @@ export async function getDashboardData(): Promise<DashboardData> {
     lastMonthVisits.map((v) => v.account_id)
   ).size;
 
-  const kpisThisMonth = thisMonthVisits.filter((v) => v.kpi).length;
-  const kpisLastMonth = lastMonthVisits.filter((v) => v.kpi).length;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const kpiRows = (kpiEventsResult.data ?? []) as any[];
+  const thisMonthKpis = kpiRows.filter(
+    (k) => k.visit?.visited_at && new Date(k.visit.visited_at) >= monthStart
+  );
+  const lastMonthKpis = kpiRows.filter((k) => {
+    if (!k.visit?.visited_at) return false;
+    const d = new Date(k.visit.visited_at);
+    return d >= prevMonthStart && d < monthStart;
+  });
+
+  const kpisThisMonth = thisMonthKpis.length;
+  const kpisLastMonth = lastMonthKpis.length;
 
   // --- Daily Visits (last 7 and 30 days) ---
   // Pre-build a date→count Map once (O(n)) instead of filtering per day (O(n×37))
@@ -153,10 +172,8 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   // --- KPI Breakdown (this month) ---
   const kpiCounts: Record<string, number> = {};
-  for (const v of thisMonthVisits) {
-    if (v.kpi) {
-      kpiCounts[v.kpi] = (kpiCounts[v.kpi] || 0) + 1;
-    }
+  for (const k of thisMonthKpis) {
+    kpiCounts[k.kpi_type] = (kpiCounts[k.kpi_type] || 0) + 1;
   }
   const kpiBreakdown = ['Display', 'Menu', 'Feature', 'Event'].map(
     (name) => ({
