@@ -164,7 +164,7 @@ export default function EosDashboardClient({
       const id = await startMeetingAction();
       router.push(`/eos/meetings/${id}/run`);
     } catch {
-      alert('Failed to start meeting.');
+      console.error('Failed to start meeting.');
       setStarting(false);
     }
   }
@@ -192,7 +192,7 @@ export default function EosDashboardClient({
       setDashTodoOwner('');
       setDashTodoDue('');
     } catch {
-      alert('Failed to add to-do.');
+      console.error('Failed to add to-do.');
     } finally {
       setDashTodoAdding(false);
     }
@@ -206,7 +206,7 @@ export default function EosDashboardClient({
       setLocalHeadlines(prev => [h, ...prev]);
       setNewTitle('');
     } catch {
-      alert('Failed to add headline.');
+      console.error('Failed to add headline.');
     } finally {
       setAddingHeadline(false);
     }

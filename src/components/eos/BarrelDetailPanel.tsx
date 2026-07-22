@@ -79,7 +79,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
         milestones,
       });
     } catch {
-      alert('Failed to save changes.');
+      console.error('Failed to save changes.');
     } finally {
       setSaving(false);
     }
@@ -92,7 +92,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
       await deleteBarrelAction(barrel.id);
       onDelete(barrel.id);
     } catch {
-      alert('Failed to delete barrel.');
+      console.error('Failed to delete barrel.');
     }
   }
 
@@ -113,7 +113,7 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
       setNewMilestoneTitle('');
       setAddingMilestone(false);
     } catch {
-      alert('Failed to add milestone.');
+      console.error('Failed to add milestone.');
     }
   }
 

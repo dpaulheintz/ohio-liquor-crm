@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import type { Headline } from '@/lib/eos/headlines';
 import { createHeadlineAction, updateHeadlineAction, deleteHeadlineAction, type HeadlineFormData } from './actions';
-import OwnerSelect from '@/components/eos/OwnerSelect';
 import SmartAddButton from '@/components/eos/SmartAddButton';
+import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
 import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 import { cn } from '@/lib/utils';
 
-type Props = { initialHeadlines: Headline[] };
+type Props = { initialHeadlines: Headline[]; archived?: boolean };
 type TypeFilter = 'all' | 'good_news' | 'customer_win' | 'employee_update';
 
 const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -127,7 +127,7 @@ function HeadlineModal({
   );
 }
 
-export default function HeadlinesClient({ initialHeadlines }: Props) {
+export default function HeadlinesClient({ initialHeadlines, archived = false }: Props) {
   const [headlines, setHeadlines] = useState<Headline[]>(initialHeadlines);
   const [filter, setFilter] = useState<TypeFilter>('all');
   const [showModal, setShowModal] = useState(false);
@@ -156,7 +156,7 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
     if (!window.confirm('Delete this headline?')) return;
     setHeadlines(prev => prev.filter(h => h.id !== id));
     try { await deleteHeadlineAction(id); }
-    catch { alert('Failed to delete.'); }
+    catch { console.error('Failed to delete.'); }
   }
 
   return (
@@ -167,10 +167,17 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Headlines</h1>
           <p className="text-gray-500 mt-1 text-sm">Good news, customer wins, and team updates</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
-          + Share Headline
-        </button>
+        {!archived && (
+          <div className="flex items-center gap-2">
+            <ArchiveButton basePath="/eos/headlines" />
+            <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
+              + Share Headline
+            </button>
+          </div>
+        )}
       </div>
+
+      {archived && <ArchiveBanner label="headlines" basePath="/eos/headlines" />}
 
       {/* Filter tabs */}
       <div className="flex gap-1 mb-5 border-b border-gray-200 flex-wrap">
@@ -215,11 +222,13 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                  <button onClick={() => setEditingHeadline(headline)} className="text-gray-400 hover:text-gray-900 text-xs px-1.5 py-1 transition-colors">Edit</button>
-                  <button onClick={() => handleDelete(headline.id)} className="text-gray-400 hover:text-red-600 text-xs px-1.5 py-1 transition-colors">✕</button>
-                </div>
+                {/* Actions (hidden in archive view — read-only) */}
+                {!archived && (
+                  <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                    <button onClick={() => setEditingHeadline(headline)} className="text-gray-400 hover:text-gray-900 text-xs px-1.5 py-1 transition-colors">Edit</button>
+                    <button onClick={() => handleDelete(headline.id)} className="text-gray-400 hover:text-red-600 text-xs px-1.5 py-1 transition-colors">✕</button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -227,14 +236,14 @@ export default function HeadlinesClient({ initialHeadlines }: Props) {
 
         {filtered.length === 0 && (
           <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
-            No headlines yet. Click &ldquo;+ Share Headline&rdquo; to celebrate a win.
+            {archived ? 'No archived headlines.' : 'No headlines yet. Click “+ Share Headline” to celebrate a win.'}
           </div>
         )}
       </div>
 
-      {showModal && <HeadlineModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
-      {editingHeadline && <HeadlineModal mode="edit" headline={editingHeadline} onSave={handleUpdate} onClose={() => setEditingHeadline(null)} />}
-      <SmartAddButton pageContext="headlines" />
+      {!archived && showModal && <HeadlineModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
+      {!archived && editingHeadline && <HeadlineModal mode="edit" headline={editingHeadline} onSave={handleUpdate} onClose={() => setEditingHeadline(null)} />}
+      {!archived && <SmartAddButton pageContext="headlines" />}
     </>
   );
 }

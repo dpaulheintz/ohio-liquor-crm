@@ -112,18 +112,35 @@ export async function startMeeting(type: string, createdBy: string): Promise<str
   return data.id;
 }
 
-export async function endMeeting(id: string, notes: string | null): Promise<void> {
-  const avgRating = await getAverageRating(id);
+export async function endMeeting(id: string, notes?: string | null): Promise<{ success: true }> {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from('eos_meetings')
-    .update({
-      ended_at: new Date().toISOString(),
-      rating: avgRating,
-      notes: notes?.trim() || null,
-    })
-    .eq('id', id);
-  if (error) throw error;
+  try {
+    // Read ratings defensively — a failure here (or zero ratings) must never
+    // block ending the meeting; we simply store a null average in that case.
+    const { data: ratings } = await supabase
+      .from('eos_meeting_ratings')
+      .select('rating')
+      .eq('meeting_id', id);
+
+    const avgRating = ratings && ratings.length > 0
+      ? Math.round((ratings.reduce((sum, r) => sum + (r.rating ?? 0), 0) / ratings.length) * 10) / 10
+      : null;
+
+    const { error } = await supabase
+      .from('eos_meetings')
+      .update({
+        ended_at: new Date().toISOString(),
+        rating: avgRating,
+        notes: notes?.trim() || null,
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('endMeeting error:', error);
+    throw error;
+  }
 }
 
 export async function getActiveMeeting(): Promise<{ id: string } | null> {

@@ -6,9 +6,15 @@ import OpportunitiesClient from './opportunities-client';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Opportunities | High Bank EOS' };
 
-export default async function EosOpportunitiesPage() {
+export default async function EosOpportunitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const { view } = await searchParams;
+  const archived = view === 'archived';
   const [opportunities, activeMeeting] = await Promise.all([
-    getOpportunities(),
+    getOpportunities(archived),
     getActiveMeeting(),
   ]);
   return (
@@ -17,6 +23,7 @@ export default async function EosOpportunitiesPage() {
         <OpportunitiesClient
           initialOpportunities={opportunities}
           activeMeetingId={activeMeeting?.id ?? null}
+          archived={archived}
         />
       </div>
     </div>

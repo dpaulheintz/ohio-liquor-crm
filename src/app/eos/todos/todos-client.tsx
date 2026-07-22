@@ -6,9 +6,15 @@ import type { Todo } from '@/lib/eos/todos';
 import { createTodoAction, updateTodoAction, toggleTodoAction, deleteTodoAction, type TodoFormData } from './actions';
 import OwnerSelect from '@/components/eos/OwnerSelect';
 import SmartAddButton from '@/components/eos/SmartAddButton';
+import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
 import { cn } from '@/lib/utils';
 
-type Props = { initialTodos: Todo[] };
+type Props = { initialTodos: Todo[]; archived?: boolean };
+
+function fmtCompletedDate(d: string | null): string {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 type Filter = 'active' | 'completed' | 'all';
 
 function fmtDate(d: string | null) {
@@ -114,7 +120,7 @@ function TodoFormModal({
   );
 }
 
-export default function TodosClient({ initialTodos }: Props) {
+export default function TodosClient({ initialTodos, archived = false }: Props) {
   const [todos, setTodos] = useState<Todo[]>(initialTodos);
   const [filter, setFilter] = useState<Filter>('active');
   const [showModal, setShowModal] = useState(false);
@@ -151,7 +157,7 @@ export default function TodosClient({ initialTodos }: Props) {
     try {
       await deleteTodoAction(id);
     } catch {
-      alert('Failed to delete.');
+      console.error('Failed to delete.');
     }
   }
 
@@ -186,35 +192,44 @@ export default function TodosClient({ initialTodos }: Props) {
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>To-Dos</h1>
           <p className="text-gray-500 mt-1 text-sm">7-day action items — carry forward anything unfinished</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
-        >
-          + Add To-Do
-        </button>
+        {!archived && (
+          <div className="flex items-center gap-2">
+            <ArchiveButton basePath="/eos/todos" />
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+            >
+              + Add To-Do
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {(['active', 'completed', 'all'] as Filter[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cn(
-              'px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-[2px]',
-              filter === f
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-900',
-            )}
-          >
-            {f} <span className="text-xs opacity-60 ml-1">{counts[f]}</span>
-          </button>
-        ))}
-      </div>
+      {archived && <ArchiveBanner label="to-dos" basePath="/eos/todos" />}
+
+      {/* Filter tabs (active view only) */}
+      {!archived && (
+        <div className="flex gap-1 mb-5 border-b border-gray-200">
+          {(['active', 'completed', 'all'] as Filter[]).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                'px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-[2px]',
+                filter === f
+                  ? 'border-green-600 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-900',
+              )}
+            >
+              {f} <span className="text-xs opacity-60 ml-1">{counts[f]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Todo list */}
       <div className="space-y-1">
-        {sorted.map(todo => {
+        {(archived ? todos : sorted).map(todo => {
           const overdue = isOverdue(todo.due_date, todo.due_date !== null && todo.completed);
           return (
             <div
@@ -226,16 +241,17 @@ export default function TodosClient({ initialTodos }: Props) {
                   : 'border-gray-200 bg-white hover:bg-gray-100/40',
               )}
             >
-              {/* Checkbox */}
+              {/* Checkbox (read-only in archive view) */}
               <button
-                onClick={() => handleToggle(todo)}
-                disabled={toggling.has(todo.id)}
+                onClick={() => !archived && handleToggle(todo)}
+                disabled={archived || toggling.has(todo.id)}
                 className={cn(
                   'shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors',
                   todo.completed
                     ? 'bg-green-600 border-green-600 text-gray-900'
                     : 'border-gray-200 hover:border-green-600',
                   toggling.has(todo.id) && 'opacity-50',
+                  archived && 'cursor-default',
                 )}
               >
                 {todo.completed && (
@@ -255,14 +271,22 @@ export default function TodosClient({ initialTodos }: Props) {
                 )}
               </div>
 
-              {/* Due date */}
-              {todo.due_date && (
-                <span className={cn(
-                  'shrink-0 text-xs',
-                  todo.completed ? 'text-gray-400' : overdue ? 'text-red-600 font-medium' : 'text-gray-500',
-                )}>
-                  {fmtDate(todo.due_date)}
-                </span>
+              {/* Due date (active) / completed date (archive) */}
+              {archived ? (
+                todo.completed_at && (
+                  <span className="shrink-0 text-xs text-gray-400">
+                    Completed {fmtCompletedDate(todo.completed_at)}
+                  </span>
+                )
+              ) : (
+                todo.due_date && (
+                  <span className={cn(
+                    'shrink-0 text-xs',
+                    todo.completed ? 'text-gray-400' : overdue ? 'text-red-600 font-medium' : 'text-gray-500',
+                  )}>
+                    {fmtDate(todo.due_date)}
+                  </span>
+                )
               )}
 
               {/* Meeting source badge */}
@@ -277,41 +301,44 @@ export default function TodosClient({ initialTodos }: Props) {
                 </Link>
               )}
 
-              {/* Actions */}
-              <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                <button
-                  onClick={() => setEditingTodo(todo)}
-                  className="text-gray-400 hover:text-gray-900 px-1 py-0.5 text-xs transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(todo.id)}
-                  className="text-gray-400 hover:text-red-600 px-1 py-0.5 text-xs transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
+              {/* Actions (hidden in archive view — read-only) */}
+              {!archived && (
+                <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => setEditingTodo(todo)}
+                    className="text-gray-400 hover:text-gray-900 px-1 py-0.5 text-xs transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(todo.id)}
+                    className="text-gray-400 hover:text-red-600 px-1 py-0.5 text-xs transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
 
-        {sorted.length === 0 && (
+        {(archived ? todos.length === 0 : sorted.length === 0) && (
           <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
-            {filter === 'active' && 'No active to-dos. Great work!'}
-            {filter === 'completed' && 'No completed to-dos yet.'}
-            {filter === 'all' && 'No to-dos yet. Click "+ Add To-Do" to get started.'}
+            {archived && 'No archived to-dos.'}
+            {!archived && filter === 'active' && 'No active to-dos. Great work!'}
+            {!archived && filter === 'completed' && 'No completed to-dos yet.'}
+            {!archived && filter === 'all' && 'No to-dos yet. Click "+ Add To-Do" to get started.'}
           </div>
         )}
       </div>
 
-      {showModal && (
+      {!archived && showModal && (
         <TodoFormModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />
       )}
-      {editingTodo && (
+      {!archived && editingTodo && (
         <TodoFormModal mode="edit" todo={editingTodo} onSave={handleUpdate} onClose={() => setEditingTodo(null)} />
       )}
-      <SmartAddButton pageContext="todos" />
+      {!archived && <SmartAddButton pageContext="todos" />}
     </>
   );
 }

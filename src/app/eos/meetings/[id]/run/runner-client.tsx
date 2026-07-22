@@ -146,6 +146,7 @@ export default function RunnerClient({
   const [showEndModal, setShowEndModal] = useState(false);
   const [endNotes, setEndNotes] = useState('');
   const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
 
   // ── Per-person ratings ──
   const [personRatings, setPersonRatings] = useState<Record<string, number>>({});
@@ -226,11 +227,17 @@ export default function RunnerClient({
 
   async function handleEndMeeting() {
     setEnding(true);
+    setEndError(null);
     try {
       await endMeetingAction(meeting.id, endNotes);
       router.push(`/eos/meetings/${meeting.id}`);
-    } catch {
-      alert('Failed to end meeting.');
+    } catch (error) {
+      console.error('Failed to end meeting:', error);
+      setEndError(
+        error instanceof Error && error.message
+          ? `Failed to end meeting: ${error.message}`
+          : 'Failed to end meeting. Please try again.',
+      );
       setEnding(false);
     }
   }
@@ -265,7 +272,7 @@ export default function RunnerClient({
       setTodos(prev => [...prev, todo]);
       setMeetingTodos(prev => [...prev, todo]);
       setNewTodoTitle(''); setNewTodoOwner(''); setNewTodoDue('');
-    } catch { alert('Failed to create to-do.'); }
+    } catch { console.error('Failed to create to-do.'); }
   }
 
   async function handleBarrelStatus(id: string, status: string) {
@@ -279,7 +286,7 @@ export default function RunnerClient({
       const h = await addHeadlineInMeetingAction(newHeadlineTitle, newHeadlineType, '');
       setHeadlines(prev => [h, ...prev]);
       setNewHeadlineTitle('');
-    } catch { alert('Failed to add headline.'); }
+    } catch { console.error('Failed to add headline.'); }
   }
 
   async function handleOppStatus(id: string, status: string) {
@@ -307,7 +314,7 @@ export default function RunnerClient({
       setSelectedOppId(opp.id);
       setNewOppTitle(''); setNewOppOwner(''); setNewOppOwnerEmail('');
       setShowAddOpp(false);
-    } catch { alert('Failed to add opportunity.'); }
+    } catch { console.error('Failed to add opportunity.'); }
     finally { setAddingOpp(false); }
   }
 
@@ -933,9 +940,12 @@ export default function RunnerClient({
                 </p>
               )}
               <p className="text-sm text-gray-500">This will save all notes and ratings, then close the meeting.</p>
+              {endError && (
+                <p className="mt-3 text-sm text-red-600 font-medium">{endError}</p>
+              )}
             </div>
             <div className="flex gap-3 px-6 pb-5">
-              <button onClick={() => setShowEndModal(false)} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">
+              <button onClick={() => { setShowEndModal(false); setEndError(null); }} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">
                 Cancel
               </button>
               <button onClick={handleEndMeeting} disabled={ending} className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium transition-colors">

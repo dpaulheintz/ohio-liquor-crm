@@ -16,12 +16,22 @@ export type Opportunity = {
 
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export async function getOpportunities(): Promise<Opportunity[]> {
+function sevenDaysAgoISO(): string {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * @param archived  false (default) = active: not solved, or solved within the
+ *                  last 7 days. true = archived: solved 7+ days ago.
+ */
+export async function getOpportunities(archived = false): Promise<Opportunity[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('eos_opportunities')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const cutoff = sevenDaysAgoISO();
+  let query = supabase.from('eos_opportunities').select('*');
+  query = archived
+    ? query.eq('status', 'solved').lte('updated_at', cutoff)
+    : query.or(`status.neq.solved,updated_at.gt.${cutoff}`);
+  const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
   const rows = (data ?? []) as Opportunity[];
   return rows.sort((a, b) => {
