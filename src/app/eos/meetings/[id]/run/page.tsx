@@ -33,7 +33,7 @@ export default async function MeetingRunnerPage({
       getBarrels(),
       getTodos(),
       getOpportunities(),
-      getHeadlines(),
+      getHeadlines(false), // active only — Segue shows just the last 7 days of headlines
     ]);
 
   return (

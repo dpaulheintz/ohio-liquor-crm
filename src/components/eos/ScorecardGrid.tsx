@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { Metric, Entry } from '@/lib/eos/scorecard';
 import {
   formatValue,
@@ -54,6 +54,9 @@ export default function ScorecardGrid({
   const [menuMetricId, setMenuMetricId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMetric, setModalMetric] = useState<Metric | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   function ck(metricId: string, weekStart: string) {
     return `${metricId}:${weekStart}`;
@@ -113,14 +116,28 @@ export default function ScorecardGrid({
     if (e.key === 'Escape') setEditing(null);
   }
 
-  async function handleDelete(metricId: string) {
+  function requestDelete(metricId: string) {
     setMenuMetricId(null);
-    if (!window.confirm('Delete this metric? This cannot be undone.')) return;
+    setConfirmingDeleteId(metricId);
+  }
+
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(prev => (prev === message ? null : prev)), 2500);
+  }
+
+  async function handleConfirmDelete(metricId: string) {
+    setDeletingId(metricId);
     try {
-      await removeMetric(metricId);
+      await removeMetric(metricId); // soft delete (active = false)
       setMetrics(prev => prev.filter(m => m.id !== metricId));
+      setConfirmingDeleteId(null);
+      showToast('Metric deleted');
     } catch {
-      alert('Failed to delete metric. Please try again.');
+      console.error('Failed to delete metric.');
+      showToast('Failed to delete metric');
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -371,7 +388,8 @@ export default function ScorecardGrid({
               const flagTitle = `Scorecard: ${metric.title}`;
 
               return (
-                <tr key={metric.id} className="group/row">
+                <Fragment key={metric.id}>
+                <tr className="group/row">
                   {/* Title — frozen */}
                   <td
                     className="sticky left-0 border-b border-r border-gray-200 px-3 py-2"
@@ -427,7 +445,7 @@ export default function ScorecardGrid({
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(metric.id)}
+                                onClick={() => requestDelete(metric.id)}
                                 className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-gray-100 transition-colors"
                               >
                                 Delete
@@ -469,6 +487,36 @@ export default function ScorecardGrid({
                   {/* Week cells */}
                   {weekStarts.map(weekStart => renderCell(metric, weekStart))}
                 </tr>
+
+                {/* Inline delete confirmation (no browser alert/modal) */}
+                {confirmingDeleteId === metric.id && (
+                  <tr>
+                    <td colSpan={4 + weekStarts.length} className="border-b border-gray-200 bg-red-50 px-4 py-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-sm text-gray-900">
+                          Delete <span className="font-semibold">{metric.title}</span>? This removes all historical data.
+                        </span>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <button
+                            onClick={() => setConfirmingDeleteId(null)}
+                            disabled={deletingId === metric.id}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleConfirmDelete(metric.id)}
+                            disabled={deletingId === metric.id}
+                            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === metric.id ? 'Deleting…' : 'Confirm Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
 
@@ -493,6 +541,13 @@ export default function ScorecardGrid({
           onSave={handleModalSave}
           onClose={() => { setShowModal(false); setModalMetric(null); }}
         />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2.5 shadow-2xl">
+          {toast}
+        </div>
       )}
     </>
   );

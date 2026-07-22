@@ -76,7 +76,7 @@ function TodoQuickModal({ onClose }: { onClose: () => void }) {
       await createTodoAction({ title: title.trim(), owner_name: ownerName, owner_email: ownerEmail, due_date: due });
       router.refresh();
       onClose();
-    } catch { alert('Failed.'); setSaving(false); }
+    } catch { console.error('Failed.'); setSaving(false); }
   }
 
   return (
@@ -115,7 +115,7 @@ function OppQuickModal({ onClose }: { onClose: () => void }) {
       await createOpportunityAction({ title: title.trim(), description: '', priority, owner_name: ownerName, owner_email: ownerEmail, term, status: 'open' });
       router.refresh();
       onClose();
-    } catch { alert('Failed.'); setSaving(false); }
+    } catch { console.error('Failed.'); setSaving(false); }
   }
 
   return (
@@ -182,7 +182,7 @@ function HeadlineQuickModal({ onClose }: { onClose: () => void }) {
       await createHeadlineAction({ title: title.trim(), headline_type: type, owner_name: ownerName });
       router.refresh();
       onClose();
-    } catch { alert('Failed.'); setSaving(false); }
+    } catch { console.error('Failed.'); setSaving(false); }
   }
 
   return (
@@ -219,7 +219,7 @@ function MeetingQuickModal({ onClose }: { onClose: () => void }) {
     try {
       const id = await startMeetingAction();
       router.push(`/eos/meetings/${id}/run`);
-    } catch { alert('Failed to start meeting.'); setStarting(false); }
+    } catch { console.error('Failed to start meeting.'); setStarting(false); }
   }
 
   return (

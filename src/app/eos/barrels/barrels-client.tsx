@@ -7,9 +7,10 @@ import BarrelModal from '@/components/eos/BarrelModal';
 import BarrelDetailPanel from '@/components/eos/BarrelDetailPanel';
 import BarrelsListView from '@/components/eos/BarrelsListView';
 import SmartAddButton from '@/components/eos/SmartAddButton';
+import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
 import { cn } from '@/lib/utils';
 
-type Props = { initialBarrels: BarrelWithMilestones[] };
+type Props = { initialBarrels: BarrelWithMilestones[]; archived?: boolean };
 
 type Status = 'not_started' | 'on_track' | 'off_track' | 'complete';
 
@@ -33,7 +34,7 @@ function fmtDate(d: string | null) {
   return new Date(y, m - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function BarrelsClient({ initialBarrels }: Props) {
+export default function BarrelsClient({ initialBarrels, archived = false }: Props) {
   const [barrels, setBarrels] = useState<BarrelWithMilestones[]>(initialBarrels);
   const [view, setView] = useState<'list' | 'board'>('list');
   const [selectedBarrel, setSelectedBarrel] = useState<BarrelWithMilestones | null>(null);
@@ -96,20 +97,27 @@ export default function BarrelsClient({ initialBarrels }: Props) {
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
-          >
-            + Add Barrel
-          </button>
+          {!archived && (
+            <ArchiveButton basePath="/eos/barrels" />
+          )}
+          {!archived && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+            >
+              + Add Barrel
+            </button>
+          )}
         </div>
       </div>
+
+      {archived && <ArchiveBanner label="barrels" basePath="/eos/barrels" />}
 
       {/* LIST VIEW */}
       {view === 'list' && (
         <BarrelsListView
           barrels={filteredBarrels}
-          onBarrelClick={barrel => setSelectedBarrel(barrel)}
+          onBarrelClick={archived ? undefined : (barrel => setSelectedBarrel(barrel))}
         />
       )}
 
@@ -133,8 +141,11 @@ export default function BarrelsClient({ initialBarrels }: Props) {
                     return (
                       <div
                         key={barrel.id}
-                        onClick={() => setSelectedBarrel(barrel)}
-                        className="rounded-xl border border-gray-200 bg-white px-4 py-3 cursor-pointer hover:bg-gray-100/60 transition-colors"
+                        onClick={archived ? undefined : () => setSelectedBarrel(barrel)}
+                        className={cn(
+                          'rounded-xl border border-gray-200 bg-white px-4 py-3 transition-colors',
+                          archived ? '' : 'cursor-pointer hover:bg-gray-100/60',
+                        )}
                       >
                         <p className="text-sm font-medium text-gray-900 mb-2">{barrel.title}</p>
                         <div className="flex items-center justify-between text-xs text-gray-500">
@@ -169,26 +180,30 @@ export default function BarrelsClient({ initialBarrels }: Props) {
 
       {barrels.length === 0 && (
         <div className="rounded-xl border border-gray-200 bg-white px-8 py-16 text-center">
-          <p className="text-gray-500 text-sm">No barrels yet. Click &ldquo;+ Add Barrel&rdquo; to create your first quarterly rock.</p>
+          <p className="text-gray-500 text-sm">
+            {archived ? 'No archived barrels.' : 'No barrels yet. Click “+ Add Barrel” to create your first quarterly rock.'}
+          </p>
         </div>
       )}
 
-      {/* Detail Panel */}
-      <BarrelDetailPanel
-        barrel={selectedBarrel}
-        onClose={() => setSelectedBarrel(null)}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-      />
+      {/* Detail Panel (active view only — archive is read-only) */}
+      {!archived && (
+        <BarrelDetailPanel
+          barrel={selectedBarrel}
+          onClose={() => setSelectedBarrel(null)}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+        />
+      )}
 
-      {showAddModal && (
+      {!archived && showAddModal && (
         <BarrelModal
           mode="create"
           onSave={handleCreate}
           onClose={() => setShowAddModal(false)}
         />
       )}
-      <SmartAddButton pageContext="barrels" />
+      {!archived && <SmartAddButton pageContext="barrels" />}
     </>
   );
 }

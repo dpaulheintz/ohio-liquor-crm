@@ -9,12 +9,23 @@ export type Headline = {
   created_at: string;
 };
 
-export async function getHeadlines(): Promise<Headline[]> {
+/** ISO timestamp for `now - 7 days`. */
+function sevenDaysAgoISO(): string {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * @param archived  false (default) = active: created in the last 7 days.
+ *                  true = archived: created 7+ days ago.
+ */
+export async function getHeadlines(archived = false): Promise<Headline[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('eos_headlines')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const cutoff = sevenDaysAgoISO();
+  let query = supabase.from('eos_headlines').select('*');
+  query = archived
+    ? query.lte('created_at', cutoff)
+    : query.gt('created_at', cutoff);
+  const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Headline[];
 }

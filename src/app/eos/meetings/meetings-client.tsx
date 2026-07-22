@@ -45,7 +45,7 @@ export default function MeetingsClient({ initialMeetings }: Props) {
       const id = await startMeetingAction();
       router.push(`/eos/meetings/${id}/run`);
     } catch {
-      alert('Failed to start meeting.');
+      console.error('Failed to start meeting.');
       setStarting(false);
     }
   }

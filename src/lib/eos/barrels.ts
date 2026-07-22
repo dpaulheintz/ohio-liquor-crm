@@ -27,10 +27,26 @@ export type Milestone = {
 
 export type BarrelWithMilestones = Barrel & { milestones: Milestone[] };
 
-export async function getBarrels(): Promise<BarrelWithMilestones[]> {
+/** Today as YYYY-MM-DD (local), for comparing against the DATE column due_date. */
+function todayDateStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * @param archived  false (default) = active: due_date today-or-later, or no
+ *                  due_date set (an undated barrel is not "past due"). true =
+ *                  archived: due_date strictly before today (past quarter end).
+ */
+export async function getBarrels(archived = false): Promise<BarrelWithMilestones[]> {
   const supabase = await createClient();
+  const today = todayDateStr();
+  let barrelsQuery = supabase.from('eos_barrels').select('*').order('barrel_type').order('created_at');
+  barrelsQuery = archived
+    ? barrelsQuery.lt('due_date', today)
+    : barrelsQuery.or(`due_date.gte.${today},due_date.is.null`);
   const [{ data: barrels, error: be }, { data: milestones, error: me }] = await Promise.all([
-    supabase.from('eos_barrels').select('*').order('barrel_type').order('created_at'),
+    barrelsQuery,
     supabase.from('eos_barrel_milestones').select('*').order('display_order').order('created_at'),
   ]);
   if (be) throw be;

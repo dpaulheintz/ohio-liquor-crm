@@ -12,9 +12,14 @@ import {
 } from './actions';
 import OwnerSelect from '@/components/eos/OwnerSelect';
 import SmartAddButton from '@/components/eos/SmartAddButton';
+import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
 import { cn } from '@/lib/utils';
 
-type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | null };
+type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | null; archived?: boolean };
+
+function fmtSolvedDate(d: string): string {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 type StatusFilter = 'open' | 'in_progress' | 'solved' | 'all';
 
 const PRIORITY_CONFIG: Record<string, { label: string; dot: string; text: string }> = {
@@ -143,14 +148,14 @@ function OppModal({
   );
 }
 
-export default function OpportunitiesClient({ initialOpportunities, activeMeetingId }: Props) {
+export default function OpportunitiesClient({ initialOpportunities, activeMeetingId, archived = false }: Props) {
   const [opps, setOpps] = useState<Opportunity[]>(initialOpportunities);
   const [filter, setFilter] = useState<StatusFilter>('open');
   const [showModal, setShowModal] = useState(false);
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
   const [flashedSolvedIds, setFlashedSolvedIds] = useState<Set<string>>(new Set());
 
-  const filtered = filter === 'all' ? opps : opps.filter(o => o.status === filter);
+  const filtered = archived ? opps : (filter === 'all' ? opps : opps.filter(o => o.status === filter));
 
   async function handleCreate(data: OpportunityFormData) {
     const created = await createOpportunityAction(data);
@@ -195,7 +200,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
     if (!window.confirm('Delete this opportunity?')) return;
     setOpps(prev => prev.filter(o => o.id !== id));
     try { await deleteOpportunityAction(id); }
-    catch { alert('Failed to delete.'); }
+    catch { console.error('Failed to delete.'); }
   }
 
   const counts = {
@@ -213,26 +218,35 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Opportunities</h1>
           <p className="text-gray-500 mt-1 text-sm">Short and long-term issues to identify, discuss, and solve</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
-          + Add Opportunity
-        </button>
+        {!archived && (
+          <div className="flex items-center gap-2">
+            <ArchiveButton basePath="/eos/opportunities" />
+            <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
+              + Add Opportunity
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-5 border-b border-gray-200">
-        {([
-          { key: 'open', label: 'Open' },
-          { key: 'in_progress', label: 'In Progress' },
-          { key: 'solved', label: 'Solved' },
-          { key: 'all', label: 'All' },
-        ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
-          <button key={key} onClick={() => setFilter(key)}
-            className={cn('px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px]',
-              filter === key ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-900')}>
-            {label} <span className="text-xs opacity-60 ml-1">{counts[key as keyof typeof counts]}</span>
-          </button>
-        ))}
-      </div>
+      {archived && <ArchiveBanner label="opportunities" basePath="/eos/opportunities" />}
+
+      {/* Filter tabs (active view only) */}
+      {!archived && (
+        <div className="flex gap-1 mb-5 border-b border-gray-200">
+          {([
+            { key: 'open', label: 'Open' },
+            { key: 'in_progress', label: 'In Progress' },
+            { key: 'solved', label: 'Solved' },
+            { key: 'all', label: 'All' },
+          ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
+            <button key={key} onClick={() => setFilter(key)}
+              className={cn('px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px]',
+                filter === key ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-900')}>
+              {label} <span className="text-xs opacity-60 ml-1">{counts[key as keyof typeof counts]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* List */}
       <div className="space-y-2">
@@ -241,9 +255,15 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
           return (
             <div key={opp.id} className="rounded-xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-100/40 transition-colors group/row">
               <div className="flex items-start gap-3">
-                {/* Priority dot — click to solve/reopen */}
+                {/* Priority dot — click to solve/reopen (static in archive view) */}
                 <div className="shrink-0 mt-1.5">
-                  {opp.status === 'solved' ? (
+                  {archived ? (
+                    <span className="w-4 h-4 rounded-full bg-green-600 flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  ) : opp.status === 'solved' ? (
                     <button
                       onClick={() => handleReopenOpp(opp.id)}
                       title="Re-open"
@@ -285,19 +305,24 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     {opp.owner_name && <span className="text-xs text-gray-400">{opp.owner_name}</span>}
                     <span className="text-xs text-gray-400">{fmtDate(opp.created_at)}</span>
-                    {/* Quick status change */}
-                    <select
-                      value={opp.status}
-                      onChange={e => handleStatusChange(opp.id, e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      className="text-xs bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 text-gray-500 focus:outline-none focus:border-green-600 transition-colors"
-                    >
-                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    {archived ? (
+                      <span className="text-xs text-gray-400">Solved {fmtSolvedDate(opp.updated_at)}</span>
+                    ) : (
+                      /* Quick status change */
+                      <select
+                        value={opp.status}
+                        onChange={e => handleStatusChange(opp.id, e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 text-gray-500 focus:outline-none focus:border-green-600 transition-colors"
+                      >
+                        {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions (hidden in archive view — read-only) */}
+                {!archived && (
                 <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                   {opp.status !== 'solved' && (
                     activeMeetingId ? (
@@ -320,6 +345,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                   <button onClick={() => setEditingOpp(opp)} className="text-gray-400 hover:text-gray-900 text-xs px-1.5 py-1 transition-colors">Edit</button>
                   <button onClick={() => handleDelete(opp.id)} className="text-gray-400 hover:text-red-600 text-xs px-1.5 py-1 transition-colors">✕</button>
                 </div>
+                )}
               </div>
             </div>
           );
@@ -327,14 +353,14 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
 
         {filtered.length === 0 && (
           <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
-            {filter === 'all' ? 'No opportunities yet.' : `No ${filter.replace('_', ' ')} opportunities.`}
+            {archived ? 'No archived opportunities.' : filter === 'all' ? 'No opportunities yet.' : `No ${filter.replace('_', ' ')} opportunities.`}
           </div>
         )}
       </div>
 
-      {showModal && <OppModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
-      {editingOpp && <OppModal mode="edit" opp={editingOpp} onSave={handleUpdate} onClose={() => setEditingOpp(null)} />}
-      <SmartAddButton pageContext="opportunities" />
+      {!archived && showModal && <OppModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
+      {!archived && editingOpp && <OppModal mode="edit" opp={editingOpp} onSave={handleUpdate} onClose={() => setEditingOpp(null)} />}
+      {!archived && <SmartAddButton pageContext="opportunities" />}
     </>
   );
 }

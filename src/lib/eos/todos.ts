@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import { sendEmail } from '@/lib/email';
+import { todoAssignedEmail } from '@/lib/eos/email-templates';
 
 export type Todo = {
   id: string;
@@ -14,11 +16,26 @@ export type Todo = {
   updated_at: string;
 };
 
-export async function getTodos(): Promise<Todo[]> {
+function sevenDaysAgoISO(): string {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * @param archived  false (default) = active: not completed, or completed within
+ *                  the last 7 days (a completed todo with no completed_at is
+ *                  treated as active so it can never disappear from both views).
+ *                  true = archived: completed 7+ days ago.
+ */
+export async function getTodos(archived = false): Promise<Todo[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('eos_todos')
-    .select('*')
+  const cutoff = sevenDaysAgoISO();
+  let query = supabase.from('eos_todos').select('*');
+  if (archived) {
+    query = query.eq('completed', true).not('completed_at', 'is', null).lte('completed_at', cutoff);
+  } else {
+    query = query.or(`completed.eq.false,completed_at.is.null,completed_at.gt.${cutoff}`);
+  }
+  const { data, error } = await query
     .order('completed')
     .order('due_date', { ascending: true, nullsFirst: false })
     .order('created_at');
@@ -51,7 +68,33 @@ export async function createTodo(data: {
     .select()
     .single();
   if (error) throw error;
-  return result as Todo;
+
+  const todo = result as Todo;
+
+  // The ONLY email trigger in the app: notify the owner when a to-do is
+  // created with an owner + due date. sendEmail never throws, so a mail
+  // failure can never break to-do creation.
+  if (todo.owner_email && todo.owner_name && todo.due_date) {
+    // Parse at noon so a DATE-only value doesn't roll back a day via UTC.
+    const formattedDue = new Date(`${todo.due_date}T12:00:00`).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    await sendEmail({
+      to: todo.owner_email,
+      subject: `New To-Do Assigned: ${todo.title}`,
+      html: todoAssignedEmail({
+        assigneeName: todo.owner_name.split(' ')[0],
+        todoTitle: todo.title,
+        dueDate: formattedDue,
+        assignedBy: 'High Bank EOS',
+      }),
+    });
+  }
+
+  return todo;
 }
 
 export async function updateTodo(
