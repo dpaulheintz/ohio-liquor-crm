@@ -5,6 +5,7 @@ import {
   createMetric,
   updateMetric,
   deleteMetric,
+  reorderMetrics,
   type Metric,
 } from '@/lib/eos/scorecard';
 import type { MetricFormData } from '@/components/eos/MetricModal';
@@ -47,4 +48,8 @@ export async function editMetric(
 
 export async function removeMetric(id: string): Promise<void> {
   await deleteMetric(id);
+}
+
+export async function reorderMetricsAction(orderedIds: string[]): Promise<void> {
+  await reorderMetrics(orderedIds);
 }

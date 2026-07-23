@@ -27,30 +27,48 @@ export type Milestone = {
 
 export type BarrelWithMilestones = Barrel & { milestones: Milestone[] };
 
-/** Today as YYYY-MM-DD (local), for comparing against the DATE column due_date. */
+/** Today as YYYY-MM-DD (local), for comparing against DATE columns. */
 function todayDateStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
- * @param archived  false (default) = active: due_date today-or-later, or no
- *                  due_date set (an undated barrel is not "past due"). true =
- *                  archived: due_date strictly before today (past quarter end).
+ * Last day (YYYY-MM-DD) of a barrel's quarter, parsed from a "Q<n> YYYY" label
+ * (e.g. "Q2 2026" → "2026-06-30"). Returns null when the label isn't parseable.
+ */
+export function quarterEndDate(quarter: string | null): string | null {
+  if (!quarter) return null;
+  const m = quarter.match(/Q\s*([1-4])\s*[-/ ]?\s*(\d{4})/i);
+  if (!m) return null;
+  const ends: Record<string, string> = { '1': '03-31', '2': '06-30', '3': '09-30', '4': '12-31' };
+  return `${m[2]}-${ends[m[1]]}`;
+}
+
+/**
+ * A barrel is archived once its quarter has fully passed. The quarter label is
+ * the source of truth (so barrels auto-move to the archive when the quarter
+ * ends, even if no due_date was ever set); if there's no parseable quarter we
+ * fall back to due_date. A barrel with neither is never auto-archived.
+ *
+ * @param archived  false (default) = active (current/future quarter, or undated);
+ *                  true = archived (quarter/ due_date strictly before today).
  */
 export async function getBarrels(archived = false): Promise<BarrelWithMilestones[]> {
   const supabase = await createClient();
   const today = todayDateStr();
-  let barrelsQuery = supabase.from('eos_barrels').select('*').order('barrel_type').order('created_at');
-  barrelsQuery = archived
-    ? barrelsQuery.lt('due_date', today)
-    : barrelsQuery.or(`due_date.gte.${today},due_date.is.null`);
   const [{ data: barrels, error: be }, { data: milestones, error: me }] = await Promise.all([
-    barrelsQuery,
+    supabase.from('eos_barrels').select('*').order('barrel_type').order('created_at'),
     supabase.from('eos_barrel_milestones').select('*').order('display_order').order('created_at'),
   ]);
   if (be) throw be;
   if (me) throw me;
+
+  const isArchived = (b: Barrel): boolean => {
+    const end = quarterEndDate(b.quarter) ?? b.due_date;
+    return end != null && end < today;
+  };
+  const visible = (barrels ?? []).filter((b) => isArchived(b as Barrel) === archived);
 
   const byBarrelId = new Map<string, Milestone[]>();
   for (const m of milestones ?? []) {
@@ -59,7 +77,7 @@ export async function getBarrels(archived = false): Promise<BarrelWithMilestones
     byBarrelId.set(m.barrel_id, arr);
   }
 
-  return (barrels ?? []).map(b => ({
+  return visible.map(b => ({
     ...(b as Barrel),
     milestones: byBarrelId.get(b.id) ?? [],
   }));

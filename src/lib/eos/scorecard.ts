@@ -112,3 +112,20 @@ export async function deleteMetric(id: string): Promise<void> {
     .eq('id', id);
   if (error) throw error;
 }
+
+/**
+ * Persist a new metric ordering. Rewrites display_order to each id's position
+ * (1-based) in the given array, so the result is always gap-free and collision-
+ * free regardless of the prior values. Metric count is small (tens), so a
+ * per-row update is fine.
+ */
+export async function reorderMetrics(orderedIds: string[]): Promise<void> {
+  const supabase = await createClient();
+  const results = await Promise.all(
+    orderedIds.map((id, i) =>
+      supabase.from('eos_scorecard_metrics').update({ display_order: i + 1 }).eq('id', id),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+}
