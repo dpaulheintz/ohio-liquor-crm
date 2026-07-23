@@ -10,7 +10,7 @@ import {
   calculateAverage,
   calculateTotal,
 } from '@/lib/eos/scorecard-utils';
-import { saveEntry, addMetric, editMetric, removeMetric } from '@/app/eos/scorecard/actions';
+import { saveEntry, addMetric, editMetric, removeMetric, reorderMetricsAction } from '@/app/eos/scorecard/actions';
 import MetricModal, { type MetricFormData } from '@/components/eos/MetricModal';
 import { cn } from '@/lib/utils';
 
@@ -145,6 +145,25 @@ export default function ScorecardGrid({
     setMenuMetricId(null);
     setModalMetric(metric);
     setShowModal(true);
+  }
+
+  // Move a metric up/down one position and persist the new order. Optimistic:
+  // the UI reorders immediately and reverts if the save fails.
+  async function handleMove(metricId: string, dir: -1 | 1) {
+    setMenuMetricId(null);
+    const idx = metrics.findIndex(m => m.id === metricId);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= metrics.length) return;
+    const prev = metrics;
+    const next = [...metrics];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setMetrics(next.map((m, i) => ({ ...m, display_order: i + 1 })));
+    try {
+      await reorderMetricsAction(next.map(m => m.id));
+    } catch {
+      setMetrics(prev);
+      showToast('Failed to reorder');
+    }
   }
 
   async function handleModalSave(data: MetricFormData) {
@@ -436,17 +455,32 @@ export default function ScorecardGrid({
                           {menuMetricId === metric.id && (
                             <div
                               data-menu
-                              className="absolute right-0 top-full mt-1 bg-gray-100 border border-gray-200 rounded-xl shadow-2xl overflow-hidden w-28 z-50"
+                              className="absolute right-0 top-full mt-1 bg-gray-100 border border-gray-200 rounded-xl shadow-2xl overflow-hidden w-36 z-50"
                             >
                               <button
+                                onClick={() => handleMove(metric.id, -1)}
+                                disabled={rowIdx === 0}
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                ↑ Move up
+                              </button>
+                              <button
+                                onClick={() => handleMove(metric.id, 1)}
+                                disabled={rowIdx === metrics.length - 1}
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                ↓ Move down
+                              </button>
+                              <div className="border-t border-gray-200" />
+                              <button
                                 onClick={() => openEditModal(metric)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-100 transition-colors"
+                                className="w-full px-4 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-200 transition-colors"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => requestDelete(metric.id)}
-                                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-gray-100 transition-colors"
+                                className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-gray-200 transition-colors"
                               >
                                 Delete
                               </button>
