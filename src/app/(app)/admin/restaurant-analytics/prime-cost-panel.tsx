@@ -1,75 +1,64 @@
 'use client';
 
 import {
-  ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceArea, ResponsiveContainer,
+  LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
+  ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { GOLD, fmtMoney, type LocationName } from './lib';
+import { fmtMoney, primeCostColor, PRIME_BENCHMARK, PRIME_YELLOW_MAX } from './lib';
 
 // ─── Data contract ────────────────────────────────────────────────────────────
 
-export interface PrimeCostData {
-  // period aggregates (combined over the selected location(s))
-  revenue: number;
-  labor: number;
-  food: number;                 // purchase-based proxy; INCLUDES unclassified invoices
-  bev: number;                  // classified beverage invoices
-  foodAvailable: boolean;       // any invoice_summary data present in the period
-  // monthly trend of prime cost %
-  trend: Array<{ label: string; prime: number | null; food: number | null; labor: number | null }>;
-  // current vs prior month vs same month last year (prime cost %)
-  compare: { currentLabel: string; current: number | null; priorMonth: number | null; lastYear: number | null };
-  // per-location breakdown (shown on All Locations)
-  perLocation: Array<{ location: LocationName; prime: number | null; food: number | null; labor: number | null; revenue: number }>;
+export interface PrimePoint {
+  label: string;
+  prime: number | null;      // prime cost %
 }
 
-// Industry benchmarks
-const PRIME_OK = 65;    // prime cost % — flag red above this
-const FOOD_LOW = 28;    // food cost % healthy band
-const FOOD_HIGH = 32;
+export interface PrimeCostData {
+  weekly: PrimePoint[];       // last (up to) 12 complete weeks
+  monthly: PrimePoint[];      // last (up to) 12 complete months
+  // Latest complete month headline (breakdown of the prime cost dollars).
+  headline: {
+    periodLabel: string;
+    prime: number | null;
+    cogs: number;
+    labor: number;
+    revenue: number;
+  } | null;
+  hasData: boolean;
+}
 
 function pct(n: number | null): string {
   return n == null ? '—' : `${n.toFixed(1)}%`;
 }
 
-function primeColor(n: number | null): string {
-  if (n == null) return 'var(--muted-foreground, #71717a)';
-  return n > PRIME_OK ? '#ef4444' : '#10b981';
-}
+// ─── Tooltip ────────────────────────────────────────────────────────────────
 
-function foodColor(n: number | null): string {
-  if (n == null) return 'var(--muted-foreground, #71717a)';
-  if (n > FOOD_HIGH) return '#ef4444';
-  if (n < FOOD_LOW) return '#f59e0b';
-  return '#10b981';
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-function MetricTile({
-  label, value, color, hint,
-}: { label: string; value: string; color?: string; hint?: string }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function PrimeTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const v = payload[0]?.value as number | null | undefined;
   return (
-    <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{label}</span>
-      <span className="text-3xl font-serif font-bold leading-none" style={{ color: color ?? 'inherit' }}>{value}</span>
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] px-3 py-2 text-xs shadow-xl min-w-[130px]">
+      {label && <p className="text-white/60 mb-1 font-medium border-b border-zinc-700 pb-1">{label}</p>}
+      <p className="flex justify-between gap-3">
+        <span className="text-white/70">Prime cost</span>
+        <span className="font-mono font-semibold" style={{ color: v == null ? '#fff' : primeCostColor(v) }}>
+          {v == null ? '—' : `${v.toFixed(1)}%`}
+        </span>
+      </p>
     </div>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function TrendTip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
-  if (!active || !payload?.length) return null;
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+function LegendSwatch() {
   return (
-    <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] px-3 py-2 text-xs shadow-xl min-w-[150px]">
-      {label && <p className="text-white/60 mb-1.5 font-medium border-b border-zinc-700 pb-1">{label}</p>}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {payload.map((p: any) => (
-        <p key={p.name} className="flex justify-between gap-3">
-          <span style={{ color: p.color }} className="truncate">{p.name}</span>
-          <span className="font-mono font-semibold text-white">{p.value != null ? `${p.value.toFixed(1)}%` : '—'}</span>
-        </p>
-      ))}
+    <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+      <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: '#10b981' }} />&lt;{PRIME_BENCHMARK}%</span>
+      <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: '#f59e0b' }} />{PRIME_BENCHMARK}–{PRIME_YELLOW_MAX}%</span>
+      <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: '#ef4444' }} />&gt;{PRIME_YELLOW_MAX}%</span>
+      <span className="flex items-center gap-1"><span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: '#ef4444' }} />Benchmark {PRIME_BENCHMARK}%</span>
     </div>
   );
 }
@@ -77,116 +66,116 @@ function TrendTip({ active, payload, label }: { active?: boolean; payload?: any[
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function PrimeCostPanel({ data }: { data: PrimeCostData }) {
-  const cogs = data.food + data.bev; // food already includes unclassified invoices
-  const primePct = data.revenue > 0 && data.foodAvailable ? ((data.labor + cogs) / data.revenue) * 100 : null;
-  const foodPct = data.revenue > 0 && data.foodAvailable ? (data.food / data.revenue) * 100 : null;
-  const laborPct = data.revenue > 0 ? (data.labor / data.revenue) * 100 : null;
+  if (!data.hasData) {
+    return (
+      <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+        No invoice-based cost data for this location. Prime cost is available for
+        Grandview, Gahanna, and Westerville (locations with MarginEdge invoices).
+      </div>
+    );
+  }
+
+  const h = data.headline;
+
+  // Shared Y domain padding so both charts breathe around the benchmark line.
+  const allVals = [...data.weekly, ...data.monthly].map((p) => p.prime).filter((v): v is number => v != null);
+  const yMax = Math.max(PRIME_YELLOW_MAX + 5, ...allVals) + 3;
+  const yMin = Math.max(0, Math.min(PRIME_BENCHMARK - 10, ...allVals) - 3);
 
   return (
     <div className="space-y-4">
-      {/* Headline metric tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricTile
-          label="Prime Cost %"
-          value={pct(primePct)}
-          color={primeColor(primePct)}
-          hint={primePct == null ? 'Awaiting cost data' : primePct > PRIME_OK ? 'Above 65% target' : 'Within 55–65% target'}
-        />
-        <MetricTile
-          label="Food Cost % (purchases)"
-          value={pct(foodPct)}
-          color={foodColor(foodPct)}
-          hint={foodPct == null ? 'Awaiting invoice data' : `Benchmark ${FOOD_LOW}–${FOOD_HIGH}%`}
-        />
-        <MetricTile label="Labor % of Sales" value={pct(laborPct)} hint="From Toast labor" />
-        <MetricTile
-          label="Prime Cost $"
-          value={data.foodAvailable ? fmtMoney(data.labor + cogs) : '—'}
-          hint={`Labor ${fmtMoney(data.labor)} + Food ${data.foodAvailable ? fmtMoney(data.food) : '—'} + Bev ${data.foodAvailable ? fmtMoney(data.bev) : '—'}`}
-        />
-      </div>
-
-      {/* Purchases-based disclaimer */}
-      <p className="text-[11px] text-muted-foreground -mt-1">
-        Food cost is a <span className="text-foreground">purchases-based proxy</span> from MarginEdge invoices (not true COGS —
-        no inventory counts), and includes <span className="text-foreground">unclassified invoices</span> (vendor spend that
-        didn&apos;t match a food/beverage keyword — assumed food-equivalent since it&apos;s overwhelmingly food/bev, not overhead).
-        See Invoice Spend below for the raw Food / Beverage / Unclassified split. Best read at monthly granularity.
-      </p>
-
-      {/* Prime cost trend + comparison */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Trend chart */}
-        <div className="lg:col-span-2 rounded-xl border bg-card p-4">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Prime Cost % — Monthly Trend</h3>
-            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="inline-block w-4 border-t-2" style={{ borderColor: GOLD }} />Prime</span>
-              <span className="flex items-center gap-1"><span className="inline-block w-4 border-t-2 border-dashed border-slate-400" />Food</span>
-            </div>
+      {/* Headline — latest complete month */}
+      {h && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Prime Cost — {h.periodLabel}
+            </span>
+            <span className="text-3xl font-serif font-bold leading-none" style={{ color: primeCostColor(h.prime) }}>
+              {pct(h.prime)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {h.prime == null ? 'Awaiting data'
+                : h.prime < PRIME_BENCHMARK ? `Below ${PRIME_BENCHMARK}% benchmark`
+                : h.prime <= PRIME_YELLOW_MAX ? `At the ${PRIME_BENCHMARK}–${PRIME_YELLOW_MAX}% caution band`
+                : `Above ${PRIME_YELLOW_MAX}% — investigate`}
+            </span>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <ComposedChart data={data.trend} margin={{ top: 4, right: 6, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
-              {/* Healthy prime-cost band 55–65% */}
-              <ReferenceArea y1={55} y2={65} fill="#10b981" fillOpacity={0.06} />
-              <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={8} />
-              <YAxis tickFormatter={(v) => `${v}%`} tick={{ fill: '#666', fontSize: 9 }} axisLine={false} tickLine={false} width={38} />
-              <Tooltip content={(p) => <TrendTip active={p.active} payload={p.payload as []} label={String(p.label)} />} />
-              <Line dataKey="prime" name="Prime" stroke={GOLD} strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />
-              <Line dataKey="food" name="Food" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls isAnimationActive={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Period comparison */}
-        <div className="rounded-xl border bg-card p-4 flex flex-col">
-          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mb-3">Prime Cost — {data.compare.currentLabel}</h3>
-          <div className="flex flex-col gap-3 flex-1 justify-center">
-            {[
-              { label: 'This month', v: data.compare.current },
-              { label: 'Prior month', v: data.compare.priorMonth },
-              { label: 'Same month last year', v: data.compare.lastYear },
-            ].map((r) => (
-              <div key={r.label} className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{r.label}</span>
-                <span className="font-mono text-lg font-semibold" style={{ color: primeColor(r.v) }}>{pct(r.v)}</span>
-              </div>
-            ))}
+          <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">COGS (Invoices)</span>
+            <span className="text-2xl font-serif font-bold leading-none text-foreground">{fmtMoney(h.cogs)}</span>
+            <span className="text-xs text-muted-foreground">{h.revenue > 0 ? `${(h.cogs / h.revenue * 100).toFixed(1)}% of sales` : '—'}</span>
           </div>
-        </div>
-      </div>
-
-      {/* Per-location breakdown */}
-      {data.perLocation.length > 1 && (
-        <div className="rounded-xl border bg-card p-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium mb-3">By Location</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b">
-                  <th className="px-3 py-2 text-left text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Location</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Prime %</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Food %</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Labor %</th>
-                  <th className="px-3 py-2 text-right text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {data.perLocation.map((r) => (
-                  <tr key={r.location}>
-                    <td className="px-3 py-2.5 font-medium text-foreground">{r.location}</td>
-                    <td className="px-3 py-2.5 text-right font-mono font-semibold" style={{ color: primeColor(r.prime) }}>{pct(r.prime)}</td>
-                    <td className="px-3 py-2.5 text-right font-mono" style={{ color: foodColor(r.food) }}>{pct(r.food)}</td>
-                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{pct(r.labor)}</td>
-                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{fmtMoney(r.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Labor</span>
+            <span className="text-2xl font-serif font-bold leading-none text-foreground">{fmtMoney(h.labor)}</span>
+            <span className="text-xs text-muted-foreground">{h.revenue > 0 ? `${(h.labor / h.revenue * 100).toFixed(1)}% of sales` : '—'}</span>
+          </div>
+          <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Revenue</span>
+            <span className="text-2xl font-serif font-bold leading-none text-foreground">{fmtMoney(h.revenue)}</span>
+            <span className="text-xs text-muted-foreground">Prime = (COGS + Labor) ÷ Revenue</span>
           </div>
         </div>
       )}
+
+      {/* Methodology note */}
+      <p className="text-[11px] text-muted-foreground -mt-1">
+        <span className="text-foreground">Invoice-based:</span> COGS is the sum of MarginEdge invoices
+        (food + beverage + unclassified) received in each period, from Monday 00:00 to Sunday 23:59 for weeks.
+        Labor and revenue come from Toast. The current partial week/month is excluded so lumpy invoice timing
+        doesn&apos;t distort the latest bar.
+      </p>
+
+      {/* 12-week line + 12-month bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Weekly line */}
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Last 12 Weeks</h3>
+            <LegendSwatch />
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={data.weekly} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={12} />
+              <YAxis domain={[yMin, yMax]} tickFormatter={(v) => `${v}%`} tick={{ fill: '#666', fontSize: 9 }} axisLine={false} tickLine={false} width={38} />
+              <Tooltip content={(p) => <PrimeTip active={p.active} payload={p.payload as []} label={String(p.label)} />} />
+              <ReferenceLine y={PRIME_BENCHMARK} stroke="#ef4444" strokeDasharray="5 4" strokeWidth={1.5}
+                label={{ value: `${PRIME_BENCHMARK}%`, position: 'right', fill: '#ef4444', fontSize: 10 }} />
+              <Line dataKey="prime" stroke="#334155" strokeWidth={2} connectNulls isAnimationActive={false}
+                dot={(props) => {
+                  const { cx, cy, payload, index } = props as { cx: number; cy: number; payload: PrimePoint; index: number };
+                  if (payload.prime == null) return <g key={index} />;
+                  return <circle key={index} cx={cx} cy={cy} r={3.5} fill={primeCostColor(payload.prime)} stroke="#fff" strokeWidth={1} />;
+                }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Monthly bar */}
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Last 12 Months</h3>
+            <LegendSwatch />
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data.monthly} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={4} />
+              <YAxis domain={[yMin, yMax]} tickFormatter={(v) => `${v}%`} tick={{ fill: '#666', fontSize: 9 }} axisLine={false} tickLine={false} width={38} />
+              <Tooltip cursor={{ fill: '#00000008' }} content={(p) => <PrimeTip active={p.active} payload={p.payload as []} label={String(p.label)} />} />
+              <ReferenceLine y={PRIME_BENCHMARK} stroke="#ef4444" strokeDasharray="5 4" strokeWidth={1.5}
+                label={{ value: `${PRIME_BENCHMARK}%`, position: 'right', fill: '#ef4444', fontSize: 10 }} />
+              <Bar dataKey="prime" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                {data.monthly.map((p, i) => (
+                  <Cell key={i} fill={primeCostColor(p.prime)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
