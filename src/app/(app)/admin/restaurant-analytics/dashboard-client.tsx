@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import {
   GOLD, LOCATIONS, monthsBetween, shiftMonth, monthLabelYear, monthLabelFull, ymOf,
-  type DailyRow, type InvoiceMonth, type LocationName, type LocationTab,
+  weekLabel, shiftDay,
+  type DailyRow, type InvoiceMonth, type LocationName, type LocationTab, type PrimeCostRow, type ItemWeekRow,
 } from './lib';
 import { KpiCards, type KpiData } from './kpi-cards';
 import { RevenueChart, type MonthPoint } from './revenue-chart';
@@ -11,6 +12,8 @@ import { LocationScorecard, type LocationStat } from './location-scorecard';
 import { DailyHeatmap } from './daily-heatmap';
 import { PrimeCostPanel, type PrimeCostData } from './prime-cost-panel';
 import { InvoiceSpend, type InvoiceSpendData } from './invoice-spend';
+import { RevenueByStore } from './revenue-by-store';
+import { FunFacts } from './fun-facts';
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
@@ -32,24 +35,14 @@ function sumField(rows: DailyRow[], field: 'total' | 'fnb' | 'guests' | 'checks'
   return s;
 }
 
-// Prime-cost aggregate for a set of (location, month) cells, combining daily_sales
-// revenue/labor with invoice_summary food/bev/unclassified. `food` here already
-// includes unclassified — per business decision, unclassified vendor spend is
-// treated as food-equivalent cost since it's overwhelmingly food/bev, not overhead.
-interface CostCell { revenue: number; labor: number; food: number; bev: number; cogsAvailable: boolean }
-
-function primePctOf(a: CostCell): number | null {
-  return a.cogsAvailable && a.revenue > 0 ? ((a.labor + a.food + a.bev) / a.revenue) * 100 : null;
-}
-function foodPctOf(a: CostCell): number | null {
-  return a.cogsAvailable && a.revenue > 0 ? (a.food / a.revenue) * 100 : null;
-}
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface RestaurantDashboardClientProps {
   rows: DailyRow[];
   invoiceMonths: InvoiceMonth[];
+  weeklyPrimeCost: PrimeCostRow[];
+  monthlyPrimeCost: PrimeCostRow[];
+  itemWeeks: ItemWeekRow[];
   dataThrough: string | null;
 }
 
@@ -57,7 +50,9 @@ const TABS: LocationTab[] = ['Grandview', 'Gahanna', 'Westerville', 'PO BOX 21',
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: RestaurantDashboardClientProps) {
+export function RestaurantDashboardClient({
+  rows, invoiceMonths, weeklyPrimeCost, monthlyPrimeCost, itemWeeks, dataThrough,
+}: RestaurantDashboardClientProps) {
   // All distinct months present, ascending.
   const allMonths = useMemo(() => {
     const set = new Set<string>();
@@ -149,82 +144,45 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
     });
   }, [rows, rangeFrom, rangeTo]);
 
-  // Revenue+labor per (location, month), from daily_sales.
-  const revLaborByCell = useMemo(() => {
-    const m = new Map<string, { revenue: number; labor: number }>();
-    for (const r of rows) {
-      const key = `${r.location}|${ymOf(r.date)}`;
-      const e = m.get(key) ?? { revenue: 0, labor: 0 };
-      e.revenue += r.total; e.labor += r.labor;
-      m.set(key, e);
-    }
-    return m;
-  }, [rows]);
-
-  // Food(+unclassified)/bev per (location, month), from invoice_summary.
-  const costByCell = useMemo(() => {
-    const m = new Map<string, { food: number; bev: number }>();
-    for (const i of invoiceMonths) {
-      m.set(`${i.location}|${i.month}`, { food: i.food + i.unclassified, bev: i.bev });
-    }
-    return m;
-  }, [invoiceMonths]);
-
-  const cellAgg = useMemo(() => (locs: readonly string[], months: string[]): CostCell => {
-    let revenue = 0, labor = 0, food = 0, bev = 0, cogsAvailable = false;
-    for (const loc of locs) {
-      for (const ym of months) {
-        const key = `${loc}|${ym}`;
-        const rl = revLaborByCell.get(key);
-        if (rl) { revenue += rl.revenue; labor += rl.labor; }
-        const c = costByCell.get(key);
-        if (c) { food += c.food; bev += c.bev; cogsAvailable = true; }
-      }
-    }
-    return { revenue, labor, food, bev, cogsAvailable };
-  }, [revLaborByCell, costByCell]);
-
-  // ── Prime cost panel ──
+  // ── Prime cost panel (invoice-based, from weekly/monthly_prime_cost views) ──
+  // Driven by the selected location tab. The current partial week/month is
+  // excluded so lumpy invoice timing doesn't distort the latest data point.
   const primeCost: PrimeCostData = useMemo(() => {
-    const selectedLocs: readonly LocationName[] = location === 'All' ? LOCATIONS : [location];
-    const agg = cellAgg(selectedLocs, rangeMonths);
+    const selKey: LocationName | 'All' = location; // tab already matches view labels
+    const weekRows = weeklyPrimeCost.filter((r) => r.location === selKey);
+    const monthRows = monthlyPrimeCost.filter((r) => r.location === selKey);
 
-    const trend = rangeMonths.map((ym) => {
-      const a = cellAgg(selectedLocs, [ym]);
-      return {
-        label: monthLabelYear(ym),
-        prime: primePctOf(a),
-        food: foodPctOf(a),
-        labor: a.revenue > 0 ? (a.labor / a.revenue) * 100 : null,
-      };
-    });
+    // Completeness cutoffs from the latest available sales date.
+    const through = dataThrough ?? '';
+    const currentMonth = through ? ymOf(through) : '';
 
-    // Current vs prior month vs same month last year (prime %)
-    const primeForMonth = (ym: string) => primePctOf(cellAgg(selectedLocs, [ym]));
-    const compare = {
-      currentLabel: monthLabelFull(rangeTo),
-      current: primeForMonth(rangeTo),
-      priorMonth: primeForMonth(shiftMonth(rangeTo, -1)),
-      lastYear: primeForMonth(shiftMonth(rangeTo, -12)),
-    };
+    // A week is complete when its Sunday (Monday+6) is on/before `through`;
+    // a month is complete when it's strictly before the month of `through`.
+    const completeWeeks = weekRows.filter((r) => !through || shiftDay(r.periodStart, 6) <= through);
+    const completeMonths = monthRows.filter((r) => !currentMonth || ymOf(r.periodStart) < currentMonth);
 
-    // Per-location breakdown (over range)
-    const perLocation = LOCATIONS.map((loc) => {
-      const a = cellAgg([loc], rangeMonths);
-      return {
-        location: loc as LocationName,
-        prime: primePctOf(a),
-        food: foodPctOf(a),
-        labor: a.revenue > 0 ? (a.labor / a.revenue) * 100 : null,
-        revenue: a.revenue,
-      };
-    }).filter((r) => r.revenue > 0);
+    const weekly = completeWeeks.slice(-12).map((r) => ({
+      label: weekLabel(r.periodStart),
+      prime: r.primePct,
+    }));
+    const monthly = completeMonths.slice(-12).map((r) => ({
+      label: monthLabelYear(ymOf(r.periodStart)),
+      prime: r.primePct,
+    }));
 
-    return {
-      revenue: agg.revenue, labor: agg.labor, food: agg.food, bev: agg.bev,
-      foodAvailable: agg.cogsAvailable, trend, compare, perLocation,
-    };
-  }, [cellAgg, location, rangeTo, rangeMonths]);
+    const latest = completeMonths[completeMonths.length - 1];
+    const headline = latest
+      ? {
+          periodLabel: monthLabelFull(ymOf(latest.periodStart)),
+          prime: latest.primePct,
+          cogs: latest.cogs,
+          labor: latest.labor,
+          revenue: latest.revenue,
+        }
+      : null;
+
+    return { weekly, monthly, headline, hasData: weekly.length > 0 || monthly.length > 0 };
+  }, [weeklyPrimeCost, monthlyPrimeCost, location, dataThrough]);
 
   // ── Invoice spend ──
   const invoiceSpend: InvoiceSpendData = useMemo(() => {
@@ -371,12 +329,17 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
         </section>
 
         <section>
-          <SectionHeader num="02" title="Prime Cost" />
+          <SectionHeader num="02" title="Prime Cost (Invoice-Based)" />
           <PrimeCostPanel data={primeCost} />
         </section>
 
         <section>
-          <SectionHeader num="03" title="Monthly Revenue" />
+          <SectionHeader num="03" title="Revenue by Store" />
+          <RevenueByStore rows={rows} dataThrough={dataThrough} />
+        </section>
+
+        <section>
+          <SectionHeader num="04" title="Monthly Revenue" />
           <RevenueChart
             points={chartPoints}
             curLabel={location === 'All' ? 'All Locations' : location}
@@ -386,18 +349,18 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
 
         {location === 'All' && (
           <section>
-            <SectionHeader num="04" title="Location Scorecard" />
+            <SectionHeader num="05" title="Location Scorecard" />
             <LocationScorecard stats={scorecard} />
           </section>
         )}
 
         <section>
-          <SectionHeader num={location === 'All' ? '05' : '04'} title="Invoice Spend" />
+          <SectionHeader num={location === 'All' ? '06' : '05'} title="Invoice Spend" />
           <InvoiceSpend data={invoiceSpend} />
         </section>
 
         <section>
-          <SectionHeader num={location === 'All' ? '06' : '05'} title="Daily Revenue" />
+          <SectionHeader num={location === 'All' ? '07' : '06'} title="Daily Revenue" />
           <DailyHeatmap
             month={effHeatmapMonth}
             monthOptions={rangeMonths}
@@ -405,6 +368,11 @@ export function RestaurantDashboardClient({ rows, invoiceMonths, dataThrough }: 
             dayRevenue={dayRevenue}
             maxRevenue={maxRevenue}
           />
+        </section>
+
+        <section>
+          <SectionHeader num={location === 'All' ? '08' : '07'} title="Fun Facts" />
+          <FunFacts rows={rows} itemWeeks={itemWeeks} dataThrough={dataThrough} />
         </section>
       </div>
     </div>

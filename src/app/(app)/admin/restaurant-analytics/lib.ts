@@ -8,6 +8,14 @@ export type LocationName = (typeof LOCATIONS)[number];
 // 'All' represents the All-Locations aggregate view.
 export type LocationTab = LocationName | 'All';
 
+// Stable per-location colors for stacked bars / multi-series legends.
+export const LOCATION_COLORS: Record<LocationName, string> = {
+  Grandview: '#C5A572',   // gold
+  Gahanna: '#3b82f6',     // blue
+  Westerville: '#10b981', // green
+  'PO BOX 21': '#a855f7', // purple
+};
+
 // One row of daily_sales, denormalized with its location name attached.
 // labor comes from daily_sales.labor_cost; foodCost from daily_costs (MarginEdge
 // purchase-based proxy) joined on location+date (null when no invoice data).
@@ -113,4 +121,72 @@ export function monthsBetween(from: string, to: string): string[] {
 /** The 'YYYY-MM' of a 'YYYY-MM-DD' date string. */
 export function ymOf(date: string): string {
   return date.slice(0, 7);
+}
+
+// ─── Week helpers (ISO Monday-anchored, matching Postgres date_trunc('week')) ───
+
+/** Monday (YYYY-MM-DD) of the ISO week containing `date`. */
+export function mondayOf(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  const dow = d.getUTCDay();            // 0=Sun … 6=Sat
+  const delta = dow === 0 ? -6 : 1 - dow; // shift back to Monday
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Shift a 'YYYY-MM-DD' by a signed number of days. */
+export function shiftDay(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 'YYYY-MM-DD' (week Monday) → short label like "Jul 14". */
+export function weekLabel(mondayDate: string): string {
+  const d = new Date(`${mondayDate}T00:00:00Z`);
+  return `${MONTH_ABBR[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+/** Day-of-week index for a date (0=Sun…6=Sat), UTC-stable. */
+export function dowOf(date: string): number {
+  return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
+export const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+export const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+// ─── Prime cost (invoice-based) ─────────────────────────────────────────────────
+
+// One period (week or month) of invoice-based prime cost, from the
+// weekly_prime_cost / monthly_prime_cost views. location === 'All' is the
+// combined (location_id IS NULL) aggregate row.
+export interface PrimeCostRow {
+  periodStart: string;              // YYYY-MM-DD (week Monday, or month first day)
+  location: LocationName | 'All';
+  cogs: number;
+  labor: number;
+  revenue: number;
+  primePct: number | null;          // (cogs + labor) / revenue * 100, null if no revenue
+}
+
+// One (week, location, item) popularity row from the weekly_item_popularity
+// view — feeds the Fun Facts "Most Popular Item" metric.
+export interface ItemWeekRow {
+  weekStart: string;   // YYYY-MM-DD (Monday)
+  location: LocationName;
+  itemName: string;
+  qty: number;
+  revenue: number;
+}
+
+// Prime-cost benchmark + traffic-light thresholds (Part 1 spec).
+export const PRIME_BENCHMARK = 62;  // benchmark line
+export const PRIME_YELLOW_MAX = 68; // green < 62 ≤ yellow ≤ 68 < red
+
+/** Traffic-light color for a prime-cost %: green <62, yellow 62–68, red >68. */
+export function primeCostColor(pct: number | null): string {
+  if (pct == null) return 'var(--muted-foreground, #71717a)';
+  if (pct < PRIME_BENCHMARK) return '#10b981';   // green
+  if (pct <= PRIME_YELLOW_MAX) return '#f59e0b'; // yellow
+  return '#ef4444';                              // red
 }

@@ -1,6 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { RestaurantDashboardClient } from './dashboard-client';
-import { LOCATIONS, type DailyRow, type InvoiceMonth, type LocationName } from './lib';
+import {
+  LOCATIONS, type DailyRow, type InvoiceMonth, type LocationName,
+  type PrimeCostRow, type ItemWeekRow,
+} from './lib';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Restaurant Analytics | High Bank CRM' };
@@ -70,6 +73,85 @@ export default async function RestaurantAnalyticsPage() {
     }
   }
 
+  // ── weekly_prime_cost + monthly_prime_cost views (invoice-based prime cost) ──
+  // location_id NULL = combined ('All'). Rows for non-restaurant / unmapped
+  // locations are skipped; the combined row is always kept.
+  const toPrimeRow = (
+    r: { location_id: string | null; cogs: unknown; labor: unknown; revenue: unknown; pct: unknown },
+    periodStart: string,
+  ): PrimeCostRow | null => {
+    let location: LocationName | 'All';
+    if (r.location_id == null) {
+      location = 'All';
+    } else {
+      const name = idToName.get(r.location_id);
+      if (!name) return null;
+      location = name;
+    }
+    return {
+      periodStart,
+      location,
+      cogs: Number(r.cogs ?? 0),
+      labor: Number(r.labor ?? 0),
+      revenue: Number(r.revenue ?? 0),
+      primePct: r.pct == null ? null : Number(r.pct),
+    };
+  };
+
+  const weeklyPrimeCost: PrimeCostRow[] = [];
+  {
+    const { data } = await supabase
+      .from('weekly_prime_cost')
+      .select('week_start, location_id, weekly_cogs, weekly_labor, weekly_revenue, prime_cost_pct')
+      .order('week_start', { ascending: true });
+    for (const r of data ?? []) {
+      const row = toPrimeRow(
+        { location_id: r.location_id, cogs: r.weekly_cogs, labor: r.weekly_labor, revenue: r.weekly_revenue, pct: r.prime_cost_pct },
+        String(r.week_start),
+      );
+      if (row) weeklyPrimeCost.push(row);
+    }
+  }
+
+  const monthlyPrimeCost: PrimeCostRow[] = [];
+  {
+    const { data } = await supabase
+      .from('monthly_prime_cost')
+      .select('month_start, location_id, monthly_cogs, monthly_labor, monthly_revenue, prime_cost_pct')
+      .order('month_start', { ascending: true });
+    for (const r of data ?? []) {
+      const row = toPrimeRow(
+        { location_id: r.location_id, cogs: r.monthly_cogs, labor: r.monthly_labor, revenue: r.monthly_revenue, pct: r.prime_cost_pct },
+        String(r.month_start),
+      );
+      if (row) monthlyPrimeCost.push(row);
+    }
+  }
+
+  // ── weekly_item_popularity (recent weeks only) — Fun Facts "Most Popular Item" ──
+  const itemWeeks: ItemWeekRow[] = [];
+  {
+    // 28-day floor covers the last few complete weeks; the client picks the
+    // target week. Keeps the payload to a few hundred rows.
+    const floor = new Date();
+    floor.setDate(floor.getDate() - 28);
+    const { data } = await supabase
+      .from('weekly_item_popularity')
+      .select('week_start, location_id, item_name, qty, revenue')
+      .gte('week_start', floor.toISOString().slice(0, 10));
+    for (const r of data ?? []) {
+      const location = idToName.get(r.location_id as string);
+      if (!location) continue;
+      itemWeeks.push({
+        weekStart: String(r.week_start),
+        location,
+        itemName: String(r.item_name),
+        qty: Number(r.qty ?? 0),
+        revenue: Number(r.revenue ?? 0),
+      });
+    }
+  }
+
   // Denormalize daily_sales, attaching labor + foodCost.
   const rows: DailyRow[] = [];
   for (const r of salesRaw) {
@@ -95,6 +177,9 @@ export default async function RestaurantAnalyticsPage() {
     <RestaurantDashboardClient
       rows={rows}
       invoiceMonths={invoiceMonths}
+      weeklyPrimeCost={weeklyPrimeCost}
+      monthlyPrimeCost={monthlyPrimeCost}
+      itemWeeks={itemWeeks}
       dataThrough={dataThrough}
     />
   );
