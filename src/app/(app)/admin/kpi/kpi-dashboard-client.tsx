@@ -229,6 +229,20 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
     return result;
   }, [displays, curMonth]);
 
+  // Display Timeline window: the last 6 months INCLUDING the current one,
+  // derived purely from today's date so the current month is always the final
+  // column and new months roll in automatically with no code change or data
+  // dependency (an empty month simply renders as "—").
+  const timelineMonths = useMemo(() => {
+    const now = new Date();
+    const result: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push(`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`);
+    }
+    return result;
+  }, []);
+
   const active   = displays.filter(d => d.monthly_status[curMonth] === 'up');
   const inactive = displays.filter(d => d.monthly_status[curMonth] !== 'up' && Object.values(d.monthly_status).some(v => v === 'up'));
 
@@ -440,9 +454,12 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
                 <th className="text-left px-4 py-2 text-muted-foreground font-medium w-[220px] sticky left-0 bg-white">Agency</th>
                 <th className="px-2 py-2 text-muted-foreground font-medium whitespace-nowrap">Rep</th>
                 <th className="px-2 py-2 text-muted-foreground font-medium whitespace-nowrap">Type</th>
-                {allMonths.map(m => (
-                  <th key={m} className={`px-2 py-2 text-muted-foreground font-medium whitespace-nowrap ${m === curMonth ? 'text-primary' : ''}`}>
+                {timelineMonths.map(m => (
+                  <th key={m} className={`px-2 py-2 font-medium whitespace-nowrap text-center ${m === curMonth ? 'text-primary bg-primary/5' : 'text-muted-foreground'}`}>
                     {monthLabel(m)}
+                    {m === curMonth && (
+                      <span className="block text-[9px] font-semibold uppercase tracking-wide text-primary">Current</span>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -458,8 +475,8 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
                   <td className="px-2 py-2 whitespace-nowrap">
                     <span className="text-[10px] font-semibold" style={{ color: TYPE_COLORS[d.display_type] ?? '#888' }}>{d.display_type}</span>
                   </td>
-                  {allMonths.map(m => (
-                    <td key={m} className="px-2 py-2 text-center">
+                  {timelineMonths.map(m => (
+                    <td key={m} className={`px-2 py-2 text-center ${m === curMonth ? 'bg-primary/5' : ''}`}>
                       <StatusCell status={(d.monthly_status[m] as 'up' | 'down') ?? null} />
                     </td>
                   ))}
