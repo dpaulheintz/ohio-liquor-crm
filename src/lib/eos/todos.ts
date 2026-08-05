@@ -43,6 +43,19 @@ export async function getTodos(archived = false): Promise<Todo[]> {
   return (data ?? []) as Todo[];
 }
 
+/** All completed to-dos, newest completion first — for the meeting runner's
+ *  "Previously Completed" section. */
+export async function getCompletedTodos(): Promise<Todo[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('eos_todos')
+    .select('*')
+    .eq('completed', true)
+    .order('completed_at', { ascending: false, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []) as Todo[];
+}
+
 export async function getTodosByMeetingId(meetingId: string): Promise<Todo[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -62,6 +75,22 @@ export async function createTodo(data: {
   created_from_meeting_id?: string;
 }): Promise<Todo> {
   const supabase = await createClient();
+
+  // Dedup: if an active (non-completed) to-do with the same normalized title
+  // already exists, return it instead of inserting a duplicate. Guards against
+  // double-submits and the same action item being logged twice in a meeting.
+  const normalized = data.title.trim().toLowerCase();
+  if (normalized) {
+    const { data: existing } = await supabase
+      .from('eos_todos')
+      .select('*')
+      .eq('completed', false);
+    const match = (existing ?? []).find(
+      (t) => String(t.title ?? '').trim().toLowerCase() === normalized,
+    );
+    if (match) return match as Todo;
+  }
+
   const { data: result, error } = await supabase
     .from('eos_todos')
     .insert(data)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import type { Meeting, MeetingNote } from '@/lib/eos/meetings';
 import type { Metric, Entry } from '@/lib/eos/scorecard';
 import type { BarrelWithMilestones } from '@/lib/eos/barrels';
@@ -24,7 +25,8 @@ import {
   createOpportunityInMeetingAction,
 } from '@/app/eos/meetings/actions';
 import { toggleTodoAction } from '@/app/eos/todos/actions';
-import { updateOpportunityStatusAction } from '@/app/eos/opportunities/actions';
+import { updateOpportunityStatusAction, reorderOpportunitiesAction } from '@/app/eos/opportunities/actions';
+import { SortableList, reorderFullFromSubset } from '@/components/eos/SortableList';
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
@@ -59,6 +61,7 @@ type Props = {
   weekStarts: string[];
   barrels: BarrelWithMilestones[];
   todos: Todo[];
+  completedTodos: Todo[];
   opportunities: Opportunity[];
   headlines: Headline[];
   initialSection?: string;
@@ -92,6 +95,7 @@ export default function RunnerClient({
   weekStarts,
   barrels: initialBarrels,
   todos: initialTodos,
+  completedTodos: initialCompletedTodos,
   opportunities: initialOpportunities,
   headlines: initialHeadlines,
   initialSection,
@@ -126,6 +130,9 @@ export default function RunnerClient({
   const [opportunities, setOpportunities] = useState(initialOpportunities);
   const [headlines, setHeadlines] = useState(initialHeadlines);
   const [meetingTodos, setMeetingTodos] = useState<Todo[]>([]);
+  // Ids of to-dos completed while this meeting is open → "Completed This Meeting".
+  const [completedThisMeeting, setCompletedThisMeeting] = useState<Set<string>>(new Set());
+  const [showPrevCompleted, setShowPrevCompleted] = useState(false);
 
   // Re-sync local copies whenever the server gives us fresh props. This is the
   // path items created via SmartAddButton take: its modals call a *different*
@@ -137,6 +144,35 @@ export default function RunnerClient({
   useEffect(() => { setTodos(initialTodos); }, [initialTodos]);
   useEffect(() => { setOpportunities(initialOpportunities); }, [initialOpportunities]);
   useEffect(() => { setHeadlines(initialHeadlines); }, [initialHeadlines]);
+
+  // ── Real-time To-Dos ──
+  // Any to-do added/completed/deleted anywhere (this runner, another attendee,
+  // or the standalone page) reflects here instantly. Insert/Delete keep the
+  // active list in sync; a completion transition also records the id so the item
+  // moves into "Completed This Meeting" rather than just vanishing.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('eos-todos-runner')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eos_todos' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const t = payload.new as Todo;
+          setTodos(prev => (prev.some(x => x.id === t.id) ? prev : [...prev, t]));
+        } else if (payload.eventType === 'UPDATE') {
+          const t = payload.new as Todo;
+          setTodos(prev => {
+            const has = prev.some(x => x.id === t.id);
+            return has ? prev.map(x => (x.id === t.id ? { ...x, ...t } : x)) : [...prev, t];
+          });
+          if (t.completed) setCompletedThisMeeting(prev => new Set(prev).add(t.id));
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = (payload.old as { id?: string }).id;
+          if (oldId) setTodos(prev => prev.filter(x => x.id !== oldId));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   // ── UI state ──
   const [sharedHeadlines, setSharedHeadlines] = useState<Set<string>>(new Set());
@@ -200,14 +236,23 @@ export default function RunnerClient({
   const displayHeadlines = showAllHeadlines ? headlines : recentHeadlines;
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const weekAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const lastWeekTodos = todos.filter(t => t.due_date && t.due_date >= weekAgoStr && t.due_date <= todayStr);
-  const overdueTodos = todos.filter(t => !t.completed && t.due_date && t.due_date < todayStr);
 
-  const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-  const openOpps = opportunities
-    .filter(o => o.status === 'open' || o.status === 'in_progress')
-    .sort((a, b) => (priorityOrder[a.priority ?? ''] ?? 99) - (priorityOrder[b.priority ?? ''] ?? 99));
+  // All outstanding to-dos (from anywhere, not just this meeting), overdue first
+  // then by due date, undated last.
+  const activeTodos = todos
+    .filter(t => !t.completed)
+    .sort((a, b) => {
+      const ad = a.due_date ?? '9999-12-31';
+      const bd = b.due_date ?? '9999-12-31';
+      return ad.localeCompare(bd);
+    });
+  // Checked off during this meeting → shown in "Completed This Meeting".
+  const completedMeetingTodos = todos.filter(t => t.completed && completedThisMeeting.has(t.id));
+  // Previously completed (snapshot at load), minus anything re-touched this meeting.
+  const prevCompletedTodos = initialCompletedTodos.filter(t => !completedThisMeeting.has(t.id));
+
+  // IDS list keeps the manual (sort_order) order so drag-to-reorder persists.
+  const openOpps = opportunities.filter(o => o.status === 'open' || o.status === 'in_progress');
   const selectedOpp = opportunities.find(o => o.id === selectedOppId) ?? null;
 
   // ── Rating summary ──
@@ -255,6 +300,11 @@ export default function RunnerClient({
 
   async function handleToggleTodo(id: string, completed: boolean) {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completed, completed_at: completed ? new Date().toISOString() : null } : t));
+    setCompletedThisMeeting(prev => {
+      const n = new Set(prev);
+      if (completed) n.add(id); else n.delete(id);
+      return n;
+    });
     try { await toggleTodoAction(id, completed); } catch { setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !completed } : t)); }
   }
 
@@ -268,11 +318,22 @@ export default function RunnerClient({
   async function handleCreateTodo() {
     if (!newTodoTitle.trim()) return;
     try {
+      // createMeetingTodoAction dedups server-side (may return an existing
+      // to-do), so guard against inserting a duplicate into local state by id.
       const todo = await createMeetingTodoAction(newTodoTitle, newTodoOwner, newTodoDue, meeting.id);
-      setTodos(prev => [...prev, todo]);
-      setMeetingTodos(prev => [...prev, todo]);
+      setTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
+      setMeetingTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
       setNewTodoTitle(''); setNewTodoOwner(''); setNewTodoDue('');
     } catch { console.error('Failed to create to-do.'); }
+  }
+
+  // Drag reorder for the IDS open-issues list (subset of all opportunities).
+  async function handleReorderOpps(newVisibleIds: string[]) {
+    const prev = opportunities;
+    const newFull = reorderFullFromSubset(opportunities, newVisibleIds);
+    setOpportunities(newFull);
+    try { await reorderOpportunitiesAction(newFull.map(o => o.id)); }
+    catch { setOpportunities(prev); }
   }
 
   async function handleBarrelStatus(id: string, status: string) {
@@ -478,53 +539,69 @@ export default function RunnerClient({
   function renderTodos() {
     return (
       <div className="space-y-6">
+        {/* All outstanding to-dos (live) */}
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Last Week&apos;s To-Dos</h3>
-          {lastWeekTodos.length === 0 ? (
-            <p className="text-sm text-gray-400 py-2">No to-dos from the past week.</p>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+            Outstanding To-Dos ({activeTodos.length})
+          </h3>
+          {activeTodos.length === 0 ? (
+            <p className="text-sm text-gray-400 py-2">All caught up — no outstanding to-dos.</p>
           ) : (
             <div className="space-y-1">
-              {lastWeekTodos.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-green-50 transition-colors">
-                  <button
-                    onClick={() => handleToggleTodo(t.id, !t.completed)}
-                    className={cn('w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-                      t.completed ? 'bg-green-600 border-green-600' : 'border-gray-200 hover:border-green-600')}
-                  >
-                    {t.completed && <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                  </button>
-                  <span className={cn('flex-1 text-sm', t.completed ? 'line-through text-gray-400' : 'text-gray-900')}>{t.title}</span>
-                  {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
-                  {!t.completed && t.due_date && t.due_date < todayStr && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium shrink-0">Overdue</span>
-                  )}
-                </div>
-              ))}
+              {activeTodos.map(t => {
+                const overdue = !!t.due_date && t.due_date < todayStr;
+                return (
+                  <div key={t.id} className={cn('flex items-center gap-3 px-3 py-2 rounded-lg transition-colors', overdue ? 'bg-red-50' : 'hover:bg-green-50')}>
+                    <button
+                      onClick={() => handleToggleTodo(t.id, true)}
+                      className="w-4 h-4 rounded border border-gray-200 hover:border-green-600 flex items-center justify-center shrink-0 transition-colors"
+                      title="Mark complete"
+                    />
+                    <span className="flex-1 text-sm text-gray-900">{t.title}</span>
+                    {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
+                    {t.due_date && (
+                      <span className={cn('text-xs shrink-0', overdue ? 'text-red-600' : 'text-gray-400')}>{fmtShortDate(t.due_date)}</span>
+                    )}
+                    {overdue && (
+                      <button
+                        onClick={() => handleCarryForward(t.id)}
+                        className="text-[11px] px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-green-600 font-medium transition-colors shrink-0"
+                      >
+                        Carry Forward +7d
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {overdueTodos.length > 0 && (
+        {/* Completed during this meeting */}
+        {completedMeetingTodos.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Carry Forward</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-green-700 mb-2">
+              Completed This Meeting ({completedMeetingTodos.length})
+            </h3>
             <div className="space-y-1">
-              {overdueTodos.map(t => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-50 border border-gray-200">
-                  <span className="flex-1 text-sm text-gray-900">{t.title}</span>
-                  {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
-                  <span className="text-xs text-red-600 shrink-0">{fmtShortDate(t.due_date)}</span>
+              {completedMeetingTodos.map(t => (
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-green-50/60 transition-colors">
                   <button
-                    onClick={() => handleCarryForward(t.id)}
-                    className="text-[11px] px-2 py-1 rounded bg-gray-100 hover:bg-gray-100 text-green-600 font-medium transition-colors shrink-0"
+                    onClick={() => handleToggleTodo(t.id, false)}
+                    className="w-4 h-4 rounded border bg-green-600 border-green-600 flex items-center justify-center shrink-0"
+                    title="Undo"
                   >
-                    Carry Forward +7d
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </button>
+                  <span className="flex-1 text-sm line-through text-gray-400">{t.title}</span>
+                  {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* Create new to-do */}
         <div className="border-t border-gray-200 pt-4">
           <h4 className="text-xs font-medium text-gray-500 mb-2">Create New To-Do</h4>
           <div className="flex gap-2 items-end flex-wrap">
@@ -557,6 +634,37 @@ export default function RunnerClient({
             </button>
           </div>
         </div>
+
+        {/* Previously completed (collapsible, read-only) */}
+        {prevCompletedTodos.length > 0 && (
+          <div className="border-t border-gray-200 pt-4">
+            <button
+              onClick={() => setShowPrevCompleted(v => !v)}
+              className="flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <span className={cn('transition-transform', showPrevCompleted && 'rotate-90')}>▸</span>
+              Previously Completed ({prevCompletedTodos.length})
+            </button>
+            {showPrevCompleted && (
+              <div className="space-y-1 mt-2">
+                {prevCompletedTodos.map(t => (
+                  <div key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors">
+                    <span className="w-4 h-4 rounded bg-gray-200 flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </span>
+                    <span className="flex-1 text-sm line-through text-gray-400">{t.title}</span>
+                    {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
+                    {t.completed_at && (
+                      <span className="text-xs text-gray-400 shrink-0">
+                        {new Date(t.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -637,23 +745,32 @@ export default function RunnerClient({
             Open Issues ({openOpps.length})
           </h3>
           <div className="space-y-1 max-h-[45vh] overflow-y-auto">
-            {openOpps.map(opp => {
-              const dot = PRIORITY_DOT[opp.priority ?? ''] ?? 'bg-gray-300';
-              return (
-                <button
-                  key={opp.id}
-                  onClick={() => setSelectedOppId(opp.id === selectedOppId ? null : opp.id)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors',
-                    selectedOppId === opp.id ? 'bg-green-50 ring-1 ring-green-600/50' : 'hover:bg-green-50',
-                  )}
-                >
-                  <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
-                  <span className="flex-1 text-sm text-gray-900 min-w-0 truncate">{opp.title}</span>
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 shrink-0">{opp.term}-term</span>
-                </button>
-              );
-            })}
+            <SortableList
+              items={openOpps}
+              onReorder={handleReorderOpps}
+              renderItem={(opp, handle) => {
+                const dot = PRIORITY_DOT[opp.priority ?? ''] ?? 'bg-gray-300';
+                return (
+                  <div
+                    className={cn(
+                      'w-full flex items-center gap-2 px-2 py-2.5 rounded-lg transition-colors',
+                      selectedOppId === opp.id ? 'bg-green-50 ring-1 ring-green-600/50' : 'hover:bg-green-50',
+                    )}
+                  >
+                    {handle}
+                    <button
+                      onClick={() => setSelectedOppId(opp.id === selectedOppId ? null : opp.id)}
+                      className="flex-1 flex items-center gap-3 min-w-0 text-left"
+                    >
+                      <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
+                      <span className="flex-1 text-sm text-gray-900 min-w-0 truncate">{opp.title}</span>
+                      {opp.creator_name && <span className="text-[10px] text-gray-400 shrink-0 hidden sm:inline">{opp.creator_name}</span>}
+                      <span className="text-[10px] uppercase tracking-wider text-gray-400 shrink-0">{opp.term}-term</span>
+                    </button>
+                  </div>
+                );
+              }}
+            />
             {openOpps.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No open issues.</p>}
           </div>
 
@@ -686,10 +803,11 @@ export default function RunnerClient({
             <div className="space-y-4">
               <h3 className="text-base font-semibold text-gray-900">{selectedOpp.title}</h3>
               {selectedOpp.description && <p className="text-sm text-gray-500 leading-relaxed">{selectedOpp.description}</p>}
-              <div className="flex items-center gap-3 text-xs text-gray-500">
+              <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                 {selectedOpp.owner_name && <span>{selectedOpp.owner_name}</span>}
                 <span className="uppercase">{selectedOpp.priority ?? 'medium'} priority</span>
                 <span>{selectedOpp.term}-term</span>
+                {selectedOpp.creator_name && <span className="text-gray-400">Added by {selectedOpp.creator_name}</span>}
               </div>
               <div className="border-t border-gray-200 pt-3 space-y-2">
                 <p className="text-xs font-medium text-gray-500">Change Status</p>

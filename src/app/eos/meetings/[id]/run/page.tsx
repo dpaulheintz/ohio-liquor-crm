@@ -3,7 +3,7 @@ import { getMeeting, getMeetingNotes } from '@/lib/eos/meetings';
 import { getMetrics, getEntries } from '@/lib/eos/scorecard';
 import { getWeekStarts } from '@/lib/eos/scorecard-utils';
 import { getBarrels } from '@/lib/eos/barrels';
-import { getTodos } from '@/lib/eos/todos';
+import { getTodos, getCompletedTodos } from '@/lib/eos/todos';
 import { getOpportunities } from '@/lib/eos/opportunities';
 import { getHeadlines } from '@/lib/eos/headlines';
 import RunnerClient from './runner-client';
@@ -25,13 +25,14 @@ export default async function MeetingRunnerPage({
   if (meeting.ended_at) redirect(`/eos/meetings/${id}`);
 
   const weekStarts = getWeekStarts(13);
-  const [notes, metrics, entries, barrels, todos, opportunities, headlines] =
+  const [notes, metrics, entries, barrels, todos, completedTodos, opportunities, headlines] =
     await Promise.all([
       getMeetingNotes(id),
       getMetrics(),
       getEntries(weekStarts),
       getBarrels(),
       getTodos(),
+      getCompletedTodos(),
       getOpportunities(),
       getHeadlines(false), // active only — Segue shows just the last 7 days of headlines
     ]);
@@ -45,6 +46,7 @@ export default async function MeetingRunnerPage({
       weekStarts={weekStarts}
       barrels={barrels}
       todos={todos}
+      completedTodos={completedTodos}
       opportunities={opportunities}
       headlines={headlines}
       initialSection={sp.section}

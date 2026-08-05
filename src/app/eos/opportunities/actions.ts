@@ -4,6 +4,7 @@ import {
   createOpportunity,
   updateOpportunity,
   deleteOpportunity,
+  reorderOpportunities,
   type Opportunity,
 } from '@/lib/eos/opportunities';
 
@@ -53,4 +54,8 @@ export async function updateOpportunityStatusAction(
 
 export async function deleteOpportunityAction(id: string): Promise<void> {
   await deleteOpportunity(id);
+}
+
+export async function reorderOpportunitiesAction(orderedIds: string[]): Promise<void> {
+  await reorderOpportunities(orderedIds);
 }

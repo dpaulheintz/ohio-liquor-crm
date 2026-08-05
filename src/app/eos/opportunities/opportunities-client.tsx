@@ -8,11 +8,13 @@ import {
   updateOpportunityAction,
   updateOpportunityStatusAction,
   deleteOpportunityAction,
+  reorderOpportunitiesAction,
   type OpportunityFormData,
 } from './actions';
 import OwnerSelect from '@/components/eos/OwnerSelect';
 import SmartAddButton from '@/components/eos/SmartAddButton';
 import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
+import { SortableList, reorderFullFromSubset } from '@/components/eos/SortableList';
 import { cn } from '@/lib/utils';
 
 type Props = { initialOpportunities: Opportunity[]; activeMeetingId: string | null; archived?: boolean };
@@ -203,6 +205,16 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
     catch { console.error('Failed to delete.'); }
   }
 
+  // Drag reorder: `newVisibleIds` is the new order of the filtered subset; keep
+  // hidden items in place, persist a coherent global sort_order.
+  async function handleReorder(newVisibleIds: string[]) {
+    const prev = opps;
+    const newFull = reorderFullFromSubset(opps, newVisibleIds);
+    setOpps(newFull);
+    try { await reorderOpportunitiesAction(newFull.map(o => o.id)); }
+    catch { setOpps(prev); }
+  }
+
   const counts = {
     open: opps.filter(o => o.status === 'open').length,
     in_progress: opps.filter(o => o.status === 'in_progress').length,
@@ -250,11 +262,17 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
 
       {/* List */}
       <div className="space-y-2">
-        {filtered.map(opp => {
+        <SortableList
+          items={filtered}
+          disabled={archived}
+          onReorder={handleReorder}
+          renderItem={(opp, handle) => {
           const pri = PRIORITY_CONFIG[opp.priority ?? ''] ?? PRIORITY_CONFIG.medium;
           return (
-            <div key={opp.id} className="rounded-xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-100/40 transition-colors group/row">
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-100/40 transition-colors group/row">
               <div className="flex items-start gap-3">
+                {/* Drag handle (hidden in archive view) */}
+                {!archived && <div className="mt-1">{handle}</div>}
                 {/* Priority dot — click to solve/reopen (static in archive view) */}
                 <div className="shrink-0 mt-1.5">
                   {archived ? (
@@ -304,6 +322,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                   )}
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     {opp.owner_name && <span className="text-xs text-gray-400">{opp.owner_name}</span>}
+                    {opp.creator_name && <span className="text-xs text-gray-400">Added by {opp.creator_name}</span>}
                     <span className="text-xs text-gray-400">{fmtDate(opp.created_at)}</span>
                     {archived ? (
                       <span className="text-xs text-gray-400">Solved {fmtSolvedDate(opp.updated_at)}</span>
@@ -349,7 +368,8 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
               </div>
             </div>
           );
-        })}
+          }}
+        />
 
         {filtered.length === 0 && (
           <div className="rounded-xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-400 text-sm">
