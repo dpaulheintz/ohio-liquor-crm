@@ -107,7 +107,7 @@ export function PrimeCostPanel({ data }: { data: PrimeCostData }) {
             <span className="text-xs text-muted-foreground">{h.revenue > 0 ? `${(h.cogs / h.revenue * 100).toFixed(1)}% of sales` : '—'}</span>
           </div>
           <div className="rounded-xl border bg-card px-5 py-4 flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Labor</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Labor (fully-loaded)</span>
             <span className="text-2xl font-serif font-bold leading-none text-foreground">{fmtMoney(h.labor)}</span>
             <span className="text-xs text-muted-foreground">{h.revenue > 0 ? `${(h.labor / h.revenue * 100).toFixed(1)}% of sales` : '—'}</span>
           </div>
@@ -123,8 +123,10 @@ export function PrimeCostPanel({ data }: { data: PrimeCostData }) {
       <p className="text-[11px] text-muted-foreground -mt-1">
         <span className="text-foreground">Invoice-based:</span> COGS is the sum of MarginEdge invoices
         (food + beverage + unclassified) received in each period, from Monday 00:00 to Sunday 23:59 for weeks.
-        Labor and revenue come from Toast. The current partial week/month is excluded so lumpy invoice timing
-        doesn&apos;t distort the latest bar.
+        Revenue comes from Toast. <span className="text-foreground">Labor is grossed up ~1.96×</span> from Toast&apos;s
+        base-hourly figure to approximate fully-loaded labor (payroll taxes, benefits, salaried management),
+        calibrated to the Q2 2026 ground-truth report. The current partial week/month is excluded so lumpy invoice
+        timing doesn&apos;t distort the latest bar.
       </p>
 
       {/* 12-week line + 12-month bar */}

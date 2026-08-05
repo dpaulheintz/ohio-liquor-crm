@@ -179,6 +179,15 @@ export interface ItemWeekRow {
   revenue: number;
 }
 
+// Toast's daily_sales.labor_cost captures only base hourly wages (implied
+// blended wage ~$11–12/hr). True fully-loaded labor — employer payroll taxes,
+// benefits, workers' comp, and salaried management — runs about 2× that.
+// Reconciling our Q2 2026 labor against the owner's ground-truth report gave a
+// remarkably consistent per-store ratio (Grandview 2.02, Gahanna 1.94,
+// Westerville 1.94 → mean ≈ 1.96), so we gross labor up by this single factor.
+// Tune this as payroll reality shifts, or replace with real payroll totals.
+export const LABOR_BURDEN_MULTIPLIER = 1.96;
+
 // Prime-cost benchmark + traffic-light thresholds (Part 1 spec).
 export const PRIME_BENCHMARK = 62;  // benchmark line
 export const PRIME_YELLOW_MAX = 68; // green < 62 ≤ yellow ≤ 68 < red
