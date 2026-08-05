@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import {
   GOLD, LOCATIONS, monthsBetween, shiftMonth, monthLabelYear, monthLabelFull, ymOf,
-  weekLabel, shiftDay,
+  weekLabel, shiftDay, LABOR_BURDEN_MULTIPLIER,
   type DailyRow, type InvoiceMonth, type LocationName, type LocationTab, type PrimeCostRow, type ItemWeekRow,
 } from './lib';
 import { KpiCards, type KpiData } from './kpi-cards';
@@ -161,22 +161,28 @@ export function RestaurantDashboardClient({
     const completeWeeks = weekRows.filter((r) => !through || shiftDay(r.periodStart, 6) <= through);
     const completeMonths = monthRows.filter((r) => !currentMonth || ymOf(r.periodStart) < currentMonth);
 
+    // Gross labor up to fully-loaded and recompute prime. The view's raw
+    // (Toast-only) labor understates real labor ~2×; see LABOR_BURDEN_MULTIPLIER.
+    const burdenedLabor = (r: PrimeCostRow) => r.labor * LABOR_BURDEN_MULTIPLIER;
+    const burdenedPrime = (r: PrimeCostRow): number | null =>
+      r.revenue > 0 ? Math.round(((r.cogs + burdenedLabor(r)) / r.revenue) * 1000) / 10 : null;
+
     const weekly = completeWeeks.slice(-12).map((r) => ({
       label: weekLabel(r.periodStart),
-      prime: r.primePct,
+      prime: burdenedPrime(r),
     }));
     const monthly = completeMonths.slice(-12).map((r) => ({
       label: monthLabelYear(ymOf(r.periodStart)),
-      prime: r.primePct,
+      prime: burdenedPrime(r),
     }));
 
     const latest = completeMonths[completeMonths.length - 1];
     const headline = latest
       ? {
           periodLabel: monthLabelFull(ymOf(latest.periodStart)),
-          prime: latest.primePct,
+          prime: burdenedPrime(latest),
           cogs: latest.cogs,
-          labor: latest.labor,
+          labor: burdenedLabor(latest),
           revenue: latest.revenue,
         }
       : null;
