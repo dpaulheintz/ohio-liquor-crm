@@ -654,11 +654,6 @@ export default function RunnerClient({
                     </span>
                     <span className="flex-1 text-sm line-through text-gray-400">{t.title}</span>
                     {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
-                    {t.completed_at && (
-                      <span className="text-xs text-gray-400 shrink-0">
-                        {new Date(t.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
-                    )}
                   </div>
                 ))}
               </div>
