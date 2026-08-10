@@ -13,7 +13,7 @@ import {
   LabelList,
 } from 'recharts';
 import type { WholesaleFullRow, AccountGroupData } from '@/app/actions/sales-dashboard';
-import { fmtDollar, isHighBank } from './utils';
+import { fmtDollar, isHighBank, effectiveAccountName } from './utils';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -24,12 +24,14 @@ function resolveGroup(
 ): { groupName: string; color: string } | null {
   const wl = (wholesaler ?? '').toLowerCase();
   const dl = (dba ?? '').toLowerCase();
+  const el = effectiveAccountName(wholesaler, dba).toLowerCase();
   for (const group of groups) {
     const hit = (text: string) =>
       group.match_terms.some((term) => text.includes(term.toLowerCase()));
     const matched =
       group.match_columns === 'wholesaler' ? hit(wl) :
       group.match_columns === 'dba'        ? hit(dl) :
+      group.match_columns === 'effective'  ? hit(el) :
       hit(wl) || hit(dl);
     if (matched) return { groupName: group.group_name, color: group.color };
   }

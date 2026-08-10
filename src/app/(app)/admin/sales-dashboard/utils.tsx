@@ -59,10 +59,31 @@ export function fmtMonthLabel(ym: string): string {
 
 // ─── Account helpers ──────────────────────────────────────────────────────────
 
+/**
+ * The real counterparty on a wholesale row.
+ *
+ * When High Bank's own agency sells to an outside account, Ohio's export writes
+ * 'HIGH BANK DISTILLERY LLC TRANSIENT' into wholesaler_name and puts the actual
+ * customer in dba. Reading wholesaler_name alone therefore either hides those
+ * sales or lumps them all under High Bank. Mirrors the SQL view
+ * `wholesale_detail_resolved.effective_account_name`.
+ */
+export function effectiveAccountName(wholesaler: string | null, dba: string | null): string {
+  const w = (wholesaler ?? '').trim();
+  const d = (dba ?? '').trim();
+  if (/TRANSIENT/i.test(w)) return d || w;
+  return w || d || 'Unknown Account';
+}
+
+/**
+ * HB bar sale? Derived from the RESOLVED name, not a raw OR across both columns.
+ * The old `w.includes || d.includes` marked every transient row as HB (the
+ * transient string itself contains 'HIGH BANK'), which is how outside sales got
+ * misattributed. Resolving first keeps transient rows whose dba really is a High
+ * Bank bar classified as HB, while releasing genuine outside accounts.
+ */
 export function isHighBank(wholesaler: string | null, dba: string | null): boolean {
-  const w = (wholesaler ?? '').toUpperCase();
-  const d = (dba ?? '').toUpperCase();
-  return w.includes('HIGH BANK') || d.includes('HIGH BANK');
+  return effectiveAccountName(wholesaler, dba).toUpperCase().includes('HIGH BANK');
 }
 
 export function resolveAccount(
@@ -72,17 +93,20 @@ export function resolveAccount(
 ): { key: string; displayName: string; groupColor?: string } {
   const wl = (wholesaler ?? '').toLowerCase();
   const dl = (dba ?? '').toLowerCase();
+  const name = effectiveAccountName(wholesaler, dba);
+  const el = name.toLowerCase();
   for (const group of groups) {
     const hit = (text: string) =>
       group.match_terms.some((term) => text.includes(term.toLowerCase()));
     const matched =
       group.match_columns === 'wholesaler' ? hit(wl) :
       group.match_columns === 'dba'        ? hit(dl) :
+      group.match_columns === 'effective'  ? hit(el) :
       hit(wl) || hit(dl);
     if (matched) return { key: `group::${group.id}`, displayName: group.group_name, groupColor: group.color };
   }
-  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
-  return { key: `raw::${name}`, displayName: name };
+  // Key on the upper-cased name so casing variants collapse into one row.
+  return { key: `raw::${name.toUpperCase()}`, displayName: name };
 }
 
 // ─── Shared UI components ─────────────────────────────────────────────────────

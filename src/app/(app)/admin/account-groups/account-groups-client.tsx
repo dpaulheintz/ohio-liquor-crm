@@ -78,12 +78,12 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 
 // ─── Live preview ─────────────────────────────────────────────────────────────
 
-function PreviewPane({ terms, matchColumns }: { terms: string[]; matchColumns: 'wholesaler' | 'dba' | 'both' }) {
+function PreviewPane({ terms, matchColumns }: { terms: string[]; matchColumns: 'wholesaler' | 'dba' | 'both' | 'effective' }) {
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetch = useCallback(async (t: string[], m: 'wholesaler' | 'dba' | 'both') => {
+  const fetch = useCallback(async (t: string[], m: 'wholesaler' | 'dba' | 'both' | 'effective') => {
     const clean = t.map(s => s.trim()).filter(Boolean);
     if (clean.length === 0) { setResult(null); return; }
     setLoading(true);
@@ -149,8 +149,8 @@ interface GroupFormProps {
 function GroupForm({ initial, onSave, onCancel, saving, submitLabel }: GroupFormProps) {
   const [name, setName] = useState(initial?.group_name ?? '');
   const [termsInput, setTermsInput] = useState((initial?.match_terms ?? []).join(', '));
-  const [matchColumns, setMatchColumns] = useState<'wholesaler' | 'dba' | 'both'>(
-    initial?.match_columns ?? 'both'
+  const [matchColumns, setMatchColumns] = useState<'wholesaler' | 'dba' | 'both' | 'effective'>(
+    initial?.match_columns ?? 'effective'
   );
   const [color, setColor] = useState(initial?.color ?? PRESET_COLORS[0]);
 
@@ -184,6 +184,7 @@ function GroupForm({ initial, onSave, onCancel, saving, submitLabel }: GroupForm
             <SelectContent>
               <SelectItem value="wholesaler">Wholesaler name</SelectItem>
               <SelectItem value="dba">DBA (doing business as)</SelectItem>
+              <SelectItem value="effective">Resolved account (recommended)</SelectItem>
               <SelectItem value="both">Both</SelectItem>
             </SelectContent>
           </Select>
@@ -258,7 +259,7 @@ function GroupCard({ group, onEdit, onDelete, deleting }: GroupCardProps) {
             ))}
           </div>
           <p className="text-xs text-muted-foreground capitalize">
-            Match: {group.match_columns === 'both' ? 'wholesaler + DBA' : group.match_columns}
+            Match: {group.match_columns === 'both' ? 'wholesaler + DBA' : group.match_columns === 'effective' ? 'resolved account' : group.match_columns}
           </p>
         </div>
       </div>
