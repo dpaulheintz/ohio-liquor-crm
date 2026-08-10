@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { WholesaleFullRow, AccountGroupData } from '@/app/actions/sales-dashboard';
-import { isHighBank } from './utils';
+import { isHighBank, resolveAccount as resolveAccountShared } from './utils';
 import {
   ChevronUp,
   ChevronDown,
@@ -29,6 +29,8 @@ interface AccountRow {
   bottles: number;
   amount: number;
   topSku: string;
+  /** Brand families this account buys, busiest first — e.g. "Vodka, Gin". */
+  products: string;
   spark: number[]; // last 12 months of bottles_sold
 }
 
@@ -40,37 +42,15 @@ interface SkuOption {
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
+// Delegates to the shared resolver in ./utils so TRANSIENT resolution, the
+// 'effective' match mode, and case-insensitive keying stay identical everywhere.
 function resolveAccount(
   wholesaler: string | null,
   dba: string | null,
   groups: AccountGroupData[]
 ): { key: string; displayName: string; isGroup: boolean; groupColor?: string } {
-  const wl = (wholesaler ?? '').toLowerCase();
-  const dl = (dba ?? '').toLowerCase();
-
-  for (const group of groups) {
-    const hit = (text: string) =>
-      group.match_terms.some((term) => text.includes(term.toLowerCase()));
-
-    const matched =
-      group.match_columns === 'wholesaler'
-        ? hit(wl)
-        : group.match_columns === 'dba'
-        ? hit(dl)
-        : hit(wl) || hit(dl);
-
-    if (matched) {
-      return {
-        key: `group::${group.id}`,
-        displayName: group.group_name,
-        isGroup: true,
-        groupColor: group.color,
-      };
-    }
-  }
-
-  const name = wholesaler?.trim() || dba?.trim() || 'Unknown Account';
-  return { key: `raw::${name}`, displayName: name, isGroup: false };
+  const r = resolveAccountShared(wholesaler, dba, groups);
+  return { ...r, isGroup: r.key.startsWith('group::') };
 }
 
 // Core aggregation: build AccountRow[] from raw wholesale rows.
@@ -96,6 +76,7 @@ function buildAccountRows(
     bottles: number;
     amount: number;
     products: Map<string, number>;
+    families: Map<string, number>;
     sparkByMonth: Map<string, number>;
   };
 
@@ -118,6 +99,7 @@ function buildAccountRows(
         bottles: 0,
         amount: 0,
         products: new Map(),
+        families: new Map(),
         sparkByMonth: new Map(),
       });
     }
@@ -141,6 +123,12 @@ function buildAccountRows(
         r.product_name,
         (acc.products.get(r.product_name) ?? 0) + r.bottles_sold
       );
+      if (r.brand_family) {
+        acc.families.set(
+          r.brand_family,
+          (acc.families.get(r.brand_family) ?? 0) + r.bottles_sold
+        );
+      }
     }
   }
 
@@ -149,6 +137,8 @@ function buildAccountRows(
     .map((acc) => {
       const topSku =
         [...acc.products.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
+      const products =
+        [...acc.families.entries()].sort((a, b) => b[1] - a[1]).map(([f]) => f).join(', ') || '—';
       return {
         key: acc.key,
         displayName: acc.displayName,
@@ -158,6 +148,7 @@ function buildAccountRows(
         bottles: acc.bottles,
         amount: acc.amount,
         topSku,
+        products,
         spark: sparkMonths.map((m) => acc.sparkByMonth.get(m) ?? 0),
       };
     });
@@ -414,7 +405,7 @@ export function WholesaleLeaderboard({
       'Group',
       'Bottles',
       'Revenue',
-      ...(showTopSku ? ['Top SKU'] : []),
+      ...(showTopSku ? ['Top SKU', 'Products'] : []),
     ].join(',');
 
     const body = displayRows.map((r, i) =>
@@ -424,7 +415,9 @@ export function WholesaleLeaderboard({
         r.isGroup ? 'Yes' : 'No',
         r.bottles,
         r.amount.toFixed(2),
-        ...(showTopSku ? [`"${r.topSku.replace(/"/g, '""')}"`] : []),
+        ...(showTopSku
+          ? [`"${r.topSku.replace(/"/g, '""')}"`, `"${r.products.replace(/"/g, '""')}"`]
+          : []),
       ].join(',')
     );
 
@@ -481,7 +474,7 @@ export function WholesaleLeaderboard({
     );
 
     const head = [
-      ['#', 'Account', 'Group?', 'Bottles', 'Revenue', ...(showTopSku ? ['Top SKU'] : [])],
+      ['#', 'Account', 'Group?', 'Bottles', 'Revenue', ...(showTopSku ? ['Top SKU', 'Products'] : [])],
     ];
     const body = [
       ...displayRows.map((r, i) => [
@@ -498,7 +491,7 @@ export function WholesaleLeaderboard({
         '',
         totals.bottles.toLocaleString(),
         fmtDollar(totals.amount),
-        ...(showTopSku ? [''] : []),
+        ...(showTopSku ? ['', ''] : []),
       ],
     ];
 
@@ -665,9 +658,14 @@ export function WholesaleLeaderboard({
                 align="right"
               />
               {activeTab === 'overall' && (
-                <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground select-none whitespace-nowrap">
-                  Top SKU
-                </th>
+                <>
+                  <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground select-none whitespace-nowrap">
+                    Top SKU
+                  </th>
+                  <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground select-none whitespace-nowrap">
+                    Products
+                  </th>
+                </>
               )}
               <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-center whitespace-nowrap select-none">
                 12mo Trend
@@ -679,7 +677,7 @@ export function WholesaleLeaderboard({
             {displayRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={activeTab === 'overall' ? 6 : 5}
+                  colSpan={activeTab === 'overall' ? 7 : 5}
                   className="py-10 text-center text-muted-foreground text-sm"
                 >
                   No wholesale data for selected filters.
@@ -712,11 +710,16 @@ export function WholesaleLeaderboard({
                       {fmtDollar(row.amount)}
                     </td>
 
-                    {/* Top SKU (Overall tab only) */}
+                    {/* Top SKU + Products (Overall tab only) */}
                     {activeTab === 'overall' && (
-                      <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[180px]">
-                        <span className="truncate block">{row.topSku}</span>
-                      </td>
+                      <>
+                        <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[180px]">
+                          <span className="truncate block">{row.topSku}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[200px]">
+                          <span className="truncate block" title={row.products}>{row.products}</span>
+                        </td>
+                      </>
                     )}
 
                     {/* Sparkline */}
@@ -738,7 +741,12 @@ export function WholesaleLeaderboard({
                   <td className="px-3 py-2.5 text-right font-mono text-sm text-primary">
                     {fmtDollar(totals.amount)}
                   </td>
-                  {activeTab === 'overall' && <td className="px-3 py-2.5" />}
+                  {activeTab === 'overall' && (
+                    <>
+                      <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5" />
+                    </>
+                  )}
                   <td className="px-3 py-2.5" />
                 </tr>
               </>

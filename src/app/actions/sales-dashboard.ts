@@ -76,7 +76,7 @@ export interface AccountGroupData {
   id: string;
   group_name: string;
   match_terms: string[];
-  match_columns: 'wholesaler' | 'dba' | 'both';
+  match_columns: 'wholesaler' | 'dba' | 'both' | 'effective';
   color: string;
   is_brewery: boolean;
 }
@@ -222,7 +222,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
     id:             String(g.id),
     group_name:     String(g.group_name),
     match_terms:    (g.match_terms as string[]) ?? [],
-    match_columns:  g.match_columns as 'wholesaler' | 'dba' | 'both',
+    match_columns:  g.match_columns as 'wholesaler' | 'dba' | 'both' | 'effective',
     color:          String(g.color),
     is_brewery:     Boolean(g.is_brewery),
   }));

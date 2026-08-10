@@ -7,7 +7,7 @@ export interface AccountGroup {
   id: string;
   group_name: string;
   match_terms: string[];
-  match_columns: 'wholesaler' | 'dba' | 'both';
+  match_columns: 'wholesaler' | 'dba' | 'both' | 'effective';
   color: string;
   created_at: string;
 }
@@ -18,12 +18,16 @@ export interface PreviewResult {
 }
 
 // Build a Supabase .or() filter string from terms × columns
-function buildOrFilter(terms: string[], matchColumns: 'wholesaler' | 'dba' | 'both'): string {
+function buildOrFilter(terms: string[], matchColumns: 'wholesaler' | 'dba' | 'both' | 'effective'): string {
+  // 'effective' is handled by the caller against wholesale_detail_resolved's
+  // effective_account_name column; the others map straight to raw columns.
   const cols =
     matchColumns === 'wholesaler'
       ? ['wholesaler_name']
       : matchColumns === 'dba'
       ? ['dba']
+      : matchColumns === 'effective'
+      ? ['effective_account_name']
       : ['wholesaler_name', 'dba'];
 
   return terms
@@ -75,7 +79,7 @@ export async function deleteAccountGroup(id: string) {
 
 export async function previewAccountGroup(
   terms: string[],
-  matchColumns: 'wholesaler' | 'dba' | 'both'
+  matchColumns: 'wholesaler' | 'dba' | 'both' | 'effective'
 ): Promise<PreviewResult> {
   const cleanTerms = terms.map((t) => t.trim()).filter(Boolean);
   if (cleanTerms.length === 0) return { count: 0, samples: [] };
@@ -83,21 +87,23 @@ export async function previewAccountGroup(
   const supabase = await createClient();
   const filter = buildOrFilter(cleanTerms, matchColumns);
 
+  // 'effective' previews against the resolved view so TRANSIENT rows surface
+  // under the real customer name rather than the High Bank transient string.
+  const table = matchColumns === 'effective' ? 'wholesale_detail_resolved' : 'wholesale_detail';
+
   const [{ count }, { data }] = await Promise.all([
-    supabase
-      .from('wholesale_detail')
-      .select('*', { count: 'exact', head: true })
-      .or(filter),
-    supabase
-      .from('wholesale_detail')
-      .select('wholesaler_name, dba')
-      .or(filter)
-      .limit(200),
+    supabase.from(table).select('*', { count: 'exact', head: true }).or(filter),
+    supabase.from(table).select('*').or(filter).limit(200),
   ]);
 
   // Collect unique business names from matching rows
+  type SampleRow = { wholesaler_name?: string | null; dba?: string | null; effective_account_name?: string | null };
   const names = new Set<string>();
-  for (const row of data ?? []) {
+  for (const row of (data ?? []) as SampleRow[]) {
+    if (matchColumns === 'effective') {
+      if (row.effective_account_name) names.add(row.effective_account_name);
+      continue;
+    }
     if (row.wholesaler_name && matchColumns !== 'dba') names.add(row.wholesaler_name);
     if (row.dba && matchColumns !== 'wholesaler') names.add(row.dba);
   }
