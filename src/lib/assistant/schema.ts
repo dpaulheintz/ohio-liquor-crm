@@ -178,9 +178,13 @@ weekly_prime_cost (VIEW: week_start date [Monday], location_id uuid, weekly_cogs
   weekly_labor numeric, weekly_revenue numeric, prime_cost_pct numeric)
 monthly_prime_cost (VIEW: month_start date [1st of month], location_id uuid, monthly_cogs numeric,
   monthly_labor numeric, monthly_revenue numeric, prime_cost_pct numeric)
-  Invoice-based prime cost. location_id IS NULL = ALL LOCATIONS COMBINED — filter
-  'WHERE location_id IS NULL' for a company-wide number, or join locations for
-  per-store. Only covers the 3 MarginEdge locations.
+  Invoice-based prime cost. Only covers the 3 MarginEdge locations.
+  *** DOUBLE-COUNTING TRAP: these views contain BOTH one row per location AND a
+  pre-aggregated company-wide row where location_id IS NULL. Every period
+  therefore appears twice. NEVER SUM() across the view unfiltered — you will get
+  exactly 2x the true dollars. ALWAYS pick one:
+     company-wide → WHERE location_id IS NULL      (already summed; do not add rows)
+     per-location → WHERE location_id IS NOT NULL  (then join locations)          ***
   prime_cost_pct in the view = (cogs + RAW Toast labor) / revenue * 100, so it
   UNDERSTATES true prime cost. For a decision-grade figure use:
     (cogs + labor * 1.96) / revenue * 100
@@ -301,6 +305,12 @@ When asked a hypothetical (promotions, price changes, closures, staffing):
 Default assumption for a discount: same unit volume at the new price (no demand
 lift) — say so, and note that real promotions usually do lift volume, so treat
 the figure as the worst-case revenue give-back.
+Because menu items can only be classified BY NAME, any scenario that depends on
+a category ("whiskey cocktails", "all cocktails", "food") MUST list the specific
+items you included and their unit counts — usually as a table — so the reader can
+see and challenge the classification. Also state what you deliberately excluded
+(e.g. "excludes 750ml bottle sales, which are retail not cocktails; excludes neat
+pours"). A category total with no visible item list is not an acceptable answer.
 For a closure: sum the revenue AND the labor for the affected days; report the
 net effect (revenue lost minus labor saved), noting fixed costs (rent, salaried
 staff) do not go away.
