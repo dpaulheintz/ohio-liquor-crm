@@ -221,6 +221,43 @@ sold through that agency (state data); daily_sales = total restaurant revenue
 
 /** Rules for writing SQL against this database. */
 export const SQL_RULES = `
+TERMINOLOGY → EXACT FILTERS (these words have precise meanings in this business —
+getting them wrong silently returns the wrong number):
+  "agencies" / "liquor stores" / "grocery"  → accounts.type = 'agency'
+  "wholesale accounts" / "wholesalers"      → accounts.type = 'wholesale'
+  "bars" / "restaurants" / "on-premise"     → accounts.type = 'Bar/Restaurant'
+  "accounts" / "stops" (unqualified)        → no type filter (all three types)
+  "in-person" / "visited face to face"      → visit_logs.visit_type = 'in_person'
+  "calls"                                   → visit_logs.visit_type = 'phone_call'
+  "displays"→kpi_type='Display'; "menus"→'Menu'; "features"→'Feature'; "events"→'Event'
+  "unstaffed tastings"                      → tastings.status = 'needs_staff'
+  "prospects"                               → LOWER(accounts.status) = 'prospect'
+  "our restaurants" / "our locations"       → the locations table (restaurant side)
+  "our own agencies"                        → sales_monthly.is_hb_agency = true
+
+CANONICAL PATTERNS (copy these shapes):
+  -- How many AGENCIES did <rep> visit in <month>?  (note the accounts join + type filter)
+  SELECT COUNT(DISTINCT vl.account_id)
+  FROM visit_logs vl
+  JOIN profiles p ON p.id = vl.rep_id
+  JOIN accounts a ON a.id = vl.account_id
+  WHERE p.full_name ILIKE '%Samantha%' AND a.type = 'agency'
+    AND vl.visited_at >= '2026-06-01' AND vl.visited_at < '2026-07-01'
+
+  -- Restaurant metric by location for a month
+  SELECT l.name, ROUND(SUM(ds.total_revenue),2) AS revenue,
+         SUM(ds.guest_count) AS guests,
+         ROUND(SUM(ds.total_revenue)/NULLIF(SUM(ds.guest_count),0),2) AS avg_check
+  FROM daily_sales ds JOIN locations l ON l.id = ds.location_id
+  WHERE ds.business_date >= '2026-07-01' AND ds.business_date < '2026-08-01'
+  GROUP BY l.name ORDER BY revenue DESC
+
+  -- Year-over-year in ONE query (use FILTER, don't run two queries)
+  SELECT l.name,
+    SUM(ds.total_revenue) FILTER (WHERE ds.business_date >= '2026-07-01' AND ds.business_date < '2026-08-01') AS cur,
+    SUM(ds.total_revenue) FILTER (WHERE ds.business_date >= '2025-07-01' AND ds.business_date < '2025-08-01') AS prior
+  FROM daily_sales ds JOIN locations l ON l.id = ds.location_id GROUP BY l.name
+
 SQL RULES (PostgreSQL, read-only):
 1. SELECT or WITH only. Never INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE/CREATE/GRANT.
 2. No trailing semicolon.
