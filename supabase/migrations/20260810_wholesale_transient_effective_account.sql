@@ -49,3 +49,28 @@ ALTER TABLE account_groups ALTER COLUMN match_columns SET DEFAULT 'effective';
 UPDATE account_groups
 SET group_name = 'Warped Wing Brewing', match_columns = 'effective'
 WHERE match_terms @> ARRAY['warped wing'] AND group_name <> 'Warped Wing Brewing';
+
+-- ─── Account groups (reviewed and approved 2026-08-10) ───────────────────────
+-- New groups consolidating TRANSIENT dba variants (typos, address suffixes and
+-- casing differences all collapse via partial ILIKE matching on the resolved name).
+INSERT INTO account_groups (group_name, match_terms, match_columns, color, is_brewery)
+VALUES
+  ('Greater Columbus Arts Council',        ARRAY['greater columbus arts'],                                        'effective', '#4f46e5', false),
+  ('Marcella''s',                          ARRAY['marcella'],                                                     'effective', '#059669', false),
+  ('The Derby',                            ARRAY['derby'],                                                        'effective', '#ca8a04', false),
+  ('Barrel Room',                          ARRAY['barrel room'],                                                  'effective', '#db2777', false),
+  ('Columbus Zoo',                         ARRAY['columbus zoo'],                                                 'effective', '#2563eb', false),
+  ('Pelotonia',                            ARRAY['peletonia','pelotonia'],                                        'effective', '#16a34a', false),
+  ('Gahanna Convention & Visitors Bureau', ARRAY['gahanna convention'],                                           'effective', '#9f1239', false),
+  ('North Canton Chamber of Commerce',     ARRAY['canton chamber','canton area chamber'],                         'effective', '#7c2d12', false),
+  ('Franklin Park Conservatory',           ARRAY['franklin park'],                                                'effective', '#1d4ed8', false),
+  ('Columbus Metropolitan Library',        ARRAY['columbus metropolitan library','columbus library book festival'],'effective','#4d7c0f', false)
+ON CONFLICT DO NOTHING;
+
+-- Switch every existing group to 'effective' EXCEPT Elliot's.
+-- Elliot's trades under holding-company wholesaler names (MJ SARAP, SARAGER LLC,
+-- RAMM PARTNERSHIP) with the brand only in the dba — a NON-transient dba-identity
+-- pattern that effective_account_name does not cover. Switching it would drop 229
+-- rows / ~$55k. Verified it already captures all 4 of its transient rows via 'both'.
+UPDATE account_groups SET match_columns = 'effective'
+WHERE group_name <> 'Elliot''s' AND match_columns <> 'effective';
