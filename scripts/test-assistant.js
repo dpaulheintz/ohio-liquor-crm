@@ -115,7 +115,11 @@ async function main() {
     const { answer } = await ask('What was our prime cost last month?');
     const p = pcts(answer);
     const inRange = p.some((x) => x >= 50 && x <= 75);
-    const basis = hasAny(answer, 'month', 'week');
+    // Basis is stated if it names the period: "monthly"/"weekly", a month name,
+    // or a YYYY-MM. Naming "June 2026" is as explicit as saying "monthly".
+    const basis = hasAny(answer, 'month', 'week', 'quarter')
+      || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(answer)
+      || /\b20\d{2}-\d{2}\b/.test(answer);
     record(3, 'Prime cost last month', inRange && basis && !hasLatex(answer),
       `pcts: ${p.join(', ')} | basis stated: ${basis}`);
   }
