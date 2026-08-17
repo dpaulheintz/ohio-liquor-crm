@@ -357,3 +357,78 @@ export async function runSync(opts: SyncOptions): Promise<SyncResult> {
 
   return result;
 }
+
+// ─── Diagnostic probe (read-only) ────────────────────────────────────────────
+
+/**
+ * Report exactly what Toast returns for one restaurant/day: page counts, order
+ * totals, and whether selections carry salesCategory / itemGroup references.
+ * Writes nothing — used to validate the sync before running a long backfill.
+ */
+export async function probeOrders(locationName: string, date: string) {
+  const supabase = createAdminClient();
+  const { data: locs } = await supabase
+    .from('locations').select('id, name, toast_guid').eq('name', locationName).limit(1);
+  const loc = locs?.[0];
+  if (!loc?.toast_guid) throw new Error(`No toast_guid for location "${locationName}"`);
+
+  const { toastGetStandard } = await import('./client');
+  const bizDate = date.replace(/-/g, '');
+  const PAGE = 100;
+
+  const pages: number[] = [];
+  let selectionsTotal = 0, withSalesCat = 0, withItemGroup = 0, grossSum = 0;
+  const sampleKeys = new Set<string>();
+  let sampleSelection: unknown = null;
+
+  for (let page = 1; page <= 100; page++) {
+    let batch: Array<Record<string, unknown>>;
+    try {
+      batch = await toastGetStandard<Array<Record<string, unknown>>>(
+        '/orders/v2/ordersBulk', loc.toast_guid,
+        { businessDate: bizDate, pageSize: String(PAGE), page: String(page) });
+    } catch (err) {
+      pages.push(-1);
+      return { location: locationName, date, pages, pageError: String(err).slice(0, 300),
+               selectionsTotal, withSalesCat, withItemGroup, grossSum };
+    }
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    pages.push(batch.length);
+    for (const order of batch) {
+      for (const check of (order.checks as Array<Record<string, unknown>>) ?? []) {
+        for (const sel of (check.selections as Array<Record<string, unknown>>) ?? []) {
+          selectionsTotal++;
+          if (!sampleSelection) { sampleSelection = sel; Object.keys(sel).forEach(k => sampleKeys.add(k)); }
+          if (sel.salesCategory) withSalesCat++;
+          if (sel.itemGroup) withItemGroup++;
+          grossSum += Number(sel.price ?? 0);
+        }
+      }
+    }
+    if (batch.length < PAGE) break;
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  // Can we resolve category names?
+  let salesCategoryCount = -1, menuGroupCount = -1, configError: string | null = null;
+  try {
+    const cats = await toastGetStandard<Array<{ guid?: string; name?: string }>>(
+      '/config/v2/salesCategories', loc.toast_guid, { pageSize: '200' });
+    salesCategoryCount = Array.isArray(cats) ? cats.length : -1;
+  } catch (e) { configError = `salesCategories: ${String(e).slice(0, 200)}`; }
+  try {
+    const grps = await toastGetStandard<Array<{ guid?: string; name?: string }>>(
+      '/config/v2/menuGroups', loc.toast_guid, { pageSize: '200' });
+    menuGroupCount = Array.isArray(grps) ? grps.length : -1;
+  } catch (e) { configError = `${configError ?? ''} menuGroups: ${String(e).slice(0, 200)}`; }
+
+  return {
+    location: locationName, date,
+    pages, totalOrders: pages.reduce((a, b) => a + b, 0),
+    selectionsTotal, withSalesCat, withItemGroup,
+    grossSum: Math.round(grossSum * 100) / 100,
+    selectionKeys: [...sampleKeys],
+    sampleSelection,
+    salesCategoryCount, menuGroupCount, configError,
+  };
+}
