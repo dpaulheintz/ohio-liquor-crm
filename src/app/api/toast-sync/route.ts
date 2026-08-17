@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runSync } from '@/lib/toast/sync';
 
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /**
  * POST /api/toast-sync
