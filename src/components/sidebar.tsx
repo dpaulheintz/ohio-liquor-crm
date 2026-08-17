@@ -22,6 +22,7 @@ import {
   Package,
   Target,
   Sparkles,
+  Wine,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -42,6 +43,7 @@ const adminItems = [
   { href: '/admin', label: 'Admin Dashboard', icon: Shield },
   { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
   { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
+  { href: '/admin/barrel-picks', label: 'Barrel Picks', icon: Wine },
   { href: '/admin/sales-dashboard', label: 'Sales Dashboard', icon: TrendingUp },
   { href: '/admin/restaurant-analytics', label: 'Restaurant Analytics', icon: UtensilsCrossed },
   { href: '/admin/restaurant-analytics/anomalies', label: 'Weekly Anomalies', icon: AlertTriangle },
