@@ -123,6 +123,19 @@ const RUN_SQL_TOOL: ChatCompletionTool = {
   },
 };
 
+/**
+ * Does this look like an aggregate answer that needs a control total?
+ * Deliberately broad — the cost of one extra query is trivial next to the cost
+ * of an unreconciled percentage in an executive answer.
+ */
+function looksAggregate(question: string, answer: string): boolean {
+  const q = question.toLowerCase();
+  const askedForAggregate =
+    /\b(total|sum|revenue|split|breakdown|mix|percent|percentage|share|average|avg|top|most|compare|vs\.?|versus|prime cost|margin)\b/.test(q);
+  const answerHasNumbers = /(\$[\d,]+|\d+(\.\d+)?\s*%)/.test(answer);
+  return askedForAggregate && answerHasNumbers;
+}
+
 // ─── Main loop ────────────────────────────────────────────────────────────────
 
 export async function runAssistant(
@@ -145,6 +158,7 @@ export async function runAssistant(
   let model = PRIMARY_MODEL;
   let usedFallback = false;
   let rounds = 0;
+  let nudgedForControl = false;
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     rounds = round + 1;
@@ -185,7 +199,28 @@ export async function runAssistant(
     // No tool calls -> the model is answering.
     if (toolCalls.length === 0) {
       const answer = choice.content?.trim() ?? '';
-      if (answer) return { answer, queries, rounds, model };
+      if (answer) {
+        // STRUCTURAL GUARD: an aggregate answer built on a single query has no
+        // control total, which is how a 15%-coverage item table produced a
+        // confident (and wrong) food-vs-beverage split. Force one more round to
+        // fetch the control total. Only nudge once.
+        const successfulQueries = queries.filter((q) => !q.error).length;
+        if (!nudgedForControl && successfulQueries < 2 && looksAggregate(question, answer)) {
+          nudgedForControl = true;
+          messages.push(choice);
+          messages.push({
+            role: 'user',
+            content:
+              'You answered with an aggregate (a total, percentage or breakdown) after only ' +
+              'one query, so it has not been reconciled. Per RULE 2, run a control-total ' +
+              'query against the summary table now — for restaurant item questions query ' +
+              'item_sales_reconciliation for control_revenue and coverage_pct over the same ' +
+              'period. Then re-answer, leading with any discrepancy over 1%.',
+          });
+          continue;
+        }
+        return { answer, queries, rounds, model };
+      }
       break;
     }
 
