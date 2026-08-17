@@ -153,23 +153,35 @@ async function syncItemSales(
   const rows = await fetchMenuItemSales(restaurantIds, start, end);
   if (!Array.isArray(rows) || rows.length === 0) return { menuItems: 0, itemSales: 0 };
 
-  // Step 1: Collect unique menu items per location
-  const menuItemsByLocation = new Map<string, Map<string, string>>(); // locationId → (toastGuid → name)
+  // Step 1: Collect unique menu items per location, carrying the menu hierarchy
+  type ItemMeta = { name: string; group?: string; category?: string };
+  const menuItemsByLocation = new Map<string, Map<string, ItemMeta>>(); // locationId → (toastGuid → meta)
   for (const row of rows) {
     const locationId = guidToId.get(row.restaurantGuid);
     if (!locationId || !row.menuItemGuid) continue;
     if (!menuItemsByLocation.has(locationId)) {
       menuItemsByLocation.set(locationId, new Map());
     }
-    menuItemsByLocation.get(locationId)!.set(row.menuItemGuid, row.menuItemName ?? row.menuItemGuid);
+    const bucket = menuItemsByLocation.get(locationId)!;
+    const prev = bucket.get(row.menuItemGuid);
+    bucket.set(row.menuItemGuid, {
+      name: row.menuItemName ?? prev?.name ?? row.menuItemGuid,
+      // Keep the first resolved value — later days may lack a category.
+      group: prev?.group ?? row.menuGroupName,
+      category: prev?.category ?? row.salesCategoryName,
+    });
   }
 
-  // Step 2: Batch upsert menu_items per location
+  // Step 2: Batch upsert menu_items per location (now including the hierarchy,
+  // which was previously left NULL — the reason category questions were
+  // impossible to answer without guessing from item names).
   for (const [locationId, items] of menuItemsByLocation) {
-    const menuRows = [...items.entries()].map(([guid, name]) => ({
+    const menuRows = [...items.entries()].map(([guid, meta]) => ({
       location_id: locationId,
       toast_guid: guid,
-      name,
+      name: meta.name,
+      menu_group: meta.group ?? null,
+      category: meta.category ?? null,
       updated_at: new Date().toISOString(),
     }));
     await supabase.from('menu_items').upsert(menuRows, { onConflict: 'location_id,toast_guid' });
@@ -201,6 +213,12 @@ async function syncItemSales(
       business_date: toIsoDate(row.businessDate),
       quantity_sold: row.quantitySold,
       gross_revenue: row.grossSalesAmount,
+      // Point-in-time hierarchy: an item's menu assignment can change between
+      // periods, so it is stored on the sale row, not only on menu_items.
+      menu_group: row.menuGroupName ?? null,
+      menu_group_guid: row.menuGroupGuid ?? null,
+      sales_category: row.salesCategoryName ?? null,
+      sales_category_guid: row.salesCategoryGuid ?? null,
     });
   }
 

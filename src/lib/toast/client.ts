@@ -304,10 +304,42 @@ export interface MenuItemRow {
   menuItemName?: string;
   menuGroupGuid?: string;
   menuGroupName?: string;
+  salesCategoryGuid?: string;
+  salesCategoryName?: string;
   quantitySold: number;
   grossSalesAmount: number;
   netSalesAmount: number;
   discountAmount: number;
+}
+
+// Order pagination / pacing. ordersBulk caps a page at 100.
+const ORDERS_PAGE_SIZE = 100;
+const MAX_ORDER_PAGES = 100;      // 10k orders/day guard
+const ORDER_PAGE_DELAY_MS = 250;  // between pages of the same day
+const ORDER_DAY_DELAY_MS = 600;   // between days
+
+/**
+ * Fetch a Toast config collection and return guid -> name.
+ * Order selections reference salesCategory/itemGroup by guid only, so these
+ * lookups are what turn them into the menu names used for reporting.
+ * Never throws — an unresolved guid simply yields no name.
+ */
+async function fetchConfigNames(
+  restaurantId: string,
+  path: string,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    const rows = await toastGetStandard<Array<{ guid?: string; name?: string }>>(
+      path, restaurantId, { pageSize: '200' },
+    );
+    for (const r of rows ?? []) {
+      if (r?.guid && r?.name) out.set(r.guid, r.name);
+    }
+  } catch (err) {
+    console.error(`[toast] config fetch ${path} failed: ${err instanceof Error ? err.message : err}`);
+  }
+  return out;
 }
 
 // Toast /era/v1/menu does not support groupBy — item sales come from the Standard API orders endpoint.
@@ -328,6 +360,10 @@ interface ToastOrderSelection {
   price: number;
   voided: boolean;
   deselected: boolean;
+  // Toast returns these as entity references (guid only); names are resolved
+  // separately from the config endpoints.
+  salesCategory?: { guid: string } | null;
+  itemGroup?: { guid: string } | null;
 }
 
 interface ToastOrderCheck {
@@ -363,23 +399,54 @@ async function fetchItemsFromOrders(
   }
 
   for (const restaurantId of restaurantIds) {
+    // Resolve guid -> name for sales categories and menu groups once per
+    // restaurant; order selections only carry the guids.
+    const [salesCategories, menuGroups] = await Promise.all([
+      fetchConfigNames(restaurantId, '/config/v2/salesCategories'),
+      fetchConfigNames(restaurantId, '/config/v2/menuGroups'),
+    ]);
+
     for (const dateStr of dates) {
       const bizDate = dateStr.replace(/-/g, '');
-      let orders: ToastOrderBulk[];
-      try {
-        orders = await toastGetStandard<ToastOrderBulk[]>(
-          '/orders/v2/ordersBulk',
-          restaurantId,
-          { businessDate: bizDate }
-        );
-      } catch {
-        continue;
+
+      // PAGINATE. /orders/v2/ordersBulk defaults to page 1 at pageSize 100 and
+      // silently drops the rest — the original bug, which captured only ~10% of
+      // revenue on busy days. Keep pulling until a short page comes back.
+      const orders: ToastOrderBulk[] = [];
+      let page = 1;
+      let pageError: string | null = null;
+      for (;;) {
+        let batch: ToastOrderBulk[];
+        try {
+          batch = await toastGetStandard<ToastOrderBulk[]>(
+            '/orders/v2/ordersBulk',
+            restaurantId,
+            { businessDate: bizDate, pageSize: String(ORDERS_PAGE_SIZE), page: String(page) }
+          );
+        } catch (err) {
+          // Surface rather than swallow: a silent failure previously showed up
+          // as a legitimate-looking zero-item day.
+          pageError = err instanceof Error ? err.message : String(err);
+          break;
+        }
+        if (!Array.isArray(batch) || batch.length === 0) break;
+        orders.push(...batch);
+        if (batch.length < ORDERS_PAGE_SIZE) break;
+        page++;
+        if (page > MAX_ORDER_PAGES) break; // runaway guard
+        await new Promise(r => setTimeout(r, ORDER_PAGE_DELAY_MS));
       }
 
-      if (!Array.isArray(orders) || orders.length === 0) continue;
+      if (pageError) {
+        console.error(`[toast] ${restaurantId} ${bizDate} page ${page} failed: ${pageError}`);
+      }
+      if (orders.length === 0) continue;
 
       // Aggregate items for this day
-      const dayItems = new Map<string, { name: string; qty: number; rev: number }>();
+      const dayItems = new Map<string, {
+        name: string; qty: number; rev: number;
+        catGuid?: string; groupGuid?: string;
+      }>();
       for (const order of orders) {
         if (order.voided || order.deleted) continue;
         for (const check of order.checks ?? []) {
@@ -391,6 +458,9 @@ async function fetchItemsFromOrders(
             const e = dayItems.get(guid) ?? { name: sel.displayName ?? 'Unknown', qty: 0, rev: 0 };
             e.qty += sel.quantity ?? 1;
             e.rev += sel.price ?? 0;
+            // First non-null wins; these are stable per item within a day.
+            e.catGuid ??= sel.salesCategory?.guid ?? undefined;
+            e.groupGuid ??= sel.itemGroup?.guid ?? undefined;
             dayItems.set(guid, e);
           }
         }
@@ -402,6 +472,10 @@ async function fetchItemsFromOrders(
           businessDate: bizDate,
           menuItemGuid: guid,
           menuItemName: agg.name,
+          menuGroupGuid: agg.groupGuid,
+          menuGroupName: agg.groupGuid ? menuGroups.get(agg.groupGuid) : undefined,
+          salesCategoryGuid: agg.catGuid,
+          salesCategoryName: agg.catGuid ? salesCategories.get(agg.catGuid) : undefined,
           quantitySold: agg.qty,
           grossSalesAmount: agg.rev,
           netSalesAmount: agg.rev,
@@ -410,7 +484,7 @@ async function fetchItemsFromOrders(
       }
 
       // Rate-limit pause between days (Standard API limit)
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, ORDER_DAY_DELAY_MS));
     }
   }
 
