@@ -3,6 +3,10 @@ import { runSync } from '@/lib/toast/sync';
 
 export const maxDuration = 800;
 
+// Bumped whenever sync behaviour changes, so a caller can confirm which build
+// is actually serving before trusting a backfill result.
+export const SYNC_VERSION = 'v3-paginated-lookup';
+
 /**
  * POST /api/toast-sync
  *
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const results = await runSync({ mode, locationFilter, startDate, endDate, step });
-    return NextResponse.json({ ok: true, mode, locationFilter, startDate, endDate, results });
+    return NextResponse.json({ ok: true, syncVersion: SYNC_VERSION, mode, locationFilter, startDate, endDate, results });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });
