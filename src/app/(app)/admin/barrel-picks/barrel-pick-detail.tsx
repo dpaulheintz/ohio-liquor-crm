@@ -21,10 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  getBarrelPick,
-  updateBarrelPick,
-  updateChecklistItem,
-  addBarrelPickNote,
   PIPELINE_STAGES,
   BARREL_TYPES,
   BARREL_DEFAULTS,
@@ -32,6 +28,12 @@ import {
   type PipelineStage,
   type BarrelType,
   type ChecklistItem,
+} from '@/app/actions/barrel-pick-constants';
+import {
+  getBarrelPick,
+  updateBarrelPick,
+  updateChecklistItem,
+  addBarrelPickNote,
 } from '@/app/actions/barrel-picks';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';

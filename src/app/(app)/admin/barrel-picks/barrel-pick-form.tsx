@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
-  createBarrelPick,
   BARREL_TYPES,
   CUSTOMER_TYPES,
   BARREL_DEFAULTS,
   type BarrelType,
   type CustomerType,
-} from '@/app/actions/barrel-picks';
+} from '@/app/actions/barrel-pick-constants';
+import { createBarrelPick } from '@/app/actions/barrel-picks';
 
 type Rep = { id: string; full_name: string | null; email: string };
 

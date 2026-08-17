@@ -7,7 +7,7 @@ import {
   PIPELINE_STAGES,
   BARREL_TYPES,
   CUSTOMER_TYPES,
-} from '@/app/actions/barrel-picks';
+} from '@/app/actions/barrel-pick-constants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

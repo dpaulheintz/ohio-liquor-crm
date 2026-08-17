@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { type BarrelPick } from '@/app/actions/barrel-picks';
+import { type BarrelPick } from '@/app/actions/barrel-pick-constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

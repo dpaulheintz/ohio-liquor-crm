@@ -5,8 +5,8 @@ import {
   type BarrelPick,
   type PipelineStage,
   PIPELINE_STAGES,
-  updateBarrelPickStatus,
-} from '@/app/actions/barrel-picks';
+} from '@/app/actions/barrel-pick-constants';
+import { updateBarrelPickStatus } from '@/app/actions/barrel-picks';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';

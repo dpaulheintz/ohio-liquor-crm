@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { type BarrelPick } from '@/app/actions/barrel-pick-constants';
 import {
   getBarrelPicks,
   getBarrelPickStats,
-  type BarrelPick,
 } from '@/app/actions/barrel-picks';
 import { getReps } from '@/app/actions/accounts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Plus,
-  Kanban,
   LayoutList,
   Calendar,
   Activity,
@@ -21,13 +20,16 @@ import {
   Factory,
   DollarSign,
   Trophy,
+  Columns3,
 } from 'lucide-react';
-import { BarrelPickBoard } from './barrel-pick-board';
-import { BarrelPickList } from './barrel-pick-list';
-import { BarrelPickCalendar } from './barrel-pick-calendar';
-import { BarrelPickFormDialog } from './barrel-pick-form';
-import { BarrelPickDetail } from './barrel-pick-detail';
 import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+const BarrelPickBoard = dynamic(() => import('./barrel-pick-board').then(m => ({ default: m.BarrelPickBoard })));
+const BarrelPickList = dynamic(() => import('./barrel-pick-list').then(m => ({ default: m.BarrelPickList })));
+const BarrelPickCalendar = dynamic(() => import('./barrel-pick-calendar').then(m => ({ default: m.BarrelPickCalendar })));
+const BarrelPickFormDialog = dynamic(() => import('./barrel-pick-form').then(m => ({ default: m.BarrelPickFormDialog })));
+const BarrelPickDetail = dynamic(() => import('./barrel-pick-detail').then(m => ({ default: m.BarrelPickDetail })));
 
 type ViewMode = 'board' | 'list' | 'calendar';
 
@@ -54,12 +56,14 @@ export default function BarrelPicksPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [reps, setReps] = useState<Rep[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>('board');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [data, s, r] = await Promise.all([
         getBarrelPicks(),
@@ -71,6 +75,7 @@ export default function BarrelPicksPage() {
       setReps(r);
     } catch (err) {
       console.error('Failed to load barrel picks:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load');
       setStats({ active: 0, prospects: 0, upcomingPicks: 0, inProduction: 0, pipeline: 0, ytdCompleted: 0, ytdRevenue: 0 });
     } finally {
       setLoading(false);
@@ -90,8 +95,8 @@ export default function BarrelPicksPage() {
     { label: 'YTD Completed', value: `${stats.ytdCompleted} / ${fmt(stats.ytdRevenue)}`, icon: Trophy },
   ];
 
-  const viewButtons: { mode: ViewMode; icon: typeof Kanban; label: string }[] = [
-    { mode: 'board', icon: Kanban, label: 'Board' },
+  const viewButtons: { mode: ViewMode; icon: typeof LayoutList; label: string }[] = [
+    { mode: 'board', icon: Columns3, label: 'Board' },
     { mode: 'list', icon: LayoutList, label: 'List' },
     { mode: 'calendar', icon: Calendar, label: 'Calendar' },
   ];
@@ -104,6 +109,13 @@ export default function BarrelPicksPage() {
           <Plus className="mr-1 h-4 w-4" /> New Barrel Pick
         </Button>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 p-4">
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={fetchAll}>Retry</Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map(({ label, value, icon: Icon, highlight }) => (
