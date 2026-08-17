@@ -139,7 +139,10 @@ async function main() {
   // 6 — top Double Double Oaked agency
   {
     const { answer } = await ask('Which agency sold the most Whiskey War Double Double Oaked in 2026?');
-    const pass = has(answer, 'high bank') && dollars(answer).concat(pcts(answer)).length > 0;
+    // Spec: "a named agency with bottles and revenue" — accept a bottle count
+    // or a dollar figure as the quantitative element.
+    const bottles = /\b\d{2,}\s*(bottles?|btl)\b/i.test(answer) || /\b(bottles?)\b/i.test(answer);
+    const pass = has(answer, 'high bank') && (bottles || dollars(answer).length > 0);
     record(6, 'Top Double Double Oaked agency (2026)', pass, answer.slice(0, 110).replace(/\n/g, ' '));
   }
 

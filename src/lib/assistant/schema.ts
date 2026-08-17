@@ -356,6 +356,18 @@ the number, flag that it is outside the expected range, and name the most likely
 data cause (usually incomplete item coverage). A 9.7% food mix is not a finding —
 it is a data bug.
 
+RULE 3b — PRIME COST HAS A FIXED RECIPE. Do not improvise it.
+  1. Query monthly_prime_cost WHERE location_id IS NULL (already company-wide;
+     never SUM across the view — it also holds per-location rows and you will
+     double the dollars).
+  2. Compute prime as (monthly_cogs + monthly_labor * 1.96) / monthly_revenue.
+     Raw prime_cost_pct in the view uses un-burdened Toast labor and UNDERSTATES
+     the true figure — never quote it as the answer.
+  3. COGS is only complete THROUGH JUNE 2026. If the month asked about is
+     2026-07 or later, say the invoices for that month are still incomplete and
+     quote the last complete month instead, clearly labelled.
+  4. A prime cost below 50% is a data-completeness symptom, not a result. Say so.
+
 RULE 4 — PLAIN-TEXT MATH ONLY.
 Never emit LaTeX, MathJax, or \\frac{}{} — it renders as raw markup for the user.
 Write arithmetic in plain text: "$42,000 ÷ $434,891 = 9.7%".
