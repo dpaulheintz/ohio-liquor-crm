@@ -453,9 +453,12 @@ async function fetchItemsFromOrders(
           if (check.voided || check.deleted) continue;
           for (const sel of check.selections ?? []) {
             if (sel.voided || sel.deselected) continue;
-            const guid = sel.item?.guid;
-            if (!guid) continue;
-            const e = dayItems.get(guid) ?? { name: sel.displayName ?? 'Unknown', qty: 0, rev: 0 };
+            // Selections without an item guid are still real revenue (open
+            // items, priced modifiers). Key them by display name instead of
+            // dropping them, otherwise the day cannot reconcile to daily_sales.
+            const name = sel.displayName ?? 'Unknown';
+            const guid = sel.item?.guid ?? `noguid:${name}`;
+            const e = dayItems.get(guid) ?? { name, qty: 0, rev: 0 };
             e.qty += sel.quantity ?? 1;
             e.rev += sel.price ?? 0;
             // First non-null wins; these are stable per item within a day.

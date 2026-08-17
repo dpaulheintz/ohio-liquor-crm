@@ -187,17 +187,24 @@ async function syncItemSales(
     await supabase.from('menu_items').upsert(menuRows, { onConflict: 'location_id,toast_guid' });
   }
 
-  // Step 3: Fetch all menu_item ids for these locations in one query
+  // Step 3: Fetch all menu_item ids for these locations.
+  // MUST paginate: Supabase caps .select() at 1000 rows by default, and
+  // Grandview/Gahanna each have >1300 menu items. Without this, every sale of an
+  // item past the first 1000 was silently discarded at the `!menuItemId` guard
+  // below — a second, compounding cause of the missing item revenue.
   const locationIds = [...menuItemsByLocation.keys()];
-  const { data: menuItemsData } = await supabase
-    .from('menu_items')
-    .select('id, location_id, toast_guid')
-    .in('location_id', locationIds);
-
-  // Build lookup: `${locationId}:${toastGuid}` → menu_item_id
   const menuItemLookup = new Map<string, string>();
-  for (const mi of menuItemsData ?? []) {
-    menuItemLookup.set(`${mi.location_id}:${mi.toast_guid}`, mi.id);
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('menu_items')
+      .select('id, location_id, toast_guid')
+      .in('location_id', locationIds)
+      .range(from, from + PAGE - 1);
+    if (error) { console.error(`[toast] menu_items lookup failed: ${error.message}`); break; }
+    if (!page || page.length === 0) break;
+    for (const mi of page) menuItemLookup.set(`${mi.location_id}:${mi.toast_guid}`, mi.id);
+    if (page.length < PAGE) break;
   }
 
   // Step 4: Build batch of daily_item_sales rows
