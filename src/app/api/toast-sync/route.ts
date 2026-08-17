@@ -45,6 +45,25 @@ export async function POST(request: NextRequest) {
   }
 
   const sp = request.nextUrl.searchParams;
+
+  // step=probe — read-only diagnostic. Reports what Toast actually returns for
+  // one restaurant/day: how many order pages exist, and whether selections
+  // carry salesCategory / itemGroup references. Writes nothing.
+  if (sp.get('step') === 'probe') {
+    try {
+      const { probeOrders } = await import('@/lib/toast/sync');
+      return NextResponse.json({
+        ok: true,
+        probe: await probeOrders(sp.get('location') ?? 'Grandview', sp.get('date') ?? '2026-07-11'),
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : String(err) },
+        { status: 500 },
+      );
+    }
+  }
+
   const mode = sp.get('mode') === 'backfill' ? 'backfill' : 'daily';
   const locationFilter = sp.get('location') ?? undefined;
   const startDate = sp.get('startDate') ?? undefined;
