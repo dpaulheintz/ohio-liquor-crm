@@ -5,7 +5,7 @@ export const maxDuration = 800;
 
 // Bumped whenever sync behaviour changes, so a caller can confirm which build
 // is actually serving before trusting a backfill result.
-export const SYNC_VERSION = 'v3-paginated-lookup';
+export const SYNC_VERSION = 'v4-dedup-upsert';
 
 /**
  * POST /api/toast-sync

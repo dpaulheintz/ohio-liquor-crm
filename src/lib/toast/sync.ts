@@ -143,7 +143,7 @@ async function syncItemSales(
   locations: Location[],
   start: string,
   end: string
-): Promise<{ menuItems: number; itemSales: number }> {
+): Promise<{ menuItems: number; itemSales: number; fetched?: number; built?: number; deduped?: number; upsertErrors?: string[] }> {
   const supabase = createAdminClient();
   const restaurantIds = locations.map((l) => l.toast_guid);
   const guidToId = new Map(locations.map((l) => [l.toast_guid, l.id]));
@@ -229,19 +229,51 @@ async function syncItemSales(
     });
   }
 
-  // Step 5: Batch upsert daily_item_sales in chunks of 500
+  // Step 5: Batch upsert daily_item_sales in chunks of 500.
+  // Deduplicate by the conflict key first: Postgres rejects an ON CONFLICT
+  // statement that would touch the same row twice ("cannot affect row a second
+  // time"), which previously failed the ENTIRE 500-row batch silently.
+  const byKey = new Map<string, (typeof salesRows)[number]>();
+  for (const r of salesRows) {
+    const k = `${r.location_id}|${r.menu_item_id}|${r.business_date}`;
+    const prev = byKey.get(k);
+    if (prev) {
+      prev.quantity_sold += r.quantity_sold;
+      prev.gross_revenue += r.gross_revenue;
+      prev.menu_group ??= r.menu_group;
+      prev.sales_category ??= r.sales_category;
+    } else {
+      byKey.set(k, { ...r });
+    }
+  }
+  const deduped = [...byKey.values()];
+
   let itemSalesCount = 0;
+  const upsertErrors: string[] = [];
   const BATCH = 500;
-  for (let i = 0; i < salesRows.length; i += BATCH) {
-    const batch = salesRows.slice(i, i + BATCH);
+  for (let i = 0; i < deduped.length; i += BATCH) {
+    const batch = deduped.slice(i, i + BATCH);
     const { error } = await supabase
       .from('daily_item_sales')
       .upsert(batch, { onConflict: 'location_id,menu_item_id,business_date' });
-    if (!error) itemSalesCount += batch.length;
+    if (error) {
+      // Surface instead of silently dropping — a failed batch used to look
+      // identical to a quiet day.
+      console.error(`[toast] daily_item_sales upsert failed: ${error.message}`);
+      if (upsertErrors.length < 3) upsertErrors.push(error.message);
+    } else {
+      itemSalesCount += batch.length;
+    }
   }
+  if (upsertErrors.length) {
+    console.error(`[toast] ${upsertErrors.length} upsert batch error(s)`);
+  }
+  console.log(`[toast] fetched=${rows.length} salesRows=${salesRows.length} deduped=${deduped.length} upserted=${itemSalesCount}`);
 
   const menuItemCount = [...menuItemsByLocation.values()].reduce((sum, items) => sum + items.size, 0);
-  return { menuItems: menuItemCount, itemSales: itemSalesCount };
+  return { menuItems: menuItemCount, itemSales: itemSalesCount,
+           fetched: rows.length, built: salesRows.length, deduped: deduped.length,
+           upsertErrors };
 }
 
 // ─── Sync log ─────────────────────────────────────────────────────────────────
