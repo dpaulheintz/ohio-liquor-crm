@@ -69,6 +69,9 @@ export default function BarrelPicksPage() {
       setPicks(data);
       setStats(s);
       setReps(r);
+    } catch (err) {
+      console.error('Failed to load barrel picks:', err);
+      setStats({ active: 0, prospects: 0, upcomingPicks: 0, inProduction: 0, pipeline: 0, ytdCompleted: 0, ytdRevenue: 0 });
     } finally {
       setLoading(false);
     }
