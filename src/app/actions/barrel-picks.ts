@@ -115,7 +115,7 @@ export async function createBarrelPick(input: {
   contact_name?: string;
   contact_email?: string;
   contact_phone?: string;
-  barrel_type: BarrelType;
+  barrel_type?: BarrelType | null;
   is_half_barrel?: boolean;
   price_per_bottle?: number;
   expected_yield?: number;
@@ -127,10 +127,10 @@ export async function createBarrelPick(input: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const defaults = BARREL_DEFAULTS[input.barrel_type];
-  const isHalf = input.is_half_barrel && defaults.halfYield !== null;
-  const price = input.price_per_bottle ?? defaults.price;
-  const yield_ = input.expected_yield ?? (isHalf ? defaults.halfYield! : defaults.fullYield);
+  const defaults = input.barrel_type ? BARREL_DEFAULTS[input.barrel_type] : null;
+  const isHalf = defaults ? input.is_half_barrel && defaults.halfYield !== null : false;
+  const price = input.price_per_bottle ?? defaults?.price ?? null;
+  const yield_ = input.expected_yield ?? (isHalf && defaults ? defaults.halfYield! : defaults?.fullYield ?? null);
   const status = input.pick_date ? 'scheduled' : 'prospect';
 
   const { data, error } = await supabase
@@ -141,8 +141,8 @@ export async function createBarrelPick(input: {
       contact_name: input.contact_name || null,
       contact_email: input.contact_email || null,
       contact_phone: input.contact_phone || null,
-      barrel_type: input.barrel_type,
-      is_half_barrel: isHalf,
+      barrel_type: input.barrel_type || null,
+      is_half_barrel: isHalf || null,
       price_per_bottle: price,
       expected_yield: yield_,
       status,
@@ -186,10 +186,10 @@ export async function updateBarrelPick(id: string, updates: {
   contact_name?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
-  barrel_type?: BarrelType;
-  is_half_barrel?: boolean;
-  price_per_bottle?: number;
-  expected_yield?: number;
+  barrel_type?: BarrelType | null;
+  is_half_barrel?: boolean | null;
+  price_per_bottle?: number | null;
+  expected_yield?: number | null;
   actual_yield?: number | null;
   status?: PipelineStage;
   pick_date?: string | null;

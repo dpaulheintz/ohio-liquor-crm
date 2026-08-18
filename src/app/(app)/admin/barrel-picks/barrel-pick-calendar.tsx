@@ -52,21 +52,21 @@ export function BarrelPickCalendar({ picks, onSelect }: Props) {
       events.push({
         id: `pick-${p.id}`, pickId: p.id, date: p.pick_date,
         label: `Pick: ${p.customer_name}`, type: 'pick',
-        customerName: p.customer_name, barrelType: p.barrel_type,
+        customerName: p.customer_name, barrelType: p.barrel_type ?? 'TBD',
       });
     }
     if (p.bottling_date) {
       events.push({
         id: `bottle-${p.id}`, pickId: p.id, date: p.bottling_date,
         label: `Bottle: ${p.customer_name}`, type: 'bottling',
-        customerName: p.customer_name, barrelType: p.barrel_type,
+        customerName: p.customer_name, barrelType: p.barrel_type ?? 'TBD',
       });
     }
     if (p.delivery_date) {
       events.push({
         id: `deliver-${p.id}`, pickId: p.id, date: p.delivery_date,
         label: `Deliver: ${p.customer_name}`, type: 'delivery',
-        customerName: p.customer_name, barrelType: p.barrel_type,
+        customerName: p.customer_name, barrelType: p.barrel_type ?? 'TBD',
       });
     }
   }

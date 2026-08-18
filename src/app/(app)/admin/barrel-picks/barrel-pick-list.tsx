@@ -86,11 +86,11 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
       switch (sortKey) {
         case 'customer': cmp = a.customer_name.localeCompare(b.customer_name); break;
         case 'type': cmp = a.customer_type.localeCompare(b.customer_type); break;
-        case 'barrel': cmp = a.barrel_type.localeCompare(b.barrel_type); break;
+        case 'barrel': cmp = (a.barrel_type ?? '').localeCompare(b.barrel_type ?? ''); break;
         case 'status': cmp = PIPELINE_STAGES.indexOf(a.status as PipelineStage) - PIPELINE_STAGES.indexOf(b.status as PipelineStage); break;
         case 'pick_date': cmp = (a.pick_date ?? '').localeCompare(b.pick_date ?? ''); break;
-        case 'yield': cmp = (a.actual_yield ?? a.expected_yield) - (b.actual_yield ?? b.expected_yield); break;
-        case 'value': cmp = Number(a.total_value) - Number(b.total_value); break;
+        case 'yield': cmp = (a.actual_yield ?? a.expected_yield ?? 0) - (b.actual_yield ?? b.expected_yield ?? 0); break;
+        case 'value': cmp = Number(a.total_value ?? 0) - Number(b.total_value ?? 0); break;
         case 'rep': cmp = (a.rep?.full_name ?? '').localeCompare(b.rep?.full_name ?? ''); break;
         case 'days': {
           const da = differenceInDays(now, parseISO(a.updated_at));
@@ -114,14 +114,14 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
     const rows = sorted.map(p => [
       p.customer_name,
       p.customer_type,
-      p.barrel_type,
-      p.is_half_barrel ? 'Yes' : 'No',
+      p.barrel_type ?? '',
+      p.is_half_barrel ? 'Yes' : p.is_half_barrel === false ? 'No' : '',
       STAGE_LABELS[p.status as PipelineStage],
       p.pick_date ?? '',
-      p.expected_yield,
+      p.expected_yield ?? '',
       p.actual_yield ?? '',
-      p.price_per_bottle,
-      p.total_value,
+      p.price_per_bottle ?? '',
+      p.total_value ?? '',
       p.rep?.full_name ?? '',
       differenceInDays(new Date(), parseISO(p.updated_at)),
     ]);
@@ -211,7 +211,7 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
                 <TableCell className="font-medium">{p.customer_name}</TableCell>
                 <TableCell className="text-xs">{p.customer_type}</TableCell>
                 <TableCell>
-                  <span className="text-xs">{p.barrel_type}</span>
+                  <span className="text-xs">{p.barrel_type ?? 'TBD'}</span>
                   {p.is_half_barrel && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">Half</Badge>}
                 </TableCell>
                 <TableCell>
@@ -223,11 +223,13 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
                   {p.pick_date ? format(parseISO(p.pick_date), 'MMM d, yyyy') : '—'}
                 </TableCell>
                 <TableCell className="text-xs tabular-nums">
-                  {p.actual_yield ?? p.expected_yield}
+                  {p.actual_yield ?? p.expected_yield ?? '—'}
                   {p.actual_yield && <span className="text-muted-foreground ml-1">(actual)</span>}
                 </TableCell>
                 <TableCell className="font-medium tabular-nums">
-                  ${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {p.total_value != null
+                    ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                    : '—'}
                 </TableCell>
                 <TableCell className="text-xs">{p.rep?.full_name ?? '—'}</TableCell>
                 <TableCell className="text-xs tabular-nums">

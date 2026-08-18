@@ -104,7 +104,7 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
                       key={p.id}
                       className={cn(
                         'border-l-4 cursor-pointer hover:shadow-md transition-shadow p-3',
-                        BARREL_COLORS[p.barrel_type] ?? 'border-l-gray-400',
+                        (p.barrel_type && BARREL_COLORS[p.barrel_type]) ?? 'border-l-gray-400',
                         isMoving && 'opacity-50'
                       )}
                       onClick={() => onSelect(p.id)}
@@ -112,7 +112,7 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
                       <p className="font-medium text-sm leading-tight">{p.customer_name}</p>
                       <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {p.barrel_type}
+                          {p.barrel_type ?? 'TBD'}
                         </Badge>
                         {p.is_half_barrel && (
                           <Badge variant="secondary" className="text-[10px] px-1 py-0">Half</Badge>
@@ -125,7 +125,9 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
                           <span className="italic">No date</span>
                         )}
                         <span className="font-medium text-foreground">
-                          ${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          {p.total_value != null
+                            ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                            : '—'}
                         </span>
                       </div>
                       {p.rep?.full_name && (

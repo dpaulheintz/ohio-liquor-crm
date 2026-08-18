@@ -187,11 +187,13 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary" className="text-xs">
                   <Wine className="h-3 w-3 mr-1" />
-                  {pick.barrel_type}
+                  {pick.barrel_type ?? 'TBD'}
                   {pick.is_half_barrel && ' (Half)'}
                 </Badge>
                 <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                  ${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {pick.total_value != null
+                    ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                    : '—'}
                 </span>
               </div>
 
@@ -260,20 +262,24 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
                   <div className="grid grid-cols-3 gap-2 text-center rounded-lg border p-2 mt-2">
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Price/Bottle</p>
-                      <p className="font-semibold text-sm">${Number(pick.price_per_bottle).toFixed(2)}</p>
+                      <p className="font-semibold text-sm">
+                        {pick.price_per_bottle != null ? `$${Number(pick.price_per_bottle).toFixed(2)}` : '—'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">
                         {pick.actual_yield ? 'Actual' : 'Expected'} Yield
                       </p>
                       <p className="font-semibold text-sm">
-                        {pick.actual_yield ?? pick.expected_yield}
+                        {pick.actual_yield ?? pick.expected_yield ?? '—'}
                       </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Total Value</p>
                       <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">
-                        ${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {pick.total_value != null
+                          ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                          : '—'}
                       </p>
                     </div>
                   </div>
@@ -471,10 +477,10 @@ function EditForm({
   const [contactName, setContactName] = useState(pick.contact_name ?? '');
   const [contactEmail, setContactEmail] = useState(pick.contact_email ?? '');
   const [contactPhone, setContactPhone] = useState(pick.contact_phone ?? '');
-  const [barrelType, setBarrelType] = useState<string>(pick.barrel_type);
-  const [isHalf, setIsHalf] = useState(pick.is_half_barrel);
-  const [price, setPrice] = useState(Number(pick.price_per_bottle));
-  const [expectedYield, setExpectedYield] = useState(pick.expected_yield);
+  const [barrelType, setBarrelType] = useState<string>(pick.barrel_type ?? '');
+  const [isHalf, setIsHalf] = useState(pick.is_half_barrel ?? false);
+  const [price, setPrice] = useState(Number(pick.price_per_bottle ?? 0));
+  const [expectedYield, setExpectedYield] = useState(pick.expected_yield ?? 0);
   const [actualYield, setActualYield] = useState(pick.actual_yield ?? '');
   const [pickDate, setPickDate] = useState(pick.pick_date ?? '');
   const [bottlingDate, setBottlingDate] = useState(pick.bottling_date ?? '');
@@ -482,7 +488,7 @@ function EditForm({
   const [barrelSelected, setBarrelSelected] = useState(pick.barrel_selected ?? '');
   const [repId, setRepId] = useState(pick.rep_id ?? '');
 
-  const canHalf = BARREL_DEFAULTS[barrelType as BarrelType]?.halfYield !== null;
+  const canHalf = barrelType ? BARREL_DEFAULTS[barrelType as BarrelType]?.halfYield !== null : false;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -493,10 +499,10 @@ function EditForm({
         contact_name: contactName || null,
         contact_email: contactEmail || null,
         contact_phone: contactPhone || null,
-        barrel_type: barrelType as BarrelType,
-        is_half_barrel: canHalf ? isHalf : false,
-        price_per_bottle: price,
-        expected_yield: expectedYield,
+        barrel_type: barrelType ? barrelType as BarrelType : null,
+        is_half_barrel: barrelType ? (canHalf ? isHalf : false) : null,
+        price_per_bottle: price || null,
+        expected_yield: expectedYield || null,
         actual_yield: actualYield !== '' ? Number(actualYield) : null,
         pick_date: pickDate || null,
         bottling_date: bottlingDate || null,

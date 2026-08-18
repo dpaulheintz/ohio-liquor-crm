@@ -42,12 +42,12 @@ export interface BarrelPick {
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
-  barrel_type: BarrelType;
-  is_half_barrel: boolean;
-  price_per_bottle: number;
-  expected_yield: number;
+  barrel_type: BarrelType | null;
+  is_half_barrel: boolean | null;
+  price_per_bottle: number | null;
+  expected_yield: number | null;
   actual_yield: number | null;
-  total_value: number;
+  total_value: number | null;
   status: PipelineStage;
   pick_date: string | null;
   barrel_selected: string | null;
