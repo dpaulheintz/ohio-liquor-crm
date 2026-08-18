@@ -168,20 +168,15 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
           </div>
         ) : (
           <>
-            <SheetHeader className="space-y-3 pb-4 border-b">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <SheetTitle className="text-xl">{pick.customer_name}</SheetTitle>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <Badge variant="outline" className="text-xs">{pick.customer_type}</Badge>
-                    <Badge className={cn('text-xs', STAGE_BADGE_CLASS[pick.status as PipelineStage])}>
-                      {STAGE_LABELS[pick.status as PipelineStage]}
-                    </Badge>
-                  </div>
+            <SheetHeader className="space-y-3 pb-4 border-b pr-10">
+              <div>
+                <SheetTitle className="text-xl">{pick.customer_name}</SheetTitle>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <Badge variant="outline" className="text-xs">{pick.customer_type}</Badge>
+                  <Badge className={cn('text-xs', STAGE_BADGE_CLASS[pick.status as PipelineStage])}>
+                    {STAGE_LABELS[pick.status as PipelineStage]}
+                  </Badge>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setEditing(!editing)}>
-                  {editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                </Button>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -195,6 +190,9 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
                     ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                     : '—'}
                 </span>
+                <Button variant="outline" size="sm" className="ml-auto" onClick={() => setEditing(!editing)}>
+                  {editing ? <><X className="h-3.5 w-3.5 mr-1" /> Cancel</> : <><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</>}
+                </Button>
               </div>
 
               <div className="w-full">
