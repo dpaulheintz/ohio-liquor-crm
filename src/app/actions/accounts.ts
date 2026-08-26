@@ -160,6 +160,12 @@ const accountSchema = z.object({
   phone: z.string().max(50).optional(),
   delivery_day: z.string().max(20).optional(),
   warehouse: z.string().max(200).optional(),
+  county: z.string().max(200).optional(),
+  wholesale: z.string().max(200).optional(),
+  order_day: z.string().max(20).optional(),
+  week: z.string().max(20).optional(),
+  d8_permit: z.boolean().optional(),
+  sale_tags: z.boolean().optional(),
   linked_agency_name: z.string().max(500).optional(),
   linked_agency_id: z.string().max(100).optional(),
   status: z.enum(['prospect', 'customer']).optional(),
@@ -176,18 +182,24 @@ function parseAccountFormData(formData: FormData) {
     type,
     display_name: toTitleCase((formData.get('display_name') as string) || ''),
     legal_name: (formData.get('legal_name') as string) || undefined,
-    agency_id: type === 'agency' ? (formData.get('agency_id') as string) || undefined : undefined,
-    permit_number: type === 'wholesale' ? (formData.get('permit_number') as string) || undefined : undefined,
+    agency_id: (formData.get('agency_id') as string) || undefined,
+    permit_number: (formData.get('permit_number') as string) || undefined,
     district: (formData.get('district') as string) || undefined,
     address: (formData.get('address') as string) || undefined,
     city: (formData.get('city') as string) || undefined,
     zip: (formData.get('zip') as string) || undefined,
     phone: (formData.get('phone') as string) || undefined,
-    delivery_day: type === 'agency' ? (formData.get('delivery_day') as string) || undefined : undefined,
-    warehouse: type === 'agency' ? (formData.get('warehouse') as string) || undefined : undefined,
-    linked_agency_name: type === 'wholesale' ? (formData.get('linked_agency_name') as string) || undefined : undefined,
-    linked_agency_id: type === 'wholesale' ? (formData.get('linked_agency_id') as string) || undefined : undefined,
-    status: type === 'wholesale' ? (formData.get('status') as string) || undefined : undefined,
+    delivery_day: (formData.get('delivery_day') as string) || undefined,
+    warehouse: (formData.get('warehouse') as string) || undefined,
+    county: (formData.get('county') as string) || undefined,
+    wholesale: (formData.get('wholesale') as string) || undefined,
+    order_day: (formData.get('order_day') as string) || undefined,
+    week: (formData.get('week') as string) || undefined,
+    d8_permit: formData.get('d8_permit') === 'true',
+    sale_tags: formData.get('sale_tags') === 'true',
+    linked_agency_name: (formData.get('linked_agency_name') as string) || undefined,
+    linked_agency_id: (formData.get('linked_agency_id') as string) || undefined,
+    status: (formData.get('status') as string) || undefined,
   };
 
   const parsed = accountSchema.parse(raw);
@@ -205,6 +217,12 @@ function parseAccountFormData(formData: FormData) {
     phone: parsed.phone || null,
     delivery_day: parsed.delivery_day || null,
     warehouse: parsed.warehouse || null,
+    county: parsed.county || null,
+    wholesale: parsed.wholesale || null,
+    order_day: parsed.order_day || null,
+    week: parsed.week || null,
+    d8_permit: parsed.d8_permit ?? false,
+    sale_tags: parsed.sale_tags ?? false,
     linked_agency_name: parsed.linked_agency_name || null,
     linked_agency_id: parsed.linked_agency_id || null,
     status: parsed.status ?? (parsed.type === 'wholesale' ? 'customer' : undefined),
@@ -376,4 +394,31 @@ export async function getPendingApprovalAccounts() {
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function deleteAccount(accountId: string) {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (profile?.role !== 'admin') throw new Error('Admin access required');
+
+  // Delete related records first (contacts, visit_logs)
+  await supabase.from('contacts').delete().eq('account_id', accountId);
+  await supabase.from('visit_logs').delete().eq('account_id', accountId);
+
+  const { error } = await supabase
+    .from('accounts')
+    .delete()
+    .eq('id', accountId);
+
+  if (error) throw error;
+
+  revalidatePath('/accounts');
 }

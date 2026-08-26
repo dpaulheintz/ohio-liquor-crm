@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Account, Contact, VisitLog, Tasting, Profile } from '@/lib/types';
-import { claimAccount, releaseAccount, approveAccount, getAccount } from '@/app/actions/accounts';
+import { claimAccount, releaseAccount, approveAccount, getAccount, deleteAccount } from '@/app/actions/accounts';
 import { getContactsByAccount } from '@/app/actions/contacts';
 import { getVisitsByAccount } from '@/app/actions/visits';
 import { getTastingsByAgency } from '@/app/actions/tastings';
@@ -13,6 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   ArrowLeft,
   MapPin,
@@ -25,6 +32,7 @@ import {
   GlassWater,
   FileText,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -43,7 +51,7 @@ interface AccountDetailClientProps {
 
 export function AccountDetailClient({ account: initialAccount }: AccountDetailClientProps) {
   const router = useRouter();
-  const { profile } = useUser();
+  const { profile, isAdmin } = useUser();
   const [account, setAccount] = useState(initialAccount);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [visits, setVisits] = useState<VisitLog[]>([]);
@@ -52,6 +60,8 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddTasting, setShowAddTasting] = useState(false);
   const [editingVisit, setEditingVisit] = useState<VisitLog | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const ownerRep = account.owner_rep ?? null;
   const isOwner = profile?.id === ownerRep?.id;
@@ -114,6 +124,19 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await deleteAccount(account.id);
+      toast.success('Account deleted');
+      router.push('/accounts');
+    } catch {
+      toast.error('Failed to delete account');
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-3xl mx-auto">
       <Button variant="ghost" size="sm" onClick={() => router.back()}>
@@ -158,9 +181,16 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
                 <p className="text-sm text-muted-foreground">{account.legal_name}</p>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
-              Edit
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+                Edit
+              </Button>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -185,6 +215,24 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
             )}
             {account.linked_agency_id && (
               <span className="text-muted-foreground">Agency ID: <strong>{account.linked_agency_id}</strong></span>
+            )}
+            {account.county && (
+              <span className="text-muted-foreground">County: <strong>{account.county}</strong></span>
+            )}
+            {account.wholesale && (
+              <span className="text-muted-foreground">Wholesale: <strong>{account.wholesale}</strong></span>
+            )}
+            {account.order_day && (
+              <span className="text-muted-foreground">Order Day: <strong>{account.order_day}</strong></span>
+            )}
+            {account.week && (
+              <span className="text-muted-foreground">Week: <strong>{account.week}</strong></span>
+            )}
+            {account.d8_permit && (
+              <Badge variant="outline">D-8 Permit</Badge>
+            )}
+            {account.sale_tags && (
+              <Badge variant="outline">Sale Tags</Badge>
             )}
           </div>
 
@@ -416,6 +464,25 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
           defaultCity={account.city ?? undefined}
         />
       )}
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Account</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Permanently delete <strong>{account.display_name}</strong> and all its contacts and visits? This cannot be undone.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

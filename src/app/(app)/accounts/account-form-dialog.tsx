@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 
 const DELIVERY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const ORDER_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface AccountFormDialogProps {
   open: boolean;
@@ -44,6 +45,9 @@ export function AccountFormDialog({
   const [type, setType] = useState<string>(account?.type || 'wholesale');
   const [status, setStatus] = useState<string>(account?.status || 'customer');
   const [deliveryDay, setDeliveryDay] = useState<string>(account?.delivery_day || '');
+  const [orderDay, setOrderDay] = useState<string>(account?.order_day || '');
+  const [d8Permit, setD8Permit] = useState<boolean>(account?.d8_permit ?? false);
+  const [saleTags, setSaleTags] = useState<boolean>(account?.sale_tags ?? false);
   const [loading, setLoading] = useState(false);
   const isEditing = !!account;
 
@@ -82,6 +86,9 @@ export function AccountFormDialog({
       formData.set('type', type);
       formData.set('status', status);
       formData.set('delivery_day', deliveryDay);
+      formData.set('order_day', orderDay);
+      formData.set('d8_permit', String(d8Permit));
+      formData.set('sale_tags', String(saleTags));
 
       if (isEditing) {
         await updateAccount(account.id, formData);
@@ -157,177 +164,198 @@ export function AccountFormDialog({
             />
           </div>
 
-          {type === 'agency' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="agency_id">Agency ID *</Label>
-                <Input
-                  id="agency_id"
-                  name="agency_id"
-                  required
-                  defaultValue={account?.agency_id ?? ''}
-                  placeholder="State-assigned ID"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="prospect">Prospect</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Delivery Day</Label>
-                  <Select value={deliveryDay} onValueChange={setDeliveryDay}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DELIVERY_DAYS.map((day) => (
-                        <SelectItem key={day} value={day}>{day}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="warehouse">Warehouse</Label>
-                  <Input
-                    id="warehouse"
-                    name="warehouse"
-                    defaultValue={account?.warehouse ?? ''}
-                    placeholder="e.g., GPT"
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="agency_id">Agency ID</Label>
+              <Input
+                id="agency_id"
+                name="agency_id"
+                defaultValue={account?.agency_id ?? ''}
+                placeholder="State-assigned ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="permit_number">Permit Number</Label>
+              <Input
+                id="permit_number"
+                name="permit_number"
+                defaultValue={account?.permit_number ?? ''}
+                placeholder="State-assigned permit"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  defaultValue={account?.address ?? ''}
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              name="address"
+              defaultValue={account?.address ?? ''}
+            />
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    defaultValue={account?.city ?? ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP</Label>
-                  <Input
-                    id="zip"
-                    name="zip"
-                    defaultValue={account?.zip ?? ''}
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                name="city"
+                defaultValue={account?.city ?? ''}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="zip">ZIP</Label>
+              <Input
+                id="zip"
+                name="zip"
+                defaultValue={account?.zip ?? ''}
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  defaultValue={account?.phone ?? ''}
-                />
-              </div>
-            </>
-          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                defaultValue={account?.phone ?? ''}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="district">District</Label>
+              <Input
+                id="district"
+                name="district"
+                defaultValue={account?.district ?? ''}
+              />
+            </div>
+          </div>
 
-          {type === 'wholesale' && (
-            <>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="customer">Customer</SelectItem>
-                    <SelectItem value="prospect">Prospect</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Delivery Day</Label>
+              <Select value={deliveryDay} onValueChange={setDeliveryDay}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DELIVERY_DAYS.map((day) => (
+                    <SelectItem key={day} value={day}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="warehouse">Warehouse</Label>
+              <Input
+                id="warehouse"
+                name="warehouse"
+                defaultValue={account?.warehouse ?? ''}
+                placeholder="e.g., GPT"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="permit_number">Permit Number</Label>
-                <Input
-                  id="permit_number"
-                  name="permit_number"
-                  defaultValue={account?.permit_number ?? ''}
-                  placeholder="State-assigned permit"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="county">County</Label>
+              <Input
+                id="county"
+                name="county"
+                defaultValue={account?.county ?? ''}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wholesale">Wholesale</Label>
+              <Input
+                id="wholesale"
+                name="wholesale"
+                defaultValue={account?.wholesale ?? ''}
+                placeholder="Yes / -"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="linked_agency_name">Agency Name</Label>
-                <Input
-                  id="linked_agency_name"
-                  name="linked_agency_name"
-                  defaultValue={account?.linked_agency_name ?? ''}
-                  placeholder="Parent agency name"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Order Day</Label>
+              <Select value={orderDay} onValueChange={setOrderDay}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORDER_DAYS.map((day) => (
+                    <SelectItem key={day} value={day}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="week">Week</Label>
+              <Input
+                id="week"
+                name="week"
+                defaultValue={account?.week ?? ''}
+                placeholder="e.g., Weekly, 1, 2"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="linked_agency_id">Agency ID</Label>
-                <Input
-                  id="linked_agency_id"
-                  name="linked_agency_id"
-                  defaultValue={account?.linked_agency_id ?? ''}
-                  placeholder="Parent agency ID"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="linked_agency_name">Linked Agency Name</Label>
+              <Input
+                id="linked_agency_name"
+                name="linked_agency_name"
+                defaultValue={account?.linked_agency_name ?? ''}
+                placeholder="Parent agency name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="linked_agency_id">Linked Agency ID</Label>
+              <Input
+                id="linked_agency_id"
+                name="linked_agency_id"
+                defaultValue={account?.linked_agency_id ?? ''}
+                placeholder="Parent agency ID"
+              />
+            </div>
+          </div>
 
-              {/* Optional fields for wholesale */}
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  defaultValue={account?.address ?? ''}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    defaultValue={account?.city ?? ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP</Label>
-                  <Input
-                    id="zip"
-                    name="zip"
-                    defaultValue={account?.zip ?? ''}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    defaultValue={account?.phone ?? ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="district">District</Label>
-                  <Input
-                    id="district"
-                    name="district"
-                    defaultValue={account?.district ?? ''}
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={d8Permit}
+                onChange={(e) => setD8Permit(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              D-8 Permit
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={saleTags}
+                onChange={(e) => setSaleTags(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              Sale Tags
+            </label>
+          </div>
 
           {/* Optional contact (new accounts only) */}
           {!isEditing && (

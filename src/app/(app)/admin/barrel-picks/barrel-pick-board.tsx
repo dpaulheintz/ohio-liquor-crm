@@ -70,7 +70,7 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
       <div className="flex gap-3 overflow-x-auto pb-4">
         {visibleStages.map(stage => {
           const stagePicks = picks.filter(p => p.status === stage);
-          const total = stagePicks.reduce((s, p) => s + Number(p.total_value ?? 0), 0);
+          const total = stagePicks.filter(p => p.barrel_type !== 'TBD').reduce((s, p) => s + Number(p.total_value ?? 0), 0);
           const meta = STAGE_META[stage];
           const stageIdx = PIPELINE_STAGES.indexOf(stage);
 
@@ -125,9 +125,11 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
                           <span className="italic">No date</span>
                         )}
                         <span className="font-medium text-foreground">
-                          {p.total_value != null
-                            ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                            : '—'}
+                          {p.barrel_type === 'TBD'
+                            ? 'TBD'
+                            : p.total_value != null
+                              ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                              : '—'}
                         </span>
                       </div>
                       {p.rep?.full_name && (

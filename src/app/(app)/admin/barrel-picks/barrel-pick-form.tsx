@@ -46,20 +46,28 @@ export function BarrelPickFormDialog({ open, onOpenChange, reps, onSuccess }: Pr
   const [contactPhone, setContactPhone] = useState('');
   const [barrelType, setBarrelType] = useState<BarrelType>('Double Oaked');
   const [isHalf, setIsHalf] = useState(false);
-  const [price, setPrice] = useState(BARREL_DEFAULTS['Double Oaked'].price);
-  const [yield_, setYield] = useState(BARREL_DEFAULTS['Double Oaked'].fullYield);
+  const [price, setPrice] = useState<number>(BARREL_DEFAULTS['Double Oaked'].price!);
+  const [yield_, setYield] = useState<number>(BARREL_DEFAULTS['Double Oaked'].fullYield!);
   const [pickDate, setPickDate] = useState('');
   const [repId, setRepId] = useState('');
   const [notes, setNotes] = useState('');
 
+  const isTBD = barrelType === 'TBD';
+
   function handleBarrelChange(bt: BarrelType) {
     setBarrelType(bt);
     const d = BARREL_DEFAULTS[bt];
-    setPrice(d.price);
+    if (bt === 'TBD') {
+      setPrice(0);
+      setYield(0);
+      setIsHalf(false);
+      return;
+    }
+    setPrice(d.price ?? 0);
     if (isHalf && d.halfYield) {
       setYield(d.halfYield);
     } else {
-      setYield(d.fullYield);
+      setYield(d.fullYield ?? 0);
       if (!d.halfYield) setIsHalf(false);
     }
   }
@@ -67,11 +75,11 @@ export function BarrelPickFormDialog({ open, onOpenChange, reps, onSuccess }: Pr
   function handleHalfToggle(val: boolean) {
     setIsHalf(val);
     const d = BARREL_DEFAULTS[barrelType];
-    setYield(val && d.halfYield ? d.halfYield : d.fullYield);
+    setYield(val && d.halfYield ? d.halfYield : d.fullYield ?? 0);
   }
 
-  const canHalf = BARREL_DEFAULTS[barrelType].halfYield !== null;
-  const totalValue = yield_ * price;
+  const canHalf = !isTBD && BARREL_DEFAULTS[barrelType].halfYield !== null;
+  const totalValue = isTBD ? null : yield_ * price;
 
   function reset() {
     setCustomerName('');
@@ -81,8 +89,8 @@ export function BarrelPickFormDialog({ open, onOpenChange, reps, onSuccess }: Pr
     setContactPhone('');
     setBarrelType('Double Oaked');
     setIsHalf(false);
-    setPrice(BARREL_DEFAULTS['Double Oaked'].price);
-    setYield(BARREL_DEFAULTS['Double Oaked'].fullYield);
+    setPrice(BARREL_DEFAULTS['Double Oaked'].price!);
+    setYield(BARREL_DEFAULTS['Double Oaked'].fullYield!);
     setPickDate('');
     setRepId('');
     setNotes('');
@@ -100,9 +108,9 @@ export function BarrelPickFormDialog({ open, onOpenChange, reps, onSuccess }: Pr
         contact_email: contactEmail || undefined,
         contact_phone: contactPhone || undefined,
         barrel_type: barrelType,
-        is_half_barrel: canHalf ? isHalf : false,
-        price_per_bottle: price,
-        expected_yield: yield_,
+        is_half_barrel: isTBD ? false : (canHalf ? isHalf : false),
+        price_per_bottle: isTBD ? undefined : price,
+        expected_yield: isTBD ? undefined : yield_,
         pick_date: pickDate || undefined,
         rep_id: repId || undefined,
         initial_notes: notes || undefined,
@@ -163,34 +171,36 @@ export function BarrelPickFormDialog({ open, onOpenChange, reps, onSuccess }: Pr
             </label>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="bp-price">Price / Bottle ($)</Label>
-              <Input
-                id="bp-price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={e => setPrice(Number(e.target.value))}
-              />
+          {!isTBD && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="bp-price">Price / Bottle ($)</Label>
+                <Input
+                  id="bp-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={price}
+                  onChange={e => setPrice(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bp-yield">Expected Yield</Label>
+                <Input
+                  id="bp-yield"
+                  type="number"
+                  min="1"
+                  value={yield_}
+                  onChange={e => setYield(Number(e.target.value))}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="bp-yield">Expected Yield</Label>
-              <Input
-                id="bp-yield"
-                type="number"
-                min="1"
-                value={yield_}
-                onChange={e => setYield(Number(e.target.value))}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="rounded-lg bg-muted/50 border p-3 text-center">
             <p className="text-xs text-muted-foreground">Estimated Total Value</p>
             <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-              ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              {isTBD ? 'TBD' : `$${totalValue!.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
             </p>
           </div>
 

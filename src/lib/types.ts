@@ -31,6 +31,12 @@ export interface Account {
   phone: string | null;
   delivery_day: string | null;
   warehouse: string | null;
+  county: string | null;
+  wholesale: string | null;
+  order_day: string | null;
+  week: string | null;
+  d8_permit: boolean;
+  sale_tags: boolean;
   linked_agency_name: string | null;
   linked_agency_id: string | null;
   status: AccountStatus;

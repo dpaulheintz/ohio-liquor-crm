@@ -41,6 +41,7 @@ type Stats = {
   upcomingPicks: number;
   inProduction: number;
   pipeline: number;
+  tbdCount: number;
   ytdCompleted: number;
   ytdRevenue: number;
 };
@@ -76,7 +77,7 @@ export default function BarrelPicksPage() {
     } catch (err) {
       console.error('Failed to load barrel picks:', err);
       setError(err instanceof Error ? err.message : 'Failed to load');
-      setStats({ active: 0, prospects: 0, upcomingPicks: 0, inProduction: 0, pipeline: 0, ytdCompleted: 0, ytdRevenue: 0 });
+      setStats({ active: 0, prospects: 0, upcomingPicks: 0, inProduction: 0, pipeline: 0, tbdCount: 0, ytdCompleted: 0, ytdRevenue: 0 });
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export default function BarrelPicksPage() {
     { label: 'Prospects', value: String(stats.prospects), icon: Users },
     { label: 'Upcoming Picks', value: String(stats.upcomingPicks), icon: CalendarDays },
     { label: 'In Production', value: String(stats.inProduction), icon: Factory },
-    { label: 'Revenue Pipeline', value: fmt(stats.pipeline), icon: DollarSign, highlight: true },
+    { label: 'Revenue Pipeline', value: fmt(stats.pipeline), icon: DollarSign, highlight: true, sub: stats.tbdCount > 0 ? `${stats.tbdCount} pending type` : undefined },
     { label: 'YTD Completed', value: `${stats.ytdCompleted} / ${fmt(stats.ytdRevenue)}`, icon: Trophy },
   ];
 
@@ -118,7 +119,7 @@ export default function BarrelPicksPage() {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {statCards.map(({ label, value, icon: Icon, highlight }) => (
+        {statCards.map(({ label, value, icon: Icon, highlight, sub }) => (
           <Card key={label} className={cn(
             'hover:border-amber-400/60 transition-colors',
             highlight && 'border-amber-400/50 dark:border-amber-500/40'
@@ -130,6 +131,7 @@ export default function BarrelPicksPage() {
               <p className={cn('text-2xl font-bold mt-1', highlight && 'text-amber-600 dark:text-amber-400')}>
                 {value}
               </p>
+              {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
             </CardContent>
           </Card>
         ))}

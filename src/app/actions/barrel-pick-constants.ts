@@ -1,4 +1,4 @@
-export const BARREL_TYPES = ['Double Oaked', 'Double Double Oaked', 'Cigar Cask', 'Barrel Select'] as const;
+export const BARREL_TYPES = ['Double Oaked', 'Double Double Oaked', 'Cigar Cask', 'Barrel Select', 'TBD'] as const;
 export type BarrelType = typeof BARREL_TYPES[number];
 
 export const CUSTOMER_TYPES = ['Corporation', 'Influencer', 'Nonprofit', 'Wholesale Account', 'Other'] as const;
@@ -25,14 +25,15 @@ export const CHECKLIST_STEPS = [
 ] as const;
 
 export const BARREL_DEFAULTS: Record<BarrelType, {
-  price: number;
-  fullYield: number;
+  price: number | null;
+  fullYield: number | null;
   halfYield: number | null;
 }> = {
   'Double Oaked':        { price: 74.99,  fullYield: 280, halfYield: 140 },
   'Double Double Oaked': { price: 104.99, fullYield: 250, halfYield: 125 },
   'Cigar Cask':          { price: 104.99, fullYield: 250, halfYield: null },
   'Barrel Select':       { price: 114.99, fullYield: 250, halfYield: null },
+  'TBD':                 { price: null,   fullYield: null, halfYield: null },
 };
 
 export interface BarrelPick {

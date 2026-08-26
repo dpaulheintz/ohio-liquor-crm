@@ -77,7 +77,7 @@ export async function getBarrelPickStats() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('barrel_picks')
-    .select('id, status, total_value, pick_date, created_at, updated_at');
+    .select('id, status, total_value, pick_date, barrel_type, created_at, updated_at');
   if (error) throw error;
 
   const all = data ?? [];
@@ -92,7 +92,9 @@ export async function getBarrelPickStats() {
     r.status === 'scheduled' && r.pick_date && r.pick_date >= today && r.pick_date <= thirtyDaysOut
   );
   const inProd = all.filter(r => r.status === 'in_production');
-  const pipeline = active.reduce((s, r) => s + Number(r.total_value ?? 0), 0);
+  const activePriced = active.filter(r => r.barrel_type !== 'TBD');
+  const tbdCount = active.filter(r => r.barrel_type === 'TBD').length;
+  const pipeline = activePriced.reduce((s, r) => s + Number(r.total_value ?? 0), 0);
   const ytdCompleted = all.filter(r => r.status === 'completed' && r.updated_at >= yearStart);
   const ytdRevenue = ytdCompleted.reduce((s, r) => s + Number(r.total_value ?? 0), 0);
 
@@ -102,6 +104,7 @@ export async function getBarrelPickStats() {
     upcomingPicks: upcoming.length,
     inProduction: inProd.length,
     pipeline,
+    tbdCount,
     ytdCompleted: ytdCompleted.length,
     ytdRevenue,
   };
@@ -191,6 +194,7 @@ export async function updateBarrelPick(id: string, updates: {
   price_per_bottle?: number | null;
   expected_yield?: number | null;
   actual_yield?: number | null;
+  total_value?: number | null;
   status?: PipelineStage;
   pick_date?: string | null;
   barrel_selected?: string | null;
@@ -199,6 +203,14 @@ export async function updateBarrelPick(id: string, updates: {
   rep_id?: string | null;
 }) {
   const supabase = await createClient();
+
+  // Auto-compute total_value when price or yield are present
+  if (updates.price_per_bottle !== undefined || updates.expected_yield !== undefined) {
+    const price = updates.price_per_bottle ?? null;
+    const yield_ = updates.expected_yield ?? null;
+    updates.total_value = (price != null && yield_ != null) ? price * yield_ : null;
+  }
+
   const { error } = await supabase
     .from('barrel_picks')
     .update(updates)

@@ -227,9 +227,11 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
                   {p.actual_yield && <span className="text-muted-foreground ml-1">(actual)</span>}
                 </TableCell>
                 <TableCell className="font-medium tabular-nums">
-                  {p.total_value != null
-                    ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                    : '—'}
+                  {p.barrel_type === 'TBD'
+                    ? 'TBD'
+                    : p.total_value != null
+                      ? `$${Number(p.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                      : '—'}
                 </TableCell>
                 <TableCell className="text-xs">{p.rep?.full_name ?? '—'}</TableCell>
                 <TableCell className="text-xs tabular-nums">

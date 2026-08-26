@@ -186,9 +186,11 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
                   {pick.is_half_barrel && ' (Half)'}
                 </Badge>
                 <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                  {pick.total_value != null
-                    ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                    : '—'}
+                  {pick.barrel_type === 'TBD'
+                    ? 'TBD'
+                    : pick.total_value != null
+                      ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                      : '—'}
                 </span>
                 <Button variant="outline" size="sm" className="ml-auto" onClick={() => setEditing(!editing)}>
                   {editing ? <><X className="h-3.5 w-3.5 mr-1" /> Cancel</> : <><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</>}
@@ -275,9 +277,11 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Total Value</p>
                       <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">
-                        {pick.total_value != null
-                          ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                          : '—'}
+                        {pick.barrel_type === 'TBD'
+                          ? 'TBD'
+                          : pick.total_value != null
+                            ? `$${Number(pick.total_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                            : '—'}
                       </p>
                     </div>
                   </div>
@@ -486,7 +490,23 @@ function EditForm({
   const [barrelSelected, setBarrelSelected] = useState(pick.barrel_selected ?? '');
   const [repId, setRepId] = useState(pick.rep_id ?? '');
 
-  const canHalf = barrelType ? BARREL_DEFAULTS[barrelType as BarrelType]?.halfYield !== null : false;
+  const isTBD = barrelType === 'TBD';
+  const canHalf = barrelType && !isTBD ? BARREL_DEFAULTS[barrelType as BarrelType]?.halfYield !== null : false;
+
+  function handleBarrelTypeChange(newType: string) {
+    setBarrelType(newType);
+    const defaults = BARREL_DEFAULTS[newType as BarrelType];
+    if (!defaults || newType === 'TBD') {
+      setPrice(0);
+      setExpectedYield(0);
+      setIsHalf(false);
+      return;
+    }
+    setPrice(defaults.price ?? 0);
+    const canHalfNew = defaults.halfYield !== null;
+    if (!canHalfNew) setIsHalf(false);
+    setExpectedYield(isHalf && canHalfNew ? defaults.halfYield! : defaults.fullYield ?? 0);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -498,9 +518,9 @@ function EditForm({
         contact_email: contactEmail || null,
         contact_phone: contactPhone || null,
         barrel_type: barrelType ? barrelType as BarrelType : null,
-        is_half_barrel: barrelType ? (canHalf ? isHalf : false) : null,
-        price_per_bottle: price || null,
-        expected_yield: expectedYield || null,
+        is_half_barrel: barrelType && !isTBD ? (canHalf ? isHalf : false) : null,
+        price_per_bottle: isTBD ? null : (price || null),
+        expected_yield: isTBD ? null : (expectedYield || null),
         actual_yield: actualYield !== '' ? Number(actualYield) : null,
         pick_date: pickDate || null,
         bottling_date: bottlingDate || null,
@@ -542,7 +562,7 @@ function EditForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Barrel Type</Label>
-          <Select value={barrelType} onValueChange={setBarrelType}>
+          <Select value={barrelType} onValueChange={handleBarrelTypeChange}>
             <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               {BARREL_TYPES.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
@@ -560,27 +580,32 @@ function EditForm({
         </div>
       </div>
 
-      {canHalf && (
+      {canHalf && !isTBD && (
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={isHalf} onChange={e => setIsHalf(e.target.checked)} className="rounded border-gray-300" />
           <span className="text-sm">Half Barrel</span>
         </label>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Price/Bottle</Label>
-          <Input type="number" step="0.01" min="0" value={price} onChange={e => setPrice(Number(e.target.value))} className="h-8 text-xs" />
+      {!isTBD && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Price/Bottle</Label>
+            <Input type="number" step="0.01" min="0" value={price} onChange={e => setPrice(Number(e.target.value))} className="h-8 text-xs" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Expected Yield</Label>
+            <Input type="number" min="1" value={expectedYield} onChange={e => setExpectedYield(Number(e.target.value))} className="h-8 text-xs" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Actual Yield</Label>
+            <Input type="number" min="0" value={actualYield} onChange={e => setActualYield(e.target.value === '' ? '' : Number(e.target.value))} className="h-8 text-xs" placeholder="—" />
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Expected Yield</Label>
-          <Input type="number" min="1" value={expectedYield} onChange={e => setExpectedYield(Number(e.target.value))} className="h-8 text-xs" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Actual Yield</Label>
-          <Input type="number" min="0" value={actualYield} onChange={e => setActualYield(e.target.value === '' ? '' : Number(e.target.value))} className="h-8 text-xs" placeholder="—" />
-        </div>
-      </div>
+      )}
+      {isTBD && (
+        <p className="text-xs text-muted-foreground italic">Price, yield, and total value will be set when barrel type is selected.</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
