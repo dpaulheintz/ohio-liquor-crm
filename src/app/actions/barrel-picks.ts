@@ -194,7 +194,6 @@ export async function updateBarrelPick(id: string, updates: {
   price_per_bottle?: number | null;
   expected_yield?: number | null;
   actual_yield?: number | null;
-  total_value?: number | null;
   status?: PipelineStage;
   pick_date?: string | null;
   barrel_selected?: string | null;
@@ -203,14 +202,6 @@ export async function updateBarrelPick(id: string, updates: {
   rep_id?: string | null;
 }) {
   const supabase = await createClient();
-
-  // Auto-compute total_value when price or yield are present
-  if (updates.price_per_bottle !== undefined || updates.expected_yield !== undefined) {
-    const price = updates.price_per_bottle ?? null;
-    const yield_ = updates.expected_yield ?? null;
-    updates.total_value = (price != null && yield_ != null) ? price * yield_ : null;
-  }
-
   const { error } = await supabase
     .from('barrel_picks')
     .update(updates)

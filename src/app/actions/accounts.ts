@@ -148,7 +148,7 @@ export async function getAccount(id: string) {
 }
 
 const accountSchema = z.object({
-  type: z.enum(['agency', 'wholesale']),
+  type: z.string().min(1),
   display_name: z.string().min(1, 'Display name is required').max(500),
   legal_name: z.string().max(500).optional(),
   agency_id: z.string().max(100).optional(),
@@ -168,7 +168,7 @@ const accountSchema = z.object({
   sale_tags: z.boolean().optional(),
   linked_agency_name: z.string().max(500).optional(),
   linked_agency_id: z.string().max(100).optional(),
-  status: z.enum(['prospect', 'customer']).optional(),
+  status: z.string().optional(),
 });
 
 /** Capitalize the first letter of each word (proper-name casing). */
@@ -225,7 +225,7 @@ function parseAccountFormData(formData: FormData) {
     sale_tags: parsed.sale_tags ?? false,
     linked_agency_name: parsed.linked_agency_name || null,
     linked_agency_id: parsed.linked_agency_id || null,
-    status: parsed.status ?? (parsed.type === 'wholesale' ? 'customer' : undefined),
+    status: parsed.status?.toLowerCase() ?? (parsed.type === 'wholesale' || parsed.type === 'Bar/Restaurant' ? 'customer' : undefined),
   };
 }
 
