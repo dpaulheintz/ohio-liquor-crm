@@ -25,9 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, ArrowUpDown } from 'lucide-react';
+import { Download, ArrowUpDown, Tag, DollarSign } from 'lucide-react';
+import { toggleBarrelPickFlag } from '@/app/actions/barrel-picks';
 import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { toast } from 'sonner';
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   prospect: 'Prospect',
@@ -61,7 +63,7 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-export function BarrelPickList({ picks, reps, onSelect }: Props) {
+export function BarrelPickList({ picks, reps, onRefresh, onSelect }: Props) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [barrelFilter, setBarrelFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -110,13 +112,15 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
   }
 
   function exportCsv() {
-    const headers = ['Customer', 'Type', 'Barrel Type', 'Half', 'Status', 'Pick Date', 'Expected Yield', 'Actual Yield', 'Price/Bottle', 'Total Value', 'Rep', 'Days in Stage'];
+    const headers = ['Customer', 'Type', 'Barrel Type', 'Half', 'Status', 'Labels Ordered', 'Paid', 'Pick Date', 'Expected Yield', 'Actual Yield', 'Price/Bottle', 'Total Value', 'Rep', 'Days in Stage'];
     const rows = sorted.map(p => [
       p.customer_name,
       p.customer_type,
       p.barrel_type ?? '',
       p.is_half_barrel ? 'Yes' : p.is_half_barrel === false ? 'No' : '',
       STAGE_LABELS[p.status as PipelineStage],
+      p.labels_ordered ? 'Yes' : 'No',
+      p.paid ? 'Yes' : 'No',
       p.pick_date ?? '',
       p.expected_yield ?? '',
       p.actual_yield ?? '',
@@ -188,6 +192,7 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
               <SortHeader k="type">Type</SortHeader>
               <SortHeader k="barrel">Barrel</SortHeader>
               <SortHeader k="status">Status</SortHeader>
+              <TableHead>Flags</TableHead>
               <SortHeader k="pick_date">Pick Date</SortHeader>
               <SortHeader k="yield">Yield</SortHeader>
               <SortHeader k="value">Total Value</SortHeader>
@@ -198,7 +203,7 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   No barrel picks match the current filters
                 </TableCell>
               </TableRow>
@@ -218,6 +223,44 @@ export function BarrelPickList({ picks, reps, onSelect }: Props) {
                   <Badge className={cn('text-[10px]', STAGE_BADGE_CLASS[p.status as PipelineStage])}>
                     {STAGE_LABELS[p.status as PipelineStage]}
                   </Badge>
+                </TableCell>
+                <TableCell onClick={e => e.stopPropagation()}>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await toggleBarrelPickFlag(p.id, 'labels_ordered', !p.labels_ordered);
+                          onRefresh();
+                        } catch { toast.error('Failed to update'); }
+                      }}
+                      title={p.labels_ordered ? 'Labels ordered' : 'Click to mark labels ordered'}
+                      className={cn(
+                        'p-1 rounded transition-colors',
+                        p.labels_ordered
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-muted-foreground/30 hover:text-muted-foreground'
+                      )}
+                    >
+                      <Tag className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await toggleBarrelPickFlag(p.id, 'paid', !p.paid);
+                          onRefresh();
+                        } catch { toast.error('Failed to update'); }
+                      }}
+                      title={p.paid ? 'Paid' : 'Unpaid — click to mark paid'}
+                      className={cn(
+                        'p-1 rounded transition-colors',
+                        p.paid
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-400 dark:text-red-500 hover:text-red-500'
+                      )}
+                    >
+                      <DollarSign className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </TableCell>
                 <TableCell className="text-xs">
                   {p.pick_date ? format(parseISO(p.pick_date), 'MMM d, yyyy') : '—'}

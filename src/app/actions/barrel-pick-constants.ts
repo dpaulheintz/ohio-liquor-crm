@@ -54,6 +54,8 @@ export interface BarrelPick {
   barrel_selected: string | null;
   bottling_date: string | null;
   delivery_date: string | null;
+  labels_ordered: boolean;
+  paid: boolean;
   rep_id: string | null;
   created_by: string;
   created_at: string;

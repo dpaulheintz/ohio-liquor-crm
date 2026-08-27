@@ -15,6 +15,7 @@ const LIST_SELECT = `
   id, customer_name, customer_type, contact_name, contact_email, contact_phone,
   barrel_type, is_half_barrel, price_per_bottle, expected_yield, actual_yield,
   total_value, status, pick_date, barrel_selected, bottling_date, delivery_date,
+  labels_ordered, paid,
   rep_id, created_by, created_at, updated_at,
   rep:profiles!barrel_picks_rep_id_fkey(id, full_name, email),
   creator:profiles!barrel_picks_created_by_fkey(id, full_name)
@@ -212,6 +213,16 @@ export async function updateBarrelPick(id: string, updates: {
 
 export async function updateBarrelPickStatus(id: string, status: PipelineStage) {
   return updateBarrelPick(id, { status });
+}
+
+export async function toggleBarrelPickFlag(id: string, flag: 'labels_ordered' | 'paid', value: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('barrel_picks')
+    .update({ [flag]: value })
+    .eq('id', id);
+  if (error) throw error;
+  revalidatePath('/admin/barrel-picks');
 }
 
 // ─── Checklist ──────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import {
   type PipelineStage,
   PIPELINE_STAGES,
 } from '@/app/actions/barrel-pick-constants';
-import { updateBarrelPickStatus } from '@/app/actions/barrel-picks';
+import { updateBarrelPickStatus, toggleBarrelPickFlag } from '@/app/actions/barrel-picks';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -135,6 +135,42 @@ export function BarrelPickBoard({ picks, onRefresh, onSelect }: Props) {
                       {p.rep?.full_name && (
                         <p className="text-[10px] text-muted-foreground mt-1 truncate">{p.rep.full_name}</p>
                       )}
+
+                      {/* Status badges */}
+                      <div className="flex gap-1 mt-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await toggleBarrelPickFlag(p.id, 'labels_ordered', !p.labels_ordered);
+                              onRefresh();
+                            } catch { toast.error('Failed to update'); }
+                          }}
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded-full border transition-colors',
+                            p.labels_ordered
+                              ? 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300'
+                              : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
+                          )}
+                        >
+                          {p.labels_ordered ? '✓ Labels Ordered' : 'Labels'}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await toggleBarrelPickFlag(p.id, 'paid', !p.paid);
+                              onRefresh();
+                            } catch { toast.error('Failed to update'); }
+                          }}
+                          className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded-full border transition-colors',
+                            p.paid
+                              ? 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300'
+                              : 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400'
+                          )}
+                        >
+                          {p.paid ? '✓ Paid' : 'Unpaid'}
+                        </button>
+                      </div>
 
                       {/* Quick move buttons */}
                       <div className="flex gap-1 mt-2 border-t pt-2" onClick={e => e.stopPropagation()}>

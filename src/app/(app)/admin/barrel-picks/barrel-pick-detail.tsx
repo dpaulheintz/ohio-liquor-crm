@@ -34,6 +34,7 @@ import {
   updateBarrelPick,
   updateChecklistItem,
   addBarrelPickNote,
+  toggleBarrelPickFlag,
 } from '@/app/actions/barrel-picks';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -185,6 +186,40 @@ export function BarrelPickDetail({ pickId, open, onClose, reps, onRefresh }: Pro
                   {pick.barrel_type ?? 'TBD'}
                   {pick.is_half_barrel && ' (Half)'}
                 </Badge>
+                <button
+                  onClick={async () => {
+                    try {
+                      await toggleBarrelPickFlag(pick.id, 'labels_ordered', !pick.labels_ordered);
+                      fetchPick();
+                      onRefresh();
+                    } catch { toast.error('Failed to update'); }
+                  }}
+                  className={cn(
+                    'text-xs px-2 py-0.5 rounded-full border transition-colors',
+                    pick.labels_ordered
+                      ? 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {pick.labels_ordered ? '✓ Labels Ordered' : 'Labels'}
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await toggleBarrelPickFlag(pick.id, 'paid', !pick.paid);
+                      fetchPick();
+                      onRefresh();
+                    } catch { toast.error('Failed to update'); }
+                  }}
+                  className={cn(
+                    'text-xs px-2 py-0.5 rounded-full border transition-colors',
+                    pick.paid
+                      ? 'bg-green-100 border-green-300 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300'
+                      : 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950 dark:border-red-800 dark:text-red-400'
+                  )}
+                >
+                  {pick.paid ? '✓ Paid' : 'Unpaid'}
+                </button>
                 <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
                   {pick.barrel_type === 'TBD'
                     ? 'TBD'
