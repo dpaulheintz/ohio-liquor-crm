@@ -262,33 +262,37 @@ export async function createAccount(formData: FormData, ownerRepId?: string) {
   return data;
 }
 
-export async function updateAccount(id: string, formData: FormData) {
-  const supabase = await createClient();
+export async function updateAccount(id: string, formData: FormData): Promise<{ error?: string }> {
+  try {
+    const supabase = await createClient();
 
-  // Fetch existing account to ensure type isn't changed
-  const { data: existing, error: fetchErr } = await supabase
-    .from('accounts')
-    .select('type')
-    .eq('id', id)
-    .single();
-  if (fetchErr) throw fetchErr;
+    const { data: existing, error: fetchErr } = await supabase
+      .from('accounts')
+      .select('type')
+      .eq('id', id)
+      .single();
+    if (fetchErr) return { error: `Fetch failed: ${fetchErr.message}` };
 
-  const updates = parseAccountFormData(formData);
+    const updates = parseAccountFormData(formData);
 
-  // Prevent type change on update
-  if (existing && updates.type !== existing.type) {
-    throw new Error('Cannot change account type after creation');
+    if (existing && updates.type !== existing.type) {
+      return { error: 'Cannot change account type after creation' };
+    }
+
+    const { error } = await supabase
+      .from('accounts')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) return { error: `DB update failed: ${error.message} (${error.code})` };
+
+    revalidatePath(`/accounts/${id}`);
+    revalidatePath('/accounts');
+    return {};
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: `Unexpected: ${msg}` };
   }
-
-  const { error } = await supabase
-    .from('accounts')
-    .update(updates)
-    .eq('id', id);
-
-  if (error) throw error;
-
-  revalidatePath(`/accounts/${id}`);
-  revalidatePath('/accounts');
 }
 
 export async function claimAccount(accountId: string) {

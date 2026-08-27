@@ -91,7 +91,11 @@ export function AccountFormDialog({
       formData.set('sale_tags', String(saleTags));
 
       if (isEditing) {
-        await updateAccount(account.id, formData);
+        const result = await updateAccount(account.id, formData);
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
         toast.success('Account updated');
       } else {
         const newAccount = await createAccount(formData);
@@ -123,8 +127,9 @@ export function AccountFormDialog({
       onOpenChange(false);
       onSuccess();
     } catch (err) {
-      void err;
-      toast.error(isEditing ? 'Failed to update account' : 'Failed to create account');
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Account save error:', msg);
+      toast.error(msg || (isEditing ? 'Failed to update account' : 'Failed to create account'));
     } finally {
       setLoading(false);
     }
