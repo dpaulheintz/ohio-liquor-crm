@@ -12,6 +12,7 @@ export interface Profile {
   full_name: string | null;
   role: UserRole;
   is_approved: boolean;
+  visible_pages: string[] | null;
   created_at: string;
   updated_at: string;
 }

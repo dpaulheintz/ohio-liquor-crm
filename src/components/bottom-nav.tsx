@@ -17,7 +17,11 @@ const adminItem = { href: '/admin', label: 'Admin', icon: Shield };
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { isAdmin } = useUser();
+  const { profile, isAdmin } = useUser();
+  const visiblePages = profile?.visible_pages;
+
+  // Restricted users get no bottom nav (sidebar handles their pages)
+  if (visiblePages && visiblePages.length > 0) return null;
 
   const items = isAdmin ? [...navItems, adminItem] : navItems;
 

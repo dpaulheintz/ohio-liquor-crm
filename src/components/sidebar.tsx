@@ -56,10 +56,13 @@ const adminItems = [
   { href: '/admin/users', label: 'Users', icon: UserCog },
 ];
 
+const allItems = [...navItems, ...adminItems];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, isAdmin } = useUser();
   const showEos = isEosAdmin(profile?.email);
+  const visiblePages = profile?.visible_pages;
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -78,37 +81,37 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-
-        {isAdmin && (
-          <>
-            <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-              Admin
-            </div>
-            {adminItems.map((item) => {
+        {visiblePages ? (
+          // Restricted user — show only their allowed pages
+          allItems
+            .filter((item) => visiblePages.some(vp => item.href === vp || item.href.startsWith(vp + '/')))
+            .map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })
+        ) : (
+          <>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === '/'
+                  ? pathname === '/'
+                  : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -125,6 +128,33 @@ export function Sidebar() {
                 </Link>
               );
             })}
+
+            {isAdmin && (
+              <>
+                <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                  Admin
+                </div>
+                {adminItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
         {showEos && (

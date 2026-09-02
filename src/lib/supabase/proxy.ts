@@ -57,7 +57,7 @@ export async function updateSession(request: NextRequest) {
   if (user && !isPublicRoute && path !== '/pending-approval') {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, visible_pages')
       .eq('id', user.id)
       .single();
 
@@ -67,11 +67,23 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Block non-admin users from admin routes
-    if (path.startsWith('/admin') && profile?.role !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
+    const visiblePages: string[] | null = profile?.visible_pages ?? null;
+
+    if (visiblePages && visiblePages.length > 0) {
+      // Restricted user — only allow their visible pages
+      const allowed = visiblePages.some(vp => path === vp || path.startsWith(vp + '/'));
+      if (!allowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = visiblePages[0];
+        return NextResponse.redirect(url);
+      }
+    } else {
+      // Standard access — block non-admin users from admin routes
+      if (path.startsWith('/admin') && profile?.role !== 'admin') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
     }
   }
 
