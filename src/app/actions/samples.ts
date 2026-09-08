@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ export async function submitSamplePull(input: SamplePullInput): Promise<void> {
 // ─── Admin: fetch all sample pulls with items ─────────────────────────────────
 
 export async function getSamplePulls(): Promise<SamplePullRow[]> {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('sample_pulls')

@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,7 +129,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   // One RPC call to get_dashboard_data() — a SECURITY DEFINER Postgres function
   // that aggregates everything server-side and returns a single JSON object.
   // This completely avoids the PostgREST max_rows cap (21k raw rows → one blob).
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase.rpc('get_dashboard_data');
   if (error) throw new Error(`Dashboard RPC failed: ${error.message}`);
