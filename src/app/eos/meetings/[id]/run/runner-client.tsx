@@ -24,8 +24,8 @@ import {
   upsertPersonRatingAction,
   createOpportunityInMeetingAction,
 } from '@/app/eos/meetings/actions';
-import { toggleTodoAction } from '@/app/eos/todos/actions';
-import { updateOpportunityStatusAction, reorderOpportunitiesAction } from '@/app/eos/opportunities/actions';
+import { toggleTodoAction, updateTodoAction, type TodoFormData } from '@/app/eos/todos/actions';
+import { updateOpportunityAction, updateOpportunityStatusAction, reorderOpportunitiesAction, type OpportunityFormData } from '@/app/eos/opportunities/actions';
 import { SortableList, reorderFullFromSubset } from '@/components/eos/SortableList';
 import { cn } from '@/lib/utils';
 
@@ -132,7 +132,12 @@ export default function RunnerClient({
   const [meetingTodos, setMeetingTodos] = useState<Todo[]>([]);
   // Ids of to-dos completed while this meeting is open → "Completed This Meeting".
   const [completedThisMeeting, setCompletedThisMeeting] = useState<Set<string>>(new Set());
+  // Ids of opportunities solved/on_hold during this meeting.
+  const [completedOppIds, setCompletedOppIds] = useState<Set<string>>(new Set());
   const [showPrevCompleted, setShowPrevCompleted] = useState(false);
+  // ── Editing state ──
+  const [editingRunnerTodo, setEditingRunnerTodo] = useState<Todo | null>(null);
+  const [editingRunnerOpp, setEditingRunnerOpp] = useState<Opportunity | null>(null);
 
   // Re-sync local copies whenever the server gives us fresh props. This is the
   // path items created via SmartAddButton take: its modals call a *different*
@@ -171,7 +176,30 @@ export default function RunnerClient({
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const oppChannel = supabase
+      .channel('eos-opps-runner')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eos_opportunities' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const o = payload.new as Opportunity;
+          setOpportunities(prev => (prev.some(x => x.id === o.id) ? prev : [...prev, o]));
+        } else if (payload.eventType === 'UPDATE') {
+          const o = payload.new as Opportunity;
+          setOpportunities(prev => {
+            const has = prev.some(x => x.id === o.id);
+            return has ? prev.map(x => (x.id === o.id ? { ...x, ...o } : x)) : [...prev, o];
+          });
+          if (o.status === 'solved' || o.status === 'on_hold') {
+            setCompletedOppIds(prev => new Set(prev).add(o.id));
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const oldId = (payload.old as { id?: string }).id;
+          if (oldId) setOpportunities(prev => prev.filter(x => x.id !== oldId));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); supabase.removeChannel(oppChannel); };
   }, []);
 
   // ── UI state ──
@@ -253,6 +281,7 @@ export default function RunnerClient({
 
   // IDS list keeps the manual (sort_order) order so drag-to-reorder persists.
   const openOpps = opportunities.filter(o => o.status === 'open' || o.status === 'in_progress');
+  const completedMeetingOpps = opportunities.filter(o => completedOppIds.has(o.id) && (o.status === 'solved' || o.status === 'on_hold'));
   const selectedOpp = opportunities.find(o => o.id === selectedOppId) ?? null;
 
   // ── Rating summary ──
@@ -352,7 +381,37 @@ export default function RunnerClient({
 
   async function handleOppStatus(id: string, status: string) {
     setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status: status as Opportunity['status'] } : o));
+    if (status === 'solved' || status === 'on_hold') {
+      setCompletedOppIds(prev => new Set(prev).add(id));
+    } else {
+      setCompletedOppIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }
     try { await updateOpportunityStatusAction(id, status); } catch { /* best effort */ }
+  }
+
+  async function handleUpdateRunnerTodo(data: TodoFormData) {
+    if (!editingRunnerTodo) return;
+    const id = editingRunnerTodo.id;
+    setTodos(prev => prev.map(t =>
+      t.id === id
+        ? { ...t, title: data.title.trim(), owner_name: data.owner_name.trim() || null, owner_email: data.owner_email.trim() || null, due_date: data.due_date || null }
+        : t,
+    ));
+    setEditingRunnerTodo(null);
+    try { await updateTodoAction(id, data); } catch { /* best effort */ }
+  }
+
+  async function handleUpdateRunnerOpp(data: OpportunityFormData) {
+    if (!editingRunnerOpp) return;
+    const id = editingRunnerOpp.id;
+    setOpportunities(prev => prev.map(o =>
+      o.id === id
+        ? { ...o, ...data, title: data.title.trim(), term: data.term as Opportunity['term'], status: data.status as Opportunity['status'] }
+        : o,
+    ));
+    setEditingRunnerOpp(null);
+    if (selectedOppId === id) setSelectedOppId(id);
+    try { await updateOpportunityAction(id, data); } catch { /* best effort */ }
   }
 
   async function handlePersonRating(email: string, name: string, rating: number) {
@@ -558,9 +617,15 @@ export default function RunnerClient({
                       title="Mark complete"
                     />
                     <span className="flex-1 text-sm text-gray-900">{t.title}</span>
+                    <button
+                      onClick={() => setEditingRunnerTodo(t)}
+                      className="text-[11px] text-gray-400 hover:text-gray-900 transition-colors shrink-0"
+                    >
+                      Edit
+                    </button>
                     {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
                     {t.due_date && (
-                      <span className={cn('text-xs shrink-0', overdue ? 'text-red-600' : 'text-gray-400')}>{fmtShortDate(t.due_date)}</span>
+                      <span className={cn('text-xs shrink-0', overdue ? 'text-red-600 font-medium' : 'text-gray-400')}>{fmtShortDate(t.due_date)}</span>
                     )}
                     {overdue && (
                       <button
@@ -594,7 +659,14 @@ export default function RunnerClient({
                     <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </button>
                   <span className="flex-1 text-sm line-through text-gray-400">{t.title}</span>
+                  <button
+                    onClick={() => setEditingRunnerTodo(t)}
+                    className="text-[11px] text-gray-400 hover:text-gray-900 transition-colors shrink-0"
+                  >
+                    Edit
+                  </button>
                   {t.owner_name && <span className="text-xs text-gray-400 shrink-0">{t.owner_name}</span>}
+                  {t.due_date && <span className="text-xs text-gray-400 shrink-0">{fmtShortDate(t.due_date)}</span>}
                 </div>
               ))}
             </div>
@@ -759,7 +831,7 @@ export default function RunnerClient({
                     >
                       <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
                       <span className="flex-1 text-sm text-gray-900 min-w-0 truncate">{opp.title}</span>
-                      {opp.creator_name && <span className="text-[10px] text-gray-400 shrink-0 hidden sm:inline">{opp.creator_name}</span>}
+                      <span className="text-[10px] text-gray-400 shrink-0 hidden sm:inline">{opp.owner_name || 'Unassigned'}</span>
                       <span className="text-[10px] uppercase tracking-wider text-gray-400 shrink-0">{opp.term}-term</span>
                     </button>
                   </div>
@@ -768,6 +840,34 @@ export default function RunnerClient({
             />
             {openOpps.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No open issues.</p>}
           </div>
+
+          {/* Completed This Meeting */}
+          {completedMeetingOpps.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-green-700 mb-2">
+                Completed This Meeting ({completedMeetingOpps.length})
+              </h3>
+              <div className="space-y-1">
+                {completedMeetingOpps.map(opp => (
+                  <div key={opp.id} className="flex items-center gap-2 px-2 py-2.5 rounded-lg bg-green-50/60 transition-colors">
+                    <span className="w-4 h-4 rounded-full bg-green-600 flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </span>
+                    <span className="flex-1 text-sm text-gray-400 line-through truncate">{opp.title}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 shrink-0">
+                      {opp.status === 'solved' ? 'Solved' : 'On Hold'}
+                    </span>
+                    <button
+                      onClick={() => handleOppStatus(opp.id, 'open')}
+                      className="text-[11px] px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-500 font-medium transition-colors shrink-0"
+                    >
+                      Reopen
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick add todo from IDS */}
           <div className="mt-4 border-t border-gray-200 pt-4">
@@ -796,13 +896,20 @@ export default function RunnerClient({
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           {selectedOpp ? (
             <div className="space-y-4">
-              <h3 className="text-base font-semibold text-gray-900">{selectedOpp.title}</h3>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-base font-semibold text-gray-900">{selectedOpp.title}</h3>
+                <button
+                  onClick={() => setEditingRunnerOpp(selectedOpp)}
+                  className="text-xs text-gray-400 hover:text-gray-900 transition-colors shrink-0 mt-0.5"
+                >
+                  Edit
+                </button>
+              </div>
               {selectedOpp.description && <p className="text-sm text-gray-500 leading-relaxed">{selectedOpp.description}</p>}
               <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                {selectedOpp.owner_name && <span>{selectedOpp.owner_name}</span>}
+                <span>{selectedOpp.owner_name || 'Unassigned'}</span>
                 <span className="uppercase">{selectedOpp.priority ?? 'medium'} priority</span>
                 <span>{selectedOpp.term}-term</span>
-                {selectedOpp.creator_name && <span className="text-gray-400">Added by {selectedOpp.creator_name}</span>}
               </div>
               <div className="border-t border-gray-200 pt-3 space-y-2">
                 <p className="text-xs font-medium text-gray-500">Change Status</p>
@@ -1039,6 +1146,134 @@ export default function RunnerClient({
 
       {/* ── SmartAddButton (above runner at z-[55]) ── */}
       <SmartAddButton pageContext="meeting" className="z-[55]" />
+
+      {/* ── Edit To-Do Modal ── */}
+      {editingRunnerTodo && (() => {
+        const t = editingRunnerTodo;
+        return (
+          <div className="fixed inset-0 z-[60] bg-gray-50/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Edit To-Do</h2>
+                <button onClick={() => setEditingRunnerTodo(null)} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  await handleUpdateRunnerTodo({
+                    title: fd.get('title') as string,
+                    owner_name: fd.get('owner_name') as string,
+                    owner_email: EOS_TEAM_MEMBERS.find(m => m.name === fd.get('owner_name'))?.email ?? '',
+                    due_date: fd.get('due_date') as string,
+                  });
+                }}
+                className="px-6 py-5 space-y-4"
+              >
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Task *</label>
+                  <input autoFocus name="title" type="text" defaultValue={t.title} className={cn(inputCls, 'w-full')} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Owner</label>
+                    <select name="owner_name" defaultValue={t.owner_name ?? ''} className={cn(inputCls, 'w-full')}>
+                      <option value="">— Owner —</option>
+                      {EOS_TEAM_MEMBERS.map(m => <option key={m.email} value={m.name}>{m.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Due Date</label>
+                    <input name="due_date" type="date" defaultValue={t.due_date ?? ''} className={cn(inputCls, 'w-full')} />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button type="button" onClick={() => setEditingRunnerTodo(null)} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Edit Opportunity Modal ── */}
+      {editingRunnerOpp && (() => {
+        const o = editingRunnerOpp;
+        return (
+          <div className="fixed inset-0 z-[60] bg-gray-50/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-lg">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Edit Opportunity</h2>
+                <button onClick={() => setEditingRunnerOpp(null)} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  await handleUpdateRunnerOpp({
+                    title: fd.get('title') as string,
+                    description: fd.get('description') as string,
+                    priority: fd.get('priority') as string,
+                    owner_name: fd.get('owner_name') as string,
+                    owner_email: EOS_TEAM_MEMBERS.find(m => m.name === fd.get('owner_name'))?.email ?? '',
+                    term: fd.get('term') as string,
+                    status: fd.get('status') as string,
+                  });
+                }}
+                className="px-6 py-5 space-y-4"
+              >
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Title *</label>
+                  <input autoFocus name="title" type="text" defaultValue={o.title} className={cn(inputCls, 'w-full')} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Priority</label>
+                    <select name="priority" defaultValue={o.priority ?? 'medium'} className={cn(inputCls, 'w-full')}>
+                      <option value="critical">Critical</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Status</label>
+                    <select name="status" defaultValue={o.status} className={cn(inputCls, 'w-full')}>
+                      <option value="open">Open</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="solved">Solved</option>
+                      <option value="on_hold">On Hold</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1.5 block">Term</label>
+                    <select name="term" defaultValue={o.term} className={cn(inputCls, 'w-full')}>
+                      <option value="short">Short</option>
+                      <option value="long">Long</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Owner</label>
+                  <select name="owner_name" defaultValue={o.owner_name ?? ''} className={cn(inputCls, 'w-full')}>
+                    <option value="">— Owner —</option>
+                    {EOS_TEAM_MEMBERS.map(m => <option key={m.email} value={m.name}>{m.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">Description</label>
+                  <textarea name="description" defaultValue={o.description ?? ''} className={cn(inputCls, 'w-full resize-none')} rows={3} placeholder="More context…" />
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button type="button" onClick={() => setEditingRunnerOpp(null)} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-900 text-sm hover:bg-gray-100 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── End Meeting Modal ── */}
       {showEndModal && (

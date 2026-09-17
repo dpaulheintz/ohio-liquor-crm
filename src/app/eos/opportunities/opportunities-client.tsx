@@ -321,8 +321,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{opp.description}</p>
                   )}
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    {opp.owner_name && <span className="text-xs text-gray-400">{opp.owner_name}</span>}
-                    {opp.creator_name && <span className="text-xs text-gray-400">Added by {opp.creator_name}</span>}
+                    <span className="text-xs text-gray-400">{opp.owner_name || 'Unassigned'}</span>
                     <span className="text-xs text-gray-400">{fmtDate(opp.created_at)}</span>
                     {archived ? (
                       <span className="text-xs text-gray-400">Solved {fmtSolvedDate(opp.updated_at)}</span>
