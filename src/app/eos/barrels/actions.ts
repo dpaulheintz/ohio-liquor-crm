@@ -4,6 +4,7 @@ import {
   createBarrel,
   updateBarrel,
   deleteBarrel,
+  archiveBarrel,
   createMilestone,
   updateMilestone,
   deleteMilestone,
@@ -50,6 +51,10 @@ export async function updateBarrelAction(id: string, data: BarrelFormData): Prom
 
 export async function deleteBarrelAction(id: string): Promise<void> {
   await deleteBarrel(id);
+}
+
+export async function archiveBarrelAction(id: string, archived: boolean): Promise<void> {
+  await archiveBarrel(id, archived);
 }
 
 export async function addMilestoneAction(

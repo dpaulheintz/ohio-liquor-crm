@@ -12,6 +12,7 @@ import type { Headline } from '@/lib/eos/headlines';
 import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 import ScorecardGrid from '@/components/eos/ScorecardGrid';
 import BarrelsListView from '@/components/eos/BarrelsListView';
+import BarrelDetailPanel from '@/components/eos/BarrelDetailPanel';
 import SmartAddButton from '@/components/eos/SmartAddButton';
 import {
   saveSectionNoteAction,
@@ -138,6 +139,7 @@ export default function RunnerClient({
   // ── Editing state ──
   const [editingRunnerTodo, setEditingRunnerTodo] = useState<Todo | null>(null);
   const [editingRunnerOpp, setEditingRunnerOpp] = useState<Opportunity | null>(null);
+  const [selectedRunnerBarrel, setSelectedRunnerBarrel] = useState<BarrelWithMilestones | null>(null);
 
   // Re-sync local copies whenever the server gives us fresh props. This is the
   // path items created via SmartAddButton take: its modals call a *different*
@@ -519,12 +521,27 @@ export default function RunnerClient({
 
   function renderBarrels() {
     return (
-      <BarrelsListView
-        barrels={barrels}
-        onStatusChange={handleBarrelStatus}
-        onFlagForIDS={handleFlagForIDS}
-        flaggedTitles={flagged}
-      />
+      <>
+        <BarrelsListView
+          barrels={barrels}
+          onStatusChange={handleBarrelStatus}
+          onFlagForIDS={handleFlagForIDS}
+          flaggedTitles={flagged}
+          onBarrelClick={b => setSelectedRunnerBarrel(b)}
+        />
+        <BarrelDetailPanel
+          barrel={selectedRunnerBarrel}
+          onClose={() => setSelectedRunnerBarrel(null)}
+          onUpdate={updated => {
+            setBarrels(prev => prev.map(b => b.id === updated.id ? updated : b));
+            setSelectedRunnerBarrel(updated);
+          }}
+          onDelete={id => {
+            setBarrels(prev => prev.filter(b => b.id !== id));
+            setSelectedRunnerBarrel(null);
+          }}
+        />
+      </>
     );
   }
 

@@ -6,6 +6,7 @@ import OwnerSelect from '@/components/eos/OwnerSelect';
 import {
   updateBarrelAction,
   deleteBarrelAction,
+  archiveBarrelAction,
   addMilestoneAction,
   toggleMilestoneAction,
   deleteMilestoneAction,
@@ -19,6 +20,7 @@ type Props = {
   onClose: () => void;
   onUpdate: (updated: BarrelWithMilestones) => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
 };
 
 const STATUS_OPTIONS = [
@@ -35,7 +37,7 @@ function fmtDate(d: string | null) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete }: Props) {
+export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete, onArchive }: Props) {
   const [form, setForm] = useState<BarrelFormData | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [saving, setSaving] = useState(false);
@@ -93,6 +95,17 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
       onDelete(barrel.id);
     } catch {
       console.error('Failed to delete barrel.');
+    }
+  }
+
+  async function handleArchive() {
+    if (!barrel) return;
+    try {
+      await archiveBarrelAction(barrel.id, true);
+      onArchive?.(barrel.id);
+      onClose();
+    } catch {
+      console.error('Failed to archive barrel.');
     }
   }
 
@@ -402,12 +415,25 @@ export default function BarrelDetailPanel({ barrel, onClose, onUpdate, onDelete 
               >
                 {saving ? 'Saving…' : 'Save Changes'}
               </button>
-              <button
-                onClick={handleDelete}
-                className="w-full text-center text-sm text-red-600 hover:text-red-600 transition-colors py-1"
-              >
-                Delete Barrel
-              </button>
+              <div className="flex gap-3">
+                {onArchive && (
+                  <button
+                    onClick={handleArchive}
+                    className="flex-1 text-center text-sm text-gray-500 hover:text-gray-700 transition-colors py-1"
+                  >
+                    Archive
+                  </button>
+                )}
+                <button
+                  onClick={handleDelete}
+                  className={cn(
+                    'text-center text-sm text-red-600 hover:text-red-600 transition-colors py-1',
+                    onArchive ? 'flex-1' : 'w-full',
+                  )}
+                >
+                  Delete Barrel
+                </button>
+              </div>
             </div>
           </div>
         )}

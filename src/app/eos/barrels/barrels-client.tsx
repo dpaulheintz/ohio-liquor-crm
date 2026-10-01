@@ -53,6 +53,11 @@ export default function BarrelsClient({ initialBarrels, archived = false }: Prop
     setSelectedBarrel(null);
   }
 
+  function handleArchive(id: string) {
+    setBarrels(prev => prev.filter(b => b.id !== id));
+    setSelectedBarrel(null);
+  }
+
   async function handleCreate(data: BarrelFormData) {
     const created = await createBarrelAction(data);
     setBarrels(prev => [...prev, { ...created, milestones: [] }]);
@@ -193,6 +198,7 @@ export default function BarrelsClient({ initialBarrels, archived = false }: Prop
           onClose={() => setSelectedBarrel(null)}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onArchive={handleArchive}
         />
       )}
 
