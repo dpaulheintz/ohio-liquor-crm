@@ -2,6 +2,12 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+  // Barrel Arcade kids game: public page reached by QR code on the kids menu.
+  const reqPath = request.nextUrl.pathname;
+  if (reqPath === '/play' || reqPath.startsWith('/play/')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

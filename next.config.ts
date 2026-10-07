@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'dev',
     NEXT_PUBLIC_APP_VERSION: `v${pkg.version.split('.')[1]}`,
   },
+  // Barrel Arcade kids game: serve public/play/index.html at /play
+  rewrites: async () => [
+    { source: '/play', destination: '/play/index.html' },
+  ],
   headers: async () => [
     {
       // All pages/routes — prevent stale cached HTML on mobile browsers
