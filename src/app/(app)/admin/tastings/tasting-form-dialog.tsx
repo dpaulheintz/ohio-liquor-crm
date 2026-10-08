@@ -255,23 +255,33 @@ export function TastingFormDialog({
 
     setSaving(true);
     try {
-      const resolvedCategory = staffCategory && staffCategory !== 'none' ? staffCategory : undefined;
-      const payload = {
-        agencyId: selectedAgency.id,
-        date,
-        startTime,
-        endTime,
-        city: city || selectedAgency.city || undefined,
-        staffCategory: resolvedCategory,
-        staffPerson: staffPerson || undefined,
-        notes: notes || undefined,
-        status,
-      };
+      const resolvedCategory = staffCategory && staffCategory !== 'none' ? staffCategory : null;
       if (isEdit && tasting) {
-        await updateTasting(tasting.id, payload);
+        // Cleared fields go as null; undefined keys are dropped by the server action.
+        await updateTasting(tasting.id, {
+          agencyId: selectedAgency.id,
+          date,
+          startTime,
+          endTime,
+          city: city || selectedAgency.city || null,
+          staffCategory: resolvedCategory,
+          staffPerson: staffPerson.trim() || null,
+          notes: notes || null,
+          status,
+        });
         toast.success('Tasting updated');
       } else {
-        await createTasting(payload);
+        await createTasting({
+          agencyId: selectedAgency.id,
+          date,
+          startTime,
+          endTime,
+          city: city || selectedAgency.city || undefined,
+          staffCategory: resolvedCategory ?? undefined,
+          staffPerson: staffPerson || undefined,
+          notes: notes || undefined,
+          status,
+        });
         toast.success('Tasting created');
       }
       onSuccess();
@@ -318,12 +328,14 @@ export function TastingFormDialog({
     }
   }
 
-  // Auto-sync status from staff fields on CREATE only.
-  useEffect(() => {
-    if (!isEdit) {
-      setStatus(deriveStatus(staffCategory === 'none' ? '' : staffCategory, staffPerson));
-    }
-  }, [staffCategory, staffPerson, isEdit]);
+  // Staffing status follows the staff fields (create and edit); completed/cancelled stay as chosen.
+  function syncStatus(category: string, person: string) {
+    setStatus((prev) =>
+      prev === 'completed' || prev === 'cancelled'
+        ? prev
+        : deriveStatus(category === 'none' ? '' : category, person)
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -393,7 +405,7 @@ export function TastingFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Staff Category</Label>
-                <Select value={staffCategory} onValueChange={setStaffCategory}>
+                <Select value={staffCategory} onValueChange={(v) => { setStaffCategory(v); syncStatus(v, staffPerson); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="None assigned" />
                   </SelectTrigger>
@@ -410,7 +422,7 @@ export function TastingFormDialog({
                 <Input
                   placeholder="e.g. Kerry, Samantha…"
                   value={staffPerson}
-                  onChange={(e) => setStaffPerson(e.target.value)}
+                  onChange={(e) => { setStaffPerson(e.target.value); syncStatus(staffCategory, e.target.value); }}
                 />
               </div>
             </div>

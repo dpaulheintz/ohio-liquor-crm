@@ -220,8 +220,7 @@ export function TastingCalendarView({ tastings, onRefresh }: TastingCalendarView
                                   </div>
                                   {(t.staff_category || t.staff_person) && (
                                     <p className="text-[10px] text-muted-foreground mt-0.5 pl-0">
-                                      {t.staff_category}
-                                      {t.staff_person ? ` — ${t.staff_person}` : ''}
+                                      {[t.staff_category, t.staff_person].filter(Boolean).join(' — ')}
                                     </p>
                                   )}
                                 </button>
@@ -307,10 +306,9 @@ export function TastingCalendarView({ tastings, onRefresh }: TastingCalendarView
                           {(t.city ?? t.agency?.city) &&
                             ` · ${t.city ?? t.agency?.city}`}
                         </p>
-                        {t.staff_category && (
+                        {(t.staff_category || t.staff_person) && (
                           <p className="text-xs text-muted-foreground">
-                            {t.staff_category}
-                            {t.staff_person ? ` — ${t.staff_person}` : ''}
+                            {[t.staff_category, t.staff_person].filter(Boolean).join(' — ')}
                           </p>
                         )}
                         {t.notes && (

@@ -235,6 +235,16 @@ export async function createTastingsBulk(
 
 // ---------- Update ----------
 
+const STAFF_CATEGORIES = ['DBC', 'HB Internal Staff', 'HB Sales Team'];
+
+/** '' / whitespace / 'none' mean "cleared" and are stored as null. */
+function cleared(v: string | null): string | null {
+  const t = v?.trim();
+  return t && t !== 'none' ? t : null;
+}
+
+// Clearing a field must be sent as null: server actions drop keys whose value is
+// undefined, so `undefined` here means "leave unchanged".
 export async function updateTasting(
   id: string,
   input: {
@@ -242,42 +252,61 @@ export async function updateTasting(
     date?: string;
     startTime?: string;
     endTime?: string;
-    city?: string;
-    staffCategory?: string;
-    staffPerson?: string;
-    notes?: string;
+    city?: string | null;
+    staffCategory?: string | null;
+    staffPerson?: string | null;
+    notes?: string | null;
     status?: string;
   }
 ) {
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updates: Record<string, any> = {};
+  const updates: Record<string, string | null> = {};
   if (input.agencyId) updates.agency_id = input.agencyId;
   if (input.date) updates.date = input.date;
   if (input.startTime) updates.start_time = input.startTime;
   if (input.endTime) updates.end_time = input.endTime;
-  if ('city' in input) updates.city = input.city || null;
-  if ('staffCategory' in input) updates.staff_category = input.staffCategory || null;
-  if ('staffPerson' in input) updates.staff_person = input.staffPerson || null;
-  if ('notes' in input) updates.notes = input.notes || null;
+  if (input.city !== undefined) updates.city = cleared(input.city);
+  if (input.staffCategory !== undefined) {
+    const category = cleared(input.staffCategory);
+    if (category && !STAFF_CATEGORIES.includes(category)) throw new Error('Invalid staff category');
+    updates.staff_category = category;
+  }
+  if (input.staffPerson !== undefined) updates.staff_person = cleared(input.staffPerson);
+  if (input.notes !== undefined) updates.notes = cleared(input.notes);
 
-  if (input.status) {
+  // Completed/cancelled are manual; otherwise staffing status follows the staff fields.
+  const staffChanged = 'staff_category' in updates || 'staff_person' in updates;
+  if (input.status === 'completed' || input.status === 'cancelled') {
     updates.status = input.status;
-  } else if ('staffCategory' in input || 'staffPerson' in input) {
-    updates.status = computeStatus(
-      'staffCategory' in input ? input.staffCategory : undefined,
-      'staffPerson' in input ? input.staffPerson : undefined
-    );
+  } else if (staffChanged) {
+    let category = updates.staff_category;
+    let person = updates.staff_person;
+    if (category === undefined || person === undefined) {
+      const { data: current, error: readErr } = await supabase
+        .from('tastings').select('staff_category, staff_person').eq('id', id).single();
+      if (readErr) throw readErr;
+      category = category === undefined ? current.staff_category : category;
+      person = person === undefined ? current.staff_person : person;
+    }
+    updates.status = computeStatus(category ?? undefined, person ?? undefined);
+  } else if (input.status) {
+    updates.status = input.status;
   }
 
-  const { error } = await supabase
+  // RLS-blocked updates return no error and zero rows — never report those as saved.
+  const { data, error } = await supabase
     .from('tastings')
     .update(updates)
-    .eq('id', id);
+    .eq('id', id)
+    .select(TASTING_SELECT);
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Tasting was not updated — it may have been deleted or you may not have permission to edit it.');
+  }
 
   revalidatePath('/admin/tastings');
+  return data[0];
 }
 
 // ---------- Complete ----------

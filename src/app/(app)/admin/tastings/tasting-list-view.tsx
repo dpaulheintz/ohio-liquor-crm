@@ -262,9 +262,9 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
                         {t.city ?? t.agency?.city ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        {t.staff_category ? (
+                        {t.staff_category || t.staff_person ? (
                           <>
-                            <div className="text-xs font-medium">{t.staff_category}</div>
+                            {t.staff_category && <div className="text-xs font-medium">{t.staff_category}</div>}
                             {t.staff_person && (
                               <div className="text-xs text-muted-foreground">
                                 {t.staff_person}
@@ -380,11 +380,10 @@ export function TastingListView({ tastings, onRefresh }: TastingListViewProps) {
                     </span>
                   </div>
 
-                  {t.staff_category && (
+                  {(t.staff_category || t.staff_person) && (
                     <p className="text-xs">
                       <span className="text-muted-foreground">Staff: </span>
-                      {t.staff_category}
-                      {t.staff_person ? ` — ${t.staff_person}` : ''}
+                      {[t.staff_category, t.staff_person].filter(Boolean).join(' — ')}
                     </p>
                   )}
 
