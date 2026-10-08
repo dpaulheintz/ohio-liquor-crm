@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAssistant, type HistoryTurn } from '@/lib/assistant/agent';
+import { createClient } from '@/lib/supabase/server';
 
 // The OpenAI client is constructed lazily inside runAssistant (never at module
 // scope) so that `next build`'s page-data collection doesn't fail when
@@ -11,6 +12,13 @@ const MAX_HISTORY_TURNS = 12; // 6 question/answer pairs
 
 export async function POST(req: NextRequest) {
   const TAG = '[assistant]';
+
+  // /api/* skips the auth proxy, and the agent queries with the service role — admins only.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+  const { data: isAdmin } = await supabase.rpc('is_admin');
+  if (isAdmin !== true) return NextResponse.json({ error: 'The AI assistant is available to admins only.' }, { status: 403 });
 
   try {
     const body = (await req.json()) as { question?: string; history?: HistoryTurn[] };
