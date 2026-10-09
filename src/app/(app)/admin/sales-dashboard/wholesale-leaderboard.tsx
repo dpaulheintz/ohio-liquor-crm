@@ -13,6 +13,7 @@ import {
   Layers,
   BarChart2,
 } from 'lucide-react';
+import { addMonths, monthRange } from '@/lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -308,12 +309,7 @@ export function WholesaleLeaderboard({
 
   // ── Sparkline month window ─────────────────────────────────────────────────
   const sparkMonths = useMemo<string[]>(() => {
-    const base = new Date(maxMonth + '-01');
-    return Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(base);
-      d.setMonth(base.getMonth() - (11 - i));
-      return d.toISOString().slice(0, 7);
-    });
+    return monthRange(addMonths(maxMonth, -11), maxMonth);
   }, [maxMonth]);
 
   // ── SKU options for By-SKU dropdown ────────────────────────────────────────

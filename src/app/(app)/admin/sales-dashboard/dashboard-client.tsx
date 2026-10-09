@@ -13,6 +13,7 @@ import { WholesaleLeaderboard } from './wholesale-leaderboard';
 import { ChannelSplit } from './channel-split';
 import { HotAccounts, type HotAccount } from './hot-accounts';
 import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, isHighBank, resolveAccount } from './utils';
+import { addMonths, formatMonth } from '@/lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ function fmtPeriod(months: string[]): string {
   if (months.length === 0) return '';
   const [first, last] = [months[0], months[months.length - 1]];
   const fmt = (m: string) =>
-    new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    formatMonth(m, { month: 'short', year: 'numeric' });
   return first === last ? fmt(first) : `${fmt(first)} – ${fmt(last)}`;
 }
 
@@ -178,11 +179,7 @@ export function DashboardClient({ data }: { data: SalesDashboardData }) {
   // ── Filter state ─────────────────────────────────────────────────────────
   const maxMonth = lastUpdated ?? new Date().toISOString().slice(0, 7);
   const defaultDateTo = maxMonth;
-  const defaultDateFrom = (() => {
-    const d = new Date(maxMonth + '-01');
-    d.setMonth(d.getMonth() - 11);
-    return d.toISOString().slice(0, 7);
-  })();
+  const defaultDateFrom = addMonths(maxMonth, -11);
 
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);

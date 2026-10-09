@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import type { SplitRow } from '@/app/actions/sales-dashboard';
 import { fmtDollar, fmtBottles, ChartTip } from './utils';
+import { formatMonth, monthRange } from '@/lib/date-utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -93,17 +94,13 @@ export function SectionHbLocations({
       mmap.set(r.month, e);
     }
     const result: Record<string, string | number>[] = [];
-    const d = new Date(dateFrom + '-01');
-    const end = new Date(dateTo + '-01');
-    while (d <= end) {
-      const key = d.toISOString().slice(0, 7);
+    for (const key of monthRange(dateFrom, dateTo)) {
       const row: Record<string, string | number> = {
-        month: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        month: formatMonth(key, { month: 'short', year: '2-digit' }),
       };
       const data = mmap.get(key) ?? {};
       for (const loc of HB_LOCATIONS) row[loc] = data[loc] ?? null;
       result.push(row);
-      d.setMonth(d.getMonth() + 1);
     }
     return result;
   }, [hbFiltered, dateFrom, dateTo]);

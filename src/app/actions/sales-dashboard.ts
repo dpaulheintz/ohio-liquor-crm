@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { addMonths } from '@/lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -198,11 +199,7 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
 
   // ── wholesaleRecent (last 6 months) ───────────────────────────────────────
   const sixMonthsAgo = lastUpdated
-    ? (() => {
-        const d2 = new Date(lastUpdated + '-01');
-        d2.setMonth(d2.getMonth() - 5);
-        return d2.toISOString().slice(0, 7);
-      })()
+    ? addMonths(lastUpdated, -5)
     : '';
   const wholesaleRecent: WholesaleRecentRow[] = wholesaleFull
     .filter((r) => r.month >= sixMonthsAgo && r.month <= (lastUpdated ?? ''))

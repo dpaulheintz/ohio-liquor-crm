@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import type { MonthlyRow, SplitRow, BailmentRow } from '@/app/actions/sales-dashboard';
 import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, GOLD, MONTH_LABELS, fmtDollar, fmtBottles, KpiCard, ChartTip } from './utils';
+import { addMonths, formatMonth, monthRange } from '@/lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,17 +123,12 @@ export function SectionRevenue({
 
   // ── 12-month rolling trend ─────────────────────────────────────────────────
   const rollingTrend = useMemo(() => {
-    const months12: string[] = [];
-    const anchor = new Date(dateTo + '-01');
-    for (let i = 11; i >= 0; i--) {
-      const dt = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
-      months12.push(dt.toISOString().slice(0, 7));
-    }
+    const months12 = monthRange(addMonths(dateTo, -11), dateTo);
     const base = monthly.filter(r => inFam(r.brand_family));
     const sums = new Map<string, number>();
     for (const r of base) sums.set(r.month, (sums.get(r.month) ?? 0) + getRevenue(r));
     return months12.map(m => ({
-      month: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      month: formatMonth(m, { month: 'short', year: '2-digit' }),
       revenue: sums.get(m) ?? null,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,7 +213,7 @@ export function SectionRevenue({
           label={`YTD ${currentYear} Revenue`}
           value={fmtDollar(kpis.rev)}
           badge={kpis.revBadge}
-          sub={`Thru ${new Date(`${currentYear}-${maxCurrentYearMonth}-01`).toLocaleDateString('en-US', { month: 'long' })}`}
+          sub={`Thru ${formatMonth(`${currentYear}-${maxCurrentYearMonth}`, { month: 'long' })}`}
         />
         <KpiCard
           label={`YTD ${currentYear} Bottles`}
@@ -233,7 +229,7 @@ export function SectionRevenue({
           label="Data Through"
           value={
             lastUpdated
-              ? new Date(lastUpdated + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+              ? formatMonth(lastUpdated, { month: 'short', year: 'numeric' })
               : '—'
           }
           sub="Most recent month loaded"

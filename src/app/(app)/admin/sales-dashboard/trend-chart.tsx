@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
+import { formatMonth } from '@/lib/date-utils';
 
 export interface TrendSeries {
   key: string;       // unique key
@@ -58,10 +59,7 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div className="rounded-lg border border-zinc-700 bg-[#1C1C1C] p-3 shadow-xl text-sm max-w-[220px]">
       <p className="text-primary font-semibold text-xs mb-2">
-        {(() => {
-          const d = new Date(label + '-01');
-          return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        })()}
+        {formatMonth(label, { month: 'short', year: 'numeric' })}
       </p>
       {payload.map((p: { name: string; value: number | null; color: string; payload: { revenue?: number } }) => (
         p.value != null && (
@@ -78,8 +76,7 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 function fmtAxisMonth(m: string) {
-  const d = new Date(m + '-01');
-  return d.toLocaleDateString('en-US', { month: 'short' }).slice(0, 3);
+  return formatMonth(m, { month: 'short' }).slice(0, 3);
 }
 
 export function TrendChart({ series, months, level, onLevelChange, onToggle }: TrendChartProps) {

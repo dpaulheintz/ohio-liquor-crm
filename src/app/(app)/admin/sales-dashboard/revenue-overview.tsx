@@ -1,6 +1,7 @@
 'use client';
 
 import { TrendingUp, TrendingDown, Minus, Star, Calendar } from 'lucide-react';
+import { formatMonth } from '@/lib/date-utils';
 
 export interface YtdStats {
   current: number;
@@ -33,8 +34,7 @@ function fmtNum(n: number) {
 }
 
 function fmtMonth(m: string) {
-  const d = new Date(m + '-01');
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return formatMonth(m, { month: 'long', year: 'numeric' });
 }
 
 function ChangeChip({ val }: { val: number | null }) {

@@ -1,5 +1,33 @@
 import { formatDistanceToNow } from 'date-fns';
 
+// ─── "YYYY-MM" month keys ─────────────────────────────────────────────────────
+// Never use new Date('YYYY-MM-01'): it parses as UTC midnight, which is the last
+// day of the previous month in US time zones.
+
+/** First day of a "YYYY-MM" month, in local time. */
+export function monthStart(ym: string): Date {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1);
+}
+
+/** "YYYY-MM" shifted by n months (n may be negative). */
+export function addMonths(ym: string, n: number): string {
+  const d = monthStart(ym);
+  d.setMonth(d.getMonth() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Every "YYYY-MM" from `from` through `to`, inclusive. */
+export function monthRange(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let m = from; m <= to; m = addMonths(m, 1)) out.push(m);
+  return out;
+}
+
+export function formatMonth(ym: string, options: Intl.DateTimeFormatOptions): string {
+  return monthStart(ym).toLocaleDateString('en-US', options);
+}
+
 /**
  * Format a UTC date string as "Monday, April 13 (2 days ago)" in EST.
  */

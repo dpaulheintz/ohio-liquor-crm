@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { SkuMonthlyRow } from '@/app/actions/sales-dashboard';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Download, FileText } from 'lucide-react';
+import { addMonths, monthRange } from '@/lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -185,12 +186,7 @@ export function SkuLeaderboard({
 
   // ── Sparkline month window: last 12 months from maxMonth ──────────────────
   const sparkMonths = useMemo<string[]>(() => {
-    const base = new Date(maxMonth + '-01');
-    return Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(base);
-      d.setMonth(base.getMonth() - (11 - i));
-      return d.toISOString().slice(0, 7);
-    });
+    return monthRange(addMonths(maxMonth, -11), maxMonth);
   }, [maxMonth]);
 
   // ── Build leaderboard rows ─────────────────────────────────────────────────

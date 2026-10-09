@@ -14,6 +14,7 @@ import {
 import type { SkuMonthlyRow } from '@/app/actions/sales-dashboard';
 import type { Channel } from './section-revenue';
 import { FAMILY_COLORS, FAMILY_COLOR_DEFAULT, GOLD, fmtDollar } from './utils';
+import { addMonths, formatMonth, monthRange } from '@/lib/date-utils';
 
 // Cycle of distinct chart colors for multi-SKU lines
 const LINE_COLORS = [
@@ -41,13 +42,7 @@ export function SectionSkuTable({
 
   // ── Build trailing-12-month window from dateTo ─────────────────────────────
   const ttmMonths = useMemo(() => {
-    const months: string[] = [];
-    const anchor = new Date(dateTo + '-01');
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
-      months.push(d.toISOString().slice(0, 7));
-    }
-    return months;
+    return monthRange(addMonths(dateTo, -11), dateTo);
   }, [dateTo]);
 
   // ── Aggregate SKUs over TTM window ────────────────────────────────────────
@@ -121,7 +116,7 @@ export function SectionSkuTable({
   const chartData = useMemo(() => {
     return ttmMonths.map(m => {
       const row: Record<string, string | number | null> = {
-        month: new Date(m + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        month: formatMonth(m, { month: 'short', year: '2-digit' }),
       };
       for (const code of selected) {
         const meta = skuMap.get(code);
@@ -196,7 +191,7 @@ export function SectionSkuTable({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-          SKU Revenue — Trailing 12 Months (ending {new Date(dateTo + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})
+          SKU Revenue — Trailing 12 Months (ending {formatMonth(dateTo, { month: 'short', year: 'numeric' })})
         </h3>
         <button
           onClick={exportCsv}
