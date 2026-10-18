@@ -28,6 +28,12 @@ export function formatMonth(ym: string, options: Intl.DateTimeFormatOptions): st
   return monthStart(ym).toLocaleDateString('en-US', options);
 }
 
+/** Today's date in America/New_York as "YYYY-MM-DD" (correct late at night and on UTC servers). */
+export function todayInNewYork(): string {
+  // en-CA formats as YYYY-MM-DD.
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
 /**
  * Format a UTC date string as "Monday, April 13 (2 days ago)" in EST.
  */

@@ -24,6 +24,7 @@ import {
   Sparkles,
   Wine,
   Eye,
+  FileText,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -54,6 +55,7 @@ const adminItems = [
   { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/admin/samples', label: 'Samples Dashboard', icon: Package },
   { href: '/admin/secret-shopper', label: 'Secret Shopper', icon: Eye },
+  { href: '/admin/wholesale-forms', label: 'Wholesale Forms', icon: FileText },
   { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: UserCog },
 ];
