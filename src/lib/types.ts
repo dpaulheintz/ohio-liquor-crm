@@ -13,6 +13,7 @@ export interface Profile {
   role: UserRole;
   is_approved: boolean;
   visible_pages: string[] | null;
+  payroll_access?: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -25,6 +25,7 @@ import {
   Wine,
   Eye,
   FileText,
+  Wallet,
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
@@ -159,6 +160,25 @@ export function Sidebar() {
                 })}
               </>
             )}
+          </>
+        )}
+        {profile?.payroll_access && (
+          <>
+            <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+              Payroll
+            </div>
+            <Link
+              href="/payroll"
+              className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                pathname.startsWith('/payroll')
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+              )}
+            >
+              <Wallet className="h-4 w-4" />
+              Payroll
+            </Link>
           </>
         )}
         {showEos && (

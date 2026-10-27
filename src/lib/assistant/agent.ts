@@ -60,6 +60,11 @@ export function cleanSql(raw: string): string {
 export function guardSql(raw: string): { sql: string } | { error: string } {
   const sql = cleanSql(raw);
   if (!sql) return { error: 'Empty query.' };
+  // Payroll is off-limits to the assistant. The database enforces this too (exec_sql runs as
+  // service_role, which has no privileges on payroll tables); this just gives a clear answer.
+  if (/payroll/i.test(sql)) {
+    return { error: 'Rejected: payroll data is not available to the assistant.' };
+  }
   if (DISALLOWED.test(sql)) {
     return { error: 'Rejected: this assistant is read-only. Use SELECT only.' };
   }

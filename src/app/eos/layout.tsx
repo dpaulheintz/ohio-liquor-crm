@@ -27,6 +27,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
     .maybeSingle();
 
   const activeMeetingId = activeMeeting?.id ?? null;
+  const { data: hasPayroll } = await supabase.rpc('has_payroll_access');
   const email = user.email ?? '';
   const admin = isEosAdmin(email);
   const member = EOS_TEAM_MEMBERS.find(m => m.email === email.toLowerCase());
@@ -64,6 +65,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
             emoji="🤝"
             activeDot={!!activeMeetingId}
           />
+          {hasPayroll === true && <EosNavLink href="/payroll" label="Payroll" emoji="💵" />}
         </nav>
 
         {/* User info + footer */}
