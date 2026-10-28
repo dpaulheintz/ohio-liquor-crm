@@ -9,13 +9,28 @@ import {
   type Metric,
 } from '@/lib/eos/scorecard';
 import type { MetricFormData } from '@/components/eos/MetricModal';
+import { normalizeScorecardValue } from '@/lib/eos/scorecard-utils';
+import { createClient } from '@/lib/supabase/server';
+
+function cleanGoal(goal: string, metricType: string): string {
+  const v = normalizeScorecardValue(goal, metricType);
+  if (!v) throw new Error('Goal must be a number.');
+  return v;
+}
 
 export async function saveEntry(
   metricId: string,
   weekStart: string,
   value: string,
-): Promise<void> {
-  await upsertEntry(metricId, weekStart, value === '' ? null : value);
+): Promise<string | null> {
+  // Store the clean number (e.g. "10100"), never the typed text.
+  const supabase = await createClient();
+  const { data: metric, error } = await supabase.from('eos_scorecard_metrics').select('metric_type').eq('id', metricId).single();
+  if (error) throw error;
+  const clean = normalizeScorecardValue(value, metric.metric_type);
+  if (clean === null) throw new Error('Not a number');
+  await upsertEntry(metricId, weekStart, clean === '' ? null : clean);
+  return clean === '' ? null : clean;
 }
 
 export async function addMetric(
@@ -24,7 +39,7 @@ export async function addMetric(
   return createMetric({
     title: data.title.trim(),
     goal_operator: data.goal_operator,
-    goal_value: data.goal_value.trim(),
+    goal_value: cleanGoal(data.goal_value, data.metric_type),
     metric_type: data.metric_type,
     owner_name: data.owner_name.trim() || undefined,
     owner_email: data.owner_email.trim() || undefined,
@@ -39,7 +54,7 @@ export async function editMetric(
   await updateMetric(id, {
     title: data.title.trim(),
     goal_operator: data.goal_operator,
-    goal_value: data.goal_value.trim(),
+    goal_value: cleanGoal(data.goal_value, data.metric_type),
     metric_type: data.metric_type,
     owner_name: data.owner_name.trim() || null,
     owner_email: data.owner_email.trim() || null,

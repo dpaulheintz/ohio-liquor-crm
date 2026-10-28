@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 import type { Metric, Entry } from '@/lib/eos/scorecard';
 import {
   formatValue,
+  normalizeScorecardValue,
   formatOperator,
   formatWeekHeader,
   evaluateGoal,
@@ -48,6 +49,7 @@ export default function ScorecardGrid({
   const [metrics, setMetrics] = useState<Metric[]>(initialMetrics);
   const [editing, setEditing] = useState<{ metricId: string; weekStart: string } | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [flashing, setFlashing] = useState<Set<string>>(new Set());
   const [errorCells, setErrorCells] = useState<Set<string>>(new Set());
@@ -76,13 +78,13 @@ export default function ScorecardGrid({
     const key = ck(metricId, weekStart);
     setSaving(prev => new Set(prev).add(key));
     setEditing(null);
+    setInputError(null);
     try {
-      await saveEntry(metricId, weekStart, value.trim());
+      const stored = await saveEntry(metricId, weekStart, value.trim());
       setEntryMap(prev => {
         const next = new Map(prev);
-        const trimmed = value.trim();
-        if (trimmed === '') next.delete(key);
-        else next.set(key, trimmed);
+        if (stored === null) next.delete(key);
+        else next.set(key, stored);
         return next;
       });
       flashKey(key);
@@ -96,6 +98,7 @@ export default function ScorecardGrid({
   function handleCellClick(metricId: string, weekStart: string, currentValue: string | undefined) {
     setEditing({ metricId, weekStart });
     setEditValue(currentValue ?? '');
+    setInputError(null);
   }
 
   function handleBooleanClick(metricId: string, weekStart: string, currentValue: string | undefined) {
@@ -108,12 +111,17 @@ export default function ScorecardGrid({
 
   function handleCellBlur() {
     if (!editing) return;
+    const type = metrics.find(m => m.id === editing.metricId)?.metric_type ?? 'number';
+    if (normalizeScorecardValue(editValue, type) === null) {
+      setInputError('Not a number');
+      return;
+    }
     handleSave(editing.metricId, editing.weekStart, editValue);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') { e.preventDefault(); handleCellBlur(); }
-    if (e.key === 'Escape') setEditing(null);
+    if (e.key === 'Escape') { setEditing(null); setInputError(null); }
   }
 
   function requestDelete(metricId: string) {
@@ -176,7 +184,7 @@ export default function ScorecardGrid({
                 ...m,
                 title: data.title.trim(),
                 goal_operator: data.goal_operator,
-                goal_value: data.goal_value.trim(),
+                goal_value: normalizeScorecardValue(data.goal_value, data.metric_type) || data.goal_value.trim(),
                 metric_type: data.metric_type,
                 owner_name: data.owner_name.trim() || null,
                 owner_email: data.owner_email.trim() || null,
@@ -227,12 +235,17 @@ export default function ScorecardGrid({
           <input
             autoFocus
             value={editValue}
-            onChange={e => setEditValue(e.target.value)}
+            onChange={e => { setEditValue(e.target.value); setInputError(null); }}
             onBlur={handleCellBlur}
             onKeyDown={handleKeyDown}
-            className="w-full py-2 px-1 bg-transparent text-gray-900 text-xs text-center focus:outline-none placeholder:text-gray-400"
+            aria-invalid={!!inputError}
+            className={cn(
+              'w-full py-2 px-1 bg-transparent text-gray-900 text-xs text-center focus:outline-none placeholder:text-gray-400',
+              inputError && 'ring-1 ring-inset ring-red-500',
+            )}
             placeholder="—"
           />
+          {inputError && <div className="px-1 pb-1 text-[10px] leading-tight text-red-600 text-center">{inputError}</div>}
         </td>
       );
     }

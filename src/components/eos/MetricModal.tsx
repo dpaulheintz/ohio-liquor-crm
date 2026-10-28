@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Metric } from '@/lib/eos/scorecard';
 import OwnerSelect from '@/components/eos/OwnerSelect';
+import { normalizeScorecardValue } from '@/lib/eos/scorecard-utils';
 
 export type MetricFormData = {
   title: string;
@@ -40,6 +41,10 @@ export default function MetricModal({ mode, metric, onSave, onClose }: Props) {
     e.preventDefault();
     if (!form.title.trim()) { setError('Title is required.'); return; }
     if (!form.goal_value.trim()) { setError('Goal value is required.'); return; }
+    if (normalizeScorecardValue(form.goal_value, form.metric_type) === null) {
+      setError(form.metric_type === 'boolean' ? 'Goal must be "true" or "false".' : 'Goal must be a number (e.g. 10,000 or 21.8).');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
