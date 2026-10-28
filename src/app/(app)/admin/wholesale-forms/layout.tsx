@@ -15,7 +15,7 @@ export default async function WholesaleFormsLayout({ children }: { children: Rea
         <div className="max-w-6xl mx-auto">
           <h1 className="font-serif text-2xl font-bold tracking-wide">Wholesale Forms</h1>
           <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">
-            Grandview warehouse #30174 · direct wholesale sales reports
+            Grandview · Gahanna · Westerville · direct wholesale sales reports
           </p>
           <WholesaleTabs isAdmin={access.isAdmin} />
         </div>

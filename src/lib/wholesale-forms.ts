@@ -30,6 +30,7 @@ export interface WholesaleCustomer {
   crm_account_id: string | null;
   crm_account_name: string | null;
   notes: string | null;
+  default_warehouse_id: string | null;
   times_used: number;
   last_used_at: string | null;
   last_order_date: string | null;
@@ -65,6 +66,7 @@ export interface WholesaleForm extends RecipientSnapshot {
   id: string;
   sales_date: string;
   customer_id: string | null;
+  warehouse_id: string | null;
   total_bottles: number;
   receipt_total_cents: number;
   status: FormStatus;
@@ -76,16 +78,60 @@ export interface WholesaleForm extends RecipientSnapshot {
   settings_snapshot: WholesaleSettings | null;
   created_at: string;
   updated_at: string;
+  last_sent_at: string | null;
   lines: WholesaleFormLine[];
 }
 
+/** The A-3a/warehouse details printed on a form (snapshotted onto each form from its warehouse). */
 export interface WholesaleSettings {
+  warehouse_name?: string;
   warehouse_label: string;
   agency_number: string;
   a3a_name: string;
   a3a_address: string;
   a3a_phone: string;
   a3a_email: string;
+}
+
+export interface WholesaleWarehouse {
+  id: string;
+  name: string;
+  label: string;
+  agency_number: string;
+  a3a_name: string;
+  a3a_address: string;
+  a3a_phone: string;
+  a3a_email: string;
+  is_default: boolean;
+  sort_order: number;
+}
+
+export function warehouseSnapshot(w: WholesaleWarehouse): WholesaleSettings {
+  return {
+    warehouse_name: w.name, warehouse_label: w.label, agency_number: w.agency_number, a3a_name: w.a3a_name,
+    a3a_address: w.a3a_address, a3a_phone: w.a3a_phone, a3a_email: w.a3a_email,
+  };
+}
+
+/** A one-off line typed onto a form (not from the price list). */
+export interface CustomLineInput {
+  brand_code: string;
+  description: string;
+  unit_type: string;
+  price_cents: number;
+  quantity: number;
+}
+
+export const DEFAULT_EMAIL_RECIPIENTS = ['msmith@highbankco.com', 'dsprequest@highbankco.com'];
+
+/** "Wholesale Form – JT's Grandview – 8/30/26 – $784.90" */
+export function emailSubject(recipient: string | null, salesDate: string, totalCents: number): string {
+  const [y, m, d] = salesDate.split('-').map(Number);
+  return `Wholesale Form – ${recipient ?? 'Recipient'} – ${m}/${d}/${String(y).slice(-2)} – ${formatCents(totalCents)}`;
+}
+
+export function isEmail(s: string): boolean {
+  return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(s);
 }
 
 // ─── Money (integer cents only) ───────────────────────────────────────────────

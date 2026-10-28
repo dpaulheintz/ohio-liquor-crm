@@ -1,8 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireWholesaleAccess } from '@/lib/wholesale-forms-server';
-import { WHOLESALE_BUCKET, WHOLESALE_FORMS_PATH, type AccountType, type FormStatus } from '@/lib/wholesale-forms';
+import { loadEmailRecipients, loadForm, renderFormPdf, requireWholesaleAccess } from '@/lib/wholesale-forms-server';
+import { sendEmailStrict } from '@/lib/email';
+import {
+  WHOLESALE_BUCKET,
+  WHOLESALE_FORMS_PATH,
+  emailSubject,
+  formatCents,
+  isEmail,
+  type AccountType,
+  type CustomLineInput,
+  type FormStatus,
+} from '@/lib/wholesale-forms';
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -32,6 +42,9 @@ export interface SaveFormInput {
   /** Create the wholesaler (when none is selected) or update the selected one with these fields. */
   saveToDirectory: boolean;
   quantities: Record<string, number>;
+  /** One-off lines typed on this form; save_to_price_list (admins) also adds the SKU to the price list. */
+  customLines: (CustomLineInput & { save_to_price_list?: boolean })[];
+  warehouseId: string | null;
   notes: string;
 }
 
@@ -66,13 +79,33 @@ function customerRow(c: CustomerInput) {
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
-export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionResult<{ id: string; customerId: string | null }>> {
+export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionResult<{ id: string; customerId: string | null; warning?: string }>> {
   try {
-    const { supabase } = await requireWholesaleAccess();
+    const { supabase, access } = await requireWholesaleAccess();
 
     if (!DATE_RE.test(input.salesDate)) return { ok: false, error: 'Enter a valid sales date.' };
     if (input.formId && !UUID_RE.test(input.formId)) return { ok: false, error: 'Invalid form.' };
     if (input.customerId && !UUID_RE.test(input.customerId)) return { ok: false, error: 'Invalid wholesaler.' };
+    if (input.warehouseId && !UUID_RE.test(input.warehouseId)) return { ok: false, error: 'Invalid warehouse.' };
+
+    const customLines: CustomLineInput[] = [];
+    const toPriceList: CustomLineInput[] = [];
+    for (const c of input.customLines ?? []) {
+      const line = {
+        brand_code: String(c.brand_code ?? '').trim().toUpperCase().slice(0, 20),
+        description: String(c.description ?? '').trim().slice(0, 120),
+        unit_type: String(c.unit_type ?? '').trim().slice(0, 20) || 'Bottles',
+        price_cents: c.price_cents,
+        quantity: c.quantity,
+      };
+      if (!line.brand_code || !line.description) return { ok: false, error: 'Each added item needs a brand code and description.' };
+      if (!Number.isSafeInteger(line.price_cents) || line.price_cents < 0 || line.price_cents > 99_999_999) return { ok: false, error: `Enter a valid price for ${line.brand_code}.` };
+      if (!Number.isSafeInteger(line.quantity) || line.quantity < 0 || line.quantity > 99999) return { ok: false, error: 'Quantities must be whole numbers of bottles.' };
+      customLines.push(line);
+      if (c.save_to_price_list) toPriceList.push(line);
+    }
+    if (customLines.length > 50) return { ok: false, error: 'Too many added items.' };
+    if (toPriceList.length && !access.isAdmin) return { ok: false, error: 'Only admins can add items to the price list.' };
 
     const quantities: Record<string, number> = {};
     let bottles = 0;
@@ -82,6 +115,7 @@ export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionRes
       quantities[productId] = qty;
       bottles += qty;
     }
+    bottles += customLines.reduce((s, l) => s + l.quantity, 0);
 
     const name = input.recipient.name.trim();
     if (input.status === 'final') {
@@ -116,13 +150,26 @@ export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionRes
         account_number: r.account_number,
         customer_id_number: r.customer_id_number,
         notes: input.notes,
+        warehouse_id: input.warehouseId ?? '',
+        custom_lines: customLines,
       },
       p_quantities: quantities,
     });
     if (error) return { ok: false, error: friendly(error) };
 
+    // "Save to price list": the line stays a one-off on this form; the SKU is added for future forms.
+    const skipped: string[] = [];
+    for (const l of toPriceList) {
+      const { data: last } = await supabase.from('wholesale_products').select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
+      const { error: pErr } = await supabase.from('wholesale_products').insert({
+        brand_code: l.brand_code, description: l.description, unit_type: l.unit_type, price_cents: l.price_cents,
+        active: true, sort_order: (last?.sort_order ?? 0) + 10,
+      });
+      if (pErr) skipped.push(pErr.code === '23505' ? `${l.brand_code} is already on the price list` : `${l.brand_code}: ${pErr.message}`);
+    }
+
     revalidate();
-    return { ok: true, data: { id: id as string, customerId } };
+    return { ok: true, data: { id: id as string, customerId, ...(skipped.length ? { warning: `Form saved, but ${skipped.join('; ')}.` } : {}) } };
   } catch (err) {
     return { ok: false, error: friendly(err) };
   }
@@ -294,10 +341,72 @@ export async function reorderProducts(orderedIds: string[]): Promise<ActionResul
   }
 }
 
-// ─── Settings (admins) ────────────────────────────────────────────────────────
+// ─── Delete ───────────────────────────────────────────────────────────────────
 
-export interface SettingsInput {
-  warehouse_label: string;
+export async function deleteWholesaleForm(formId: string): Promise<ActionResult> {
+  try {
+    if (!UUID_RE.test(formId)) return { ok: false, error: 'Invalid form.' };
+    const { supabase } = await requireWholesaleAccess();
+    // RLS: drafts for anyone using the module, finalized forms for admins only.
+    const { data, error } = await supabase.from('wholesale_forms').delete().eq('id', formId).select('id');
+    if (error) return { ok: false, error: friendly(error) };
+    if (!data?.length) return { ok: false, error: 'Only admins can delete a finalized form.' };
+    revalidate();
+    return { ok: true, data: null };
+  } catch (err) {
+    return { ok: false, error: friendly(err) };
+  }
+}
+
+// ─── Send by email ────────────────────────────────────────────────────────────
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+export async function getEmailRecipients(): Promise<string[]> {
+  const { supabase } = await requireWholesaleAccess();
+  return loadEmailRecipients(supabase);
+}
+
+export async function sendWholesaleForm(formId: string): Promise<ActionResult<{ sentAt: string; recipients: string[] }>> {
+  try {
+    if (!UUID_RE.test(formId)) return { ok: false, error: 'Invalid form.' };
+    const { supabase, access } = await requireWholesaleAccess();
+    const form = await loadForm(supabase, formId);
+    if (!form) return { ok: false, error: 'Form not found.' };
+    if (form.status !== 'final') return { ok: false, error: 'Finalize the form before sending it.' };
+
+    const recipients = await loadEmailRecipients(supabase);
+    const { bytes, filename } = await renderFormPdf(supabase, form);
+    const subject = emailSubject(form.recipient_name, form.sales_date, form.receipt_total_cents);
+    const warehouse = form.settings_snapshot?.warehouse_name ?? form.settings_snapshot?.warehouse_label ?? 'Grandview';
+    const summary = `${warehouse} warehouse · ${form.total_bottles} bottle${form.total_bottles === 1 ? '' : 's'} · ${formatCents(form.receipt_total_cents)} · completed by ${form.completed_by_name ?? '—'}`;
+
+    await sendEmailStrict({
+      to: recipients,
+      subject,
+      text: `${summary}\n\nThe wholesale form PDF is attached.`,
+      html: `<p>${esc(summary)}</p><p>The wholesale form PDF is attached.</p>`,
+      fromName: 'High Bank Wholesale Forms',
+      attachments: [{ filename, content: Buffer.from(bytes), contentType: 'application/pdf' }],
+    });
+
+    const { data: sent, error } = await supabase
+      .from('wholesale_form_sends')
+      .insert({ form_id: formId, sent_by: access.userId, recipients, subject })
+      .select('sent_at')
+      .single();
+    if (error) return { ok: false, error: `Email sent, but logging it failed: ${friendly(error)}` };
+    revalidate();
+    return { ok: true, data: { sentAt: sent.sent_at, recipients } };
+  } catch (err) {
+    return { ok: false, error: friendly(err) };
+  }
+}
+
+// ─── Settings (admins): warehouse profiles + email recipients ────────────────
+
+export interface WarehouseInput {
+  label: string;
   agency_number: string;
   a3a_name: string;
   a3a_address: string;
@@ -305,14 +414,40 @@ export interface SettingsInput {
   a3a_email: string;
 }
 
-export async function saveSettings(input: SettingsInput): Promise<ActionResult> {
+export async function saveWarehouse(id: string, input: WarehouseInput): Promise<ActionResult> {
   try {
-    if (Object.values(input).some((v) => !String(v ?? '').trim())) return { ok: false, error: 'All fields are required.' };
+    if (!UUID_RE.test(id)) return { ok: false, error: 'Invalid warehouse.' };
+    const keys: (keyof WarehouseInput)[] = ['label', 'agency_number', 'a3a_name', 'a3a_address', 'a3a_phone', 'a3a_email'];
+    const row = Object.fromEntries(keys.map((k) => [k, String(input[k] ?? '').trim()])) as unknown as WarehouseInput;
+    if (keys.some((k) => !row[k])) return { ok: false, error: 'All fields are required.' };
+    if (!isEmail(row.a3a_email)) return { ok: false, error: 'Enter a valid A-3a email address.' };
+    row.label = row.label.toUpperCase();
     const { supabase, access } = await requireWholesaleAccess({ adminOnly: true });
-    const row = Object.fromEntries(Object.entries(input).map(([k, v]) => [k, String(v).trim()]));
+    const { data, error } = await supabase
+      .from('wholesale_warehouses')
+      .update({ ...row, updated_by: access.userId })
+      .eq('id', id)
+      .select('id');
+    if (error) return { ok: false, error: friendly(error) };
+    if (!data?.length) return { ok: false, error: 'You don’t have permission to do that.' };
+    revalidate();
+    return { ok: true, data: null };
+  } catch (err) {
+    return { ok: false, error: friendly(err) };
+  }
+}
+
+export async function saveEmailRecipients(recipients: string[]): Promise<ActionResult> {
+  try {
+    const list = [...new Set((recipients ?? []).map((r) => String(r).trim().toLowerCase()).filter(Boolean))];
+    if (list.length === 0) return { ok: false, error: 'Add at least one recipient.' };
+    if (list.length > 10) return { ok: false, error: 'Up to 10 recipients.' };
+    const bad = list.find((r) => !isEmail(r));
+    if (bad) return { ok: false, error: `“${bad}” isn’t a valid email address.` };
+    const { supabase, access } = await requireWholesaleAccess({ adminOnly: true });
     const { data, error } = await supabase
       .from('wholesale_form_settings')
-      .update({ ...row, updated_by: access.userId })
+      .update({ email_recipients: list, updated_by: access.userId })
       .eq('id', true)
       .select('id');
     if (error) return { ok: false, error: friendly(error) };

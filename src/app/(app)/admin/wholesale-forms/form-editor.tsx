@@ -1,24 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, ChevronsUpDown, Download, History, Loader2, Plus, RotateCcw, Save } from 'lucide-react';
+import { Check, ChevronsUpDown, Download, History, Loader2, Mail, Plus, RotateCcw, Save, Share2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { getLastOrderQuantities, saveWholesaleForm, type CustomerInput } from '@/app/actions/wholesale-forms';
+import { deleteWholesaleForm, getLastOrderQuantities, saveWholesaleForm, sendWholesaleForm, type CustomerInput } from '@/app/actions/wholesale-forms';
 import {
   WHOLESALE_FORMS_PATH,
   formatCents,
+  parseDollarsToCents,
   parseQuantity,
+  pdfFileName,
   type AccountType,
   type WholesaleCustomer,
   type WholesaleForm,
+  type WholesaleWarehouse,
 } from '@/lib/wholesale-forms';
 
 export interface ProductRow {
@@ -32,8 +36,32 @@ export interface ProductRow {
 interface Props {
   rows: ProductRow[];
   customers: WholesaleCustomer[];
+  warehouses: WholesaleWarehouse[];
+  recipients: string[];
+  isAdmin: boolean;
   today: string;
   initial?: WholesaleForm;
+}
+
+interface CustomRow {
+  key: string;
+  brand_code: string;
+  description: string;
+  unit_type: string;
+  price: string;
+  qty: string;
+  save: boolean;
+}
+
+let customKey = 0;
+const newCustomRow = (): CustomRow => ({ key: `c${++customKey}`, brand_code: '', description: '', unit_type: 'Bottles', price: '', qty: '', save: false });
+
+function centsInput(cents: number): string {
+  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, '0')}`;
+}
+
+function formatSentAt(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', timeZone: 'America/New_York' });
 }
 
 const EMPTY_RECIPIENT: CustomerInput = {
@@ -71,9 +99,26 @@ function fromForm(f: WholesaleForm): CustomerInput {
 
 const RECIPIENT_KEYS: (keyof CustomerInput)[] = ['name', 'address_line1', 'city', 'state', 'zip', 'phone', 'account_type', 'account_number', 'customer_id_number'];
 
-export function FormEditor({ rows, customers, today, initial }: Props) {
+export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, today, initial }: Props) {
   const router = useRouter();
+  const defaultWarehouse = warehouses.find((w) => w.is_default) ?? warehouses[0];
   const [formId, setFormId] = useState<string | null>(initial?.id ?? null);
+  const [warehouseId, setWarehouseId] = useState<string | null>(initial?.warehouse_id ?? defaultWarehouse?.id ?? null);
+  const [customRows, setCustomRows] = useState<CustomRow[]>(() =>
+    (initial?.lines ?? []).filter((l) => !l.product_id).map((l) => ({
+      key: `c${++customKey}`, brand_code: l.brand_code, description: l.description, unit_type: l.unit_type,
+      price: centsInput(l.price_cents), qty: String(l.quantity), save: false,
+    })),
+  );
+  const [lastSentAt, setLastSentAt] = useState<string | null>(initial?.last_sent_at ?? null);
+  const [confirmSend, setConfirmSend] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Web Share with files (mostly phones); checked after mount so server and client render the same.
+  const canShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'form.pdf', { type: 'application/pdf' })] }),
+    () => false,
+  );
   const [isFinal, setIsFinal] = useState(initial?.status === 'final');
   const [salesDate, setSalesDate] = useState(initial?.sales_date ?? today);
   const [customerId, setCustomerId] = useState<string | null>(initial?.customer_id ?? null);
@@ -92,7 +137,7 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [busy, setBusy] = useState<null | 'draft' | 'final' | 'repeat'>(null);
+  const [busy, setBusy] = useState<null | 'draft' | 'final' | 'repeat' | 'send' | 'share' | 'delete'>(null);
 
   const selected = customers.find((c) => c.id === customerId) ?? null;
   const showFields = !!customerId || isNewWholesaler || !!recipient.name;
@@ -104,9 +149,15 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
     const qty = parseQuantity(raw);
     return { ...r, raw, qty, invalid: qty === null, lineCents: qty ? r.price_cents * qty : 0 };
   });
-  const totalBottles = lineState.reduce((s, l) => s + (l.qty ?? 0), 0);
-  const totalCents = lineState.reduce((s, l) => s + l.lineCents, 0);
-  const anyInvalid = lineState.some((l) => l.invalid);
+  const customState = customRows.map((c) => {
+    const qty = parseQuantity(c.qty);
+    const price = c.price.trim() === '' ? null : parseDollarsToCents(c.price);
+    const incomplete = !c.brand_code.trim() || !c.description.trim() || price === null;
+    return { ...c, qtyN: qty, priceCents: price, invalidQty: qty === null, invalidPrice: c.price.trim() !== '' && price === null, incomplete, lineCents: qty && price !== null ? price * qty : 0 };
+  });
+  const totalBottles = lineState.reduce((s, l) => s + (l.qty ?? 0), 0) + customState.reduce((s, c) => s + (c.qtyN ?? 0), 0);
+  const totalCents = lineState.reduce((s, l) => s + l.lineCents, 0) + customState.reduce((s, c) => s + c.lineCents, 0);
+  const anyInvalid = lineState.some((l) => l.invalid) || customState.some((c) => c.invalidQty || c.invalidPrice);
   const canFinalize = !!recipient.name.trim() && totalBottles > 0 && !anyInvalid;
 
   const filtered = useMemo(() => {
@@ -128,6 +179,7 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
   function pickCustomer(c: WholesaleCustomer) {
     const r = fromCustomer(c);
     setCustomerId(c.id);
+    if (!formId && c.default_warehouse_id) setWarehouseId(c.default_warehouse_id);
     setRecipient(r);
     setBaseline(r);
     setIsNewWholesaler(false);
@@ -175,6 +227,11 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
       toast.error(!recipient.name.trim() ? 'Choose or add a recipient first.' : 'Enter at least one bottle first.');
       return;
     }
+    const incomplete = customState.find((c) => c.incomplete);
+    if (incomplete) {
+      toast.error('Each added item needs a brand code, description, and price (or remove it).');
+      return;
+    }
     setBusy(finalize ? 'final' : 'draft');
     try {
       const res = await saveWholesaleForm({
@@ -185,13 +242,20 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
         recipient,
         saveToDirectory: !!customerId && edited && updateSaved,
         quantities: Object.fromEntries(lineState.filter((l) => (l.qty ?? 0) > 0).map((l) => [l.productId, l.qty!])),
+        customLines: customState.map((c) => ({
+          brand_code: c.brand_code, description: c.description, unit_type: c.unit_type || 'Bottles',
+          price_cents: c.priceCents!, quantity: c.qtyN ?? 0, save_to_price_list: isAdmin && c.save,
+        })),
+        warehouseId,
         notes,
       });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      const { id, customerId: savedCustomerId } = res.data;
+      const { id, customerId: savedCustomerId, warning } = res.data;
+      if (warning) toast.warning(warning);
+      setCustomRows((rows) => rows.map((r) => ({ ...r, save: false })));
       setFormId(id);
       setCustomerId(savedCustomerId);
       setIsNewWholesaler(false);
@@ -221,6 +285,53 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
     a.remove();
   }
 
+  async function send() {
+    if (!formId) return;
+    setBusy('send');
+    try {
+      const res = await sendWholesaleForm(formId);
+      if (!res.ok) return void toast.error(res.error);
+      setLastSentAt(res.data.sentAt);
+      setConfirmSend(false);
+      toast.success(`Sent to ${res.data.recipients.join(', ')}`);
+      router.refresh();
+    } catch {
+      toast.error('Couldn’t send the form. Check your connection and try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function share() {
+    if (!formId) return;
+    setBusy('share');
+    try {
+      const resp = await fetch(`/api/wholesale-forms/${formId}/pdf`);
+      if (!resp.ok) throw new Error('pdf');
+      const file = new File([await resp.blob()], pdfFileName(salesDate, recipient.name || null), { type: 'application/pdf' });
+      await navigator.share({ files: [file], title: file.name });
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') toast.error('Couldn’t open the share sheet.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove() {
+    if (!formId) return;
+    setBusy('delete');
+    const res = await deleteWholesaleForm(formId);
+    setBusy(null);
+    if (!res.ok) return void toast.error(res.error);
+    toast.success('Form deleted');
+    router.replace(WHOLESALE_FORMS_PATH);
+    router.refresh();
+  }
+
+  function setCustom(key: string, patch: Partial<CustomRow>) {
+    setCustomRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  }
+
   const inputCls = 'h-11 text-base';
 
   return (
@@ -228,14 +339,86 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
       {isFinal && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 flex flex-wrap items-center gap-3">
           <Check className="h-4 w-4" />
-          <span className="flex-1">This form is final. Saving changes regenerates its PDF.</span>
+          <span className="flex-1">
+            This form is final. Saving changes regenerates its PDF.
+            {lastSentAt && <span className="ml-2 font-medium">Sent ✓ {formatSentAt(lastSentAt)}</span>}
+          </span>
           {formId && (
-            <Button variant="outline" size="sm" onClick={() => downloadPdf(formId)}>
-              <Download className="h-4 w-4 mr-1.5" /> Download PDF
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={() => downloadPdf(formId)}>
+                <Download className="h-4 w-4 mr-1.5" /> Download PDF
+              </Button>
+              <Button size="sm" onClick={() => setConfirmSend(true)} disabled={busy !== null}>
+                <Mail className="h-4 w-4 mr-1.5" /> {lastSentAt ? 'Send again' : 'Send'}
+              </Button>
+              {canShare && (
+                <Button variant="outline" size="sm" onClick={share} disabled={busy !== null}>
+                  {busy === 'share' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Share2 className="h-4 w-4 mr-1.5" />} Share
+                </Button>
+              )}
+            </>
           )}
         </div>
       )}
+
+      <Dialog open={confirmSend} onOpenChange={(o) => busy !== 'send' && setConfirmSend(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email this form?</DialogTitle>
+            <DialogDescription>The PDF will be attached and sent to:</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1 text-sm font-medium">
+            {recipients.map((r) => <li key={r} className="font-mono">{r}</li>)}
+          </ul>
+          {lastSentAt && <p className="text-xs text-muted-foreground">Already sent {formatSentAt(lastSentAt)} — this sends it again.</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={busy === 'send'}>Cancel</Button>
+            <Button onClick={send} disabled={busy === 'send'}>
+              {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />} Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDelete} onOpenChange={(o) => busy !== 'delete' && setConfirmDelete(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this form?</DialogTitle>
+            <DialogDescription>
+              {recipient.name || 'This form'} · {formatCents(totalCents)}. This can’t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={busy === 'delete'}>Cancel</Button>
+            <Button variant="destructive" onClick={remove} disabled={busy === 'delete'}>
+              {busy === 'delete' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* From warehouse */}
+      <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-2">
+        <Label>From Warehouse</Label>
+        <div className="flex flex-wrap rounded-lg border overflow-hidden w-fit" role="radiogroup" aria-label="From warehouse">
+          {warehouses.map((wh) => (
+            <button
+              key={wh.id}
+              type="button"
+              role="radio"
+              aria-checked={warehouseId === wh.id}
+              onClick={() => setWarehouseId(wh.id)}
+              className={cn('h-11 px-4 text-sm font-medium', warehouseId === wh.id ? 'bg-primary text-white' : 'bg-white text-muted-foreground hover:text-foreground')}
+            >
+              {wh.name} <span className={cn('ml-1 text-xs', warehouseId === wh.id ? 'text-white/80' : 'text-muted-foreground')}>#{wh.agency_number}</span>
+            </button>
+          ))}
+        </div>
+        {(() => {
+          const wh = warehouses.find((x) => x.id === warehouseId);
+          return wh ? <p className="text-xs text-muted-foreground">A-3a: {wh.a3a_address} · {wh.a3a_phone} · {wh.a3a_email}</p> : null;
+        })()}
+      </section>
 
       {/* Date + recipient */}
       <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-5">
@@ -373,6 +556,39 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
               </span>
             </div>
           ))}
+          {customState.map((c) => (
+            <div key={c.key} className="px-4 sm:px-5 py-3 space-y-2 bg-amber-50/40">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium uppercase tracking-wider text-amber-800">Added item</p>
+                <button type="button" onClick={() => setCustomRows((rows) => rows.filter((r) => r.key !== c.key))} className="p-1 text-muted-foreground hover:text-red-700" aria-label="Remove added item">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid gap-2 grid-cols-[110px_1fr]">
+                <MiniField label="Brand code" value={c.brand_code} onChange={(v) => setCustom(c.key, { brand_code: v.toUpperCase() })} />
+                <MiniField label="Description" value={c.description} onChange={(v) => setCustom(c.key, { description: v })} />
+              </div>
+              <div className="grid gap-2 grid-cols-[1fr_1fr_1fr_auto] items-end">
+                <MiniField label="Unit type" value={c.unit_type} onChange={(v) => setCustom(c.key, { unit_type: v })} />
+                <MiniField label="Price / bottle" value={c.price} onChange={(v) => setCustom(c.key, { price: v })} inputMode="decimal" placeholder="0.00" invalid={c.invalidPrice} />
+                <MiniField label="Quantity" value={c.qty} onChange={(v) => setCustom(c.key, { qty: v.replace(/\s/g, '') })} inputMode="numeric" placeholder="0" invalid={c.invalidQty} />
+                <span className="h-10 min-w-20 flex items-center justify-end text-sm tabular-nums font-medium">
+                  {c.lineCents > 0 ? formatCents(c.lineCents) : <span className="text-muted-foreground">—</span>}
+                </span>
+              </div>
+              {isAdmin && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={c.save} onChange={(e) => setCustom(c.key, { save: e.target.checked })} className="h-4 w-4 accent-[#C8102E]" />
+                  Save to price list
+                </label>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="px-4 sm:px-5 py-3 border-t">
+          <Button variant="outline" size="sm" onClick={() => setCustomRows((rows) => [...rows, newCustomRow()])}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add item
+          </Button>
         </div>
       </section>
 
@@ -389,6 +605,11 @@ export function FormEditor({ rows, customers, today, initial }: Props) {
             <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Receipt Total · {totalBottles} bottle{totalBottles === 1 ? '' : 's'}</p>
             <p className="text-2xl font-serif font-bold tabular-nums">{formatCents(totalCents)}</p>
           </div>
+          {formId && (!isFinal || isAdmin) && (
+            <Button variant="ghost" onClick={() => setConfirmDelete(true)} disabled={busy !== null} className="h-11 px-3 text-red-700" title="Delete form">
+              <Trash2 className="h-4 w-4" /><span className="sr-only">Delete form</span>
+            </Button>
+          )}
           {formId && (
             <Button variant="ghost" onClick={() => router.push(WHOLESALE_FORMS_PATH)} className="hidden sm:inline-flex">
               <History className="h-4 w-4 mr-1.5" /> History
@@ -424,5 +645,21 @@ function Field({ label, value, onChange, className, placeholder, inputMode }: {
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} className={className} placeholder={placeholder} inputMode={inputMode} />
     </div>
+  );
+}
+
+function MiniField({ label, value, onChange, placeholder, inputMode, invalid }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  invalid?: boolean;
+}) {
+  return (
+    <label className="space-y-1 block">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} className={cn('h-10', invalid && 'border-red-500')} />
+    </label>
   );
 }

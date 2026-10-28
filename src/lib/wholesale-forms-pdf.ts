@@ -92,13 +92,14 @@ export async function renderWholesaleFormPdf(form: WholesaleForm, settings: Whol
   const split = L + COL_SPLIT;
   const right = L + BOX_W;
 
-  // ── Title + sales date ──────────────────────────────────────────────────────
-  w.text(`WHOLESALE SALES REPORT **${settings.warehouse_label}** warehouse #${settings.agency_number}`, L, 66, { size: 14, font: fonts.bold, color: TITLE_BLUE });
-  w.text('SALES DATE', L, 96, { size: 11, font: fonts.bold, color: TITLE_BLUE });
-  w.text(formatSalesDate(form.sales_date), L + 78, 96, { size: 11 });
+  // ── Header: vendor, warehouse tag, sales date (matches the current paper forms) ──
+  w.text('Vendor: OHLQ - High Bank Distillery', L, 60, { size: 14, font: fonts.bold, color: TITLE_BLUE });
+  w.text(`**${settings.warehouse_label}**`, L, 80, { size: 12, font: fonts.bold });
+  w.text('SALES DATE', L, 102, { size: 11, font: fonts.bold, color: TITLE_BLUE });
+  w.text(formatSalesDate(form.sales_date), L + 78, 102, { size: 11 });
 
   // ── A-3a box ────────────────────────────────────────────────────────────────
-  const box1Top = 108;
+  const box1Top = 112;
   const box1H = 86;
   w.rect(L, box1Top, BOX_W, box1H, { fill: SHADE, border: RULE_BLUE });
   w.line(split, box1Top, split, box1Top + box1H, RULE_BLUE, 0.9);
@@ -125,7 +126,26 @@ export async function renderWholesaleFormPdf(form: WholesaleForm, settings: Whol
   const vx = L + 68;
   const vMax = COL_SPLIT - 72;
   w.text('Recipient:', L + 6, box2Top + 18, { size: 8.5, font: fonts.bold, color: LABEL_GRAY });
-  w.text(form.recipient_name ?? '', vx, box2Top + 18, { size: 10.5, font: fonts.bold, maxWidth: vMax, shrink: true });
+  // Long names (e.g. "Clock Tower Kitchen & Bar (Around the Clock Hospitality)") wrap onto up to three lines.
+  const recipientName = form.recipient_name ?? '';
+  if (w.width(recipientName, 10.5, fonts.bold) <= vMax) {
+    w.text(recipientName, vx, box2Top + 18, { size: 10.5, font: fonts.bold, maxWidth: vMax });
+  } else {
+    const wrapAt = (size: number) => {
+      const out: string[] = [];
+      for (const word of recipientName.split(/\s+/)) {
+        const cur = out.at(-1);
+        if (cur !== undefined && w.width(`${cur} ${word}`, size, fonts.bold) <= vMax) out[out.length - 1] = `${cur} ${word}`;
+        else out.push(word);
+      }
+      return out;
+    };
+    const two = wrapAt(9);
+    const [rows, size, ys] = two.length <= 2 ? [two, 9, [14, 26]] : [wrapAt(8), 8, [11, 21, 31]];
+    const shown = rows.slice(0, ys.length);
+    if (rows.length > ys.length) shown[ys.length - 1] = rows.slice(ys.length - 1).join(' ');
+    shown.forEach((t, i) => w.text(t, vx, box2Top + ys[i], { size, font: fonts.bold, maxWidth: vMax, shrink: true }));
+  }
   w.text('Address', L + 6, box2Top + 44, { size: 8.5, font: fonts.bold, color: LABEL_GRAY });
   w.text(form.recipient_address_line1 ?? '', vx, box2Top + 44, { size: 10, maxWidth: vMax, shrink: true });
   w.text(recipientCityLine(form), vx, box2Top + 58, { size: 10, maxWidth: vMax, shrink: true });

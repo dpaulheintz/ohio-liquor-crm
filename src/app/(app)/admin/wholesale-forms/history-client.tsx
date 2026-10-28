@@ -59,10 +59,11 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
   );
 
   function exportCsv() {
-    const header = ['Sales Date', 'Recipient', 'Account #', 'Customer ID#', 'Type', 'City', 'Bottles', 'Receipt Total', 'Status', 'Signed Copy', 'Notes'];
+    const header = ['Sales Date', 'Warehouse', 'Recipient', 'Account #', 'Customer ID#', 'Type', 'City', 'Bottles', 'Receipt Total', 'Status', 'Last Sent', 'Signed Copy', 'Notes'];
     const rows = filtered.map((f) => [
-      f.sales_date, f.recipient_name, f.account_number, f.customer_id_number, f.account_type, f.recipient_city,
-      f.total_bottles, centsPlain(f.receipt_total_cents), f.status, f.signed_copy_path ? 'Yes' : 'No', f.notes,
+      f.sales_date, f.settings_snapshot?.warehouse_name ?? f.settings_snapshot?.warehouse_label, f.recipient_name, f.account_number,
+      f.customer_id_number, f.account_type, f.recipient_city, f.total_bottles, centsPlain(f.receipt_total_cents), f.status,
+      f.last_sent_at ?? '', f.signed_copy_path ? 'Yes' : 'No', f.notes,
     ]);
     const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
     const a = document.createElement('a');
@@ -166,6 +167,11 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
                   <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold', f.status === 'final' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-800 border border-amber-200')}>
                     {f.status === 'final' ? 'Final' : 'Draft'}
                   </span>
+                  {f.last_sent_at && (
+                    <span className="ml-1.5 whitespace-nowrap text-[11px] font-medium text-green-700" title={`Emailed ${new Date(f.last_sent_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}`}>
+                      Sent ✓ {new Date(f.last_sent_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', timeZone: 'America/New_York' })}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-end items-center gap-1">
