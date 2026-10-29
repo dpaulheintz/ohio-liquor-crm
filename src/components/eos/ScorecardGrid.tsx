@@ -592,7 +592,7 @@ export default function ScorecardGrid({
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2.5 shadow-2xl">
+        <div className="fixed bottom-[calc(var(--mobile-nav-h)+1.5rem)] md:bottom-6 left-1/2 -translate-x-1/2 z-[70] rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2.5 shadow-2xl">
           {toast}
         </div>
       )}

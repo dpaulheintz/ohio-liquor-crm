@@ -187,13 +187,13 @@ export default function TodosClient({ initialTodos, archived = false }: Props) {
   return (
     <>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>To-Dos</h1>
           <p className="text-gray-500 mt-1 text-sm">7-day action items — carry forward anything unfinished</p>
         </div>
         {!archived && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ArchiveButton basePath="/eos/todos" />
             <button
               onClick={() => setShowModal(true)}

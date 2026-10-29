@@ -201,7 +201,7 @@ function Card({ title, children, className, right }: { title: string; children: 
 
 function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-white border p-0.5">
+    <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-white border p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -455,7 +455,7 @@ export function SecretShopperDashboardClient({ visits: initialVisits, demo, load
       </div>
 
       {/* Filters */}
-      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm px-6 py-3 flex flex-wrap gap-3 items-center">
+      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6 py-3 flex flex-wrap gap-3 items-center">
         <div className="flex items-center gap-2 text-xs shrink-0">
           <span className="text-muted-foreground uppercase tracking-wider">Range</span>
           <input type="date" value={dateFrom} max={dateTo} onChange={(e) => e.target.value && setDateFrom(e.target.value)}

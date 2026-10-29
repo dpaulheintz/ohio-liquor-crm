@@ -158,3 +158,13 @@
     transform: translateY(0);
   }
 }
+
+/* Height of the mobile tab bar (src/components/nav/mobile-nav.tsx), for anything that has to sit above it. */
+:root {
+  --mobile-nav-h: 0px;
+}
+@media (max-width: 767.98px) {
+  :root {
+    --mobile-nav-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}

@@ -71,12 +71,12 @@ export default function BarrelsClient({ initialBarrels, archived = false }: Prop
   return (
     <>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Barrels</h1>
           <p className="text-gray-500 mt-1 text-sm">Quarterly rocks — big goals for the company and individuals</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {quarters.length > 1 && (
             <select
               value={quarterFilter}

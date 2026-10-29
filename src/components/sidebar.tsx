@@ -2,72 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Building2,
-  Users,
-  Shield,
-  LogOut,
-  FileUp,
-  BarChart3,
-  ClipboardCheck,
-  ClipboardList,
-  UserCog,
-  GlassWater,
-  BarChart2,
-  Layers,
-  TrendingUp,
-  UtensilsCrossed,
-  AlertTriangle,
-  Package,
-  Target,
-  Sparkles,
-  Wine,
-  Eye,
-  FileText,
-  Wallet,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
-import { isEosAdmin } from '@/lib/eos-auth';
+import { navModulesForUser, navUserFromProfile } from '@/lib/nav';
+import { NavList } from '@/components/nav/nav-list';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
-
-const navItems = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/accounts', label: 'Accounts', icon: Building2 },
-  { href: '/contacts', label: 'Contacts', icon: Users },
-  { href: '/assignments', label: 'My Assignments', icon: ClipboardList },
-];
-
-const adminItems = [
-  { href: '/admin/assistant', label: 'AI Assistant', icon: Sparkles },
-  { href: '/admin', label: 'Admin Dashboard', icon: Shield },
-  { href: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
-  { href: '/admin/tastings', label: 'Tastings', icon: GlassWater },
-  { href: '/admin/barrel-picks', label: 'Barrel Picks', icon: Wine },
-  { href: '/admin/sales-dashboard', label: 'Sales Dashboard', icon: TrendingUp },
-  { href: '/admin/restaurant-analytics', label: 'Restaurant Analytics', icon: UtensilsCrossed },
-  { href: '/admin/restaurant-analytics/anomalies', label: 'Weekly Anomalies', icon: AlertTriangle },
-  { href: '/admin/sales-upload', label: 'Sales Upload', icon: BarChart2 },
-  { href: '/admin/account-groups', label: 'Account Groups', icon: Layers },
-  { href: '/admin/import', label: 'Import Agencies', icon: FileUp },
-  { href: '/admin/approvals', label: 'Approvals', icon: ClipboardCheck },
-  { href: '/admin/samples', label: 'Samples Dashboard', icon: Package },
-  { href: '/admin/secret-shopper', label: 'Secret Shopper', icon: Eye },
-  { href: '/admin/wholesale-forms', label: 'Wholesale Forms', icon: FileText },
-  { href: '/admin/kpi', label: 'KPI Report', icon: BarChart3 },
-  { href: '/admin/users', label: 'Users', icon: UserCog },
-];
-
-const allItems = [...navItems, ...adminItems];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { profile, isAdmin } = useUser();
-  const showEos = isEosAdmin(profile?.email);
-  const visiblePages = profile?.visible_pages;
+  const { profile } = useUser();
+  const modules = navModulesForUser(navUserFromProfile(profile));
 
   const initials = profile?.full_name
     ? profile.full_name
@@ -85,121 +31,8 @@ export function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-        {visiblePages ? (
-          // Restricted user — show only their allowed pages
-          allItems
-            .filter((item) => visiblePages.some(vp => item.href === vp || item.href.startsWith(vp + '/')))
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })
-        ) : (
-          <>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                item.href === '/'
-                  ? pathname === '/'
-                  : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-
-            {isAdmin && (
-              <>
-                <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                  Admin
-                </div>
-                {adminItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </>
-            )}
-          </>
-        )}
-        {profile?.payroll_access && (
-          <>
-            <div className="my-3 border-t border-sidebar-border pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-              Payroll
-            </div>
-            <Link
-              href="/payroll"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                pathname.startsWith('/payroll')
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-              )}
-            >
-              <Wallet className="h-4 w-4" />
-              Payroll
-            </Link>
-          </>
-        )}
-        {showEos && (
-          <>
-            <div className="my-3 border-t pt-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              EOS
-            </div>
-            <Link
-              href="/eos"
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                pathname.startsWith('/eos')
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              <Target className="h-4 w-4" />
-              EOS
-            </Link>
-          </>
-        )}
+      <nav aria-label="Main" className="flex-1 px-2 pb-4 overflow-y-auto">
+        <NavList modules={modules} pathname={pathname} variant="sidebar" />
       </nav>
 
       <div className="border-t border-sidebar-border p-3">

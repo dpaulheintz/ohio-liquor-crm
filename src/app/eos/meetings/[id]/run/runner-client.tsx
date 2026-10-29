@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Meeting, MeetingNote } from '@/lib/eos/meetings';
 import type { Metric, Entry } from '@/lib/eos/scorecard';
@@ -1062,6 +1063,15 @@ export default function RunnerClient({
       {/* ── Top bar ── */}
       <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Leave the full-screen view without ending the meeting (it stays Live in the nav) */}
+          <Link
+            href="/eos/meetings"
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            aria-label="Leave meeting view (meeting keeps running)"
+            title="Leave meeting view — the meeting keeps running"
+          >
+            <span aria-hidden className="text-lg leading-none">←</span>
+          </Link>
           <span className="font-serif text-base sm:text-lg font-bold text-gray-900 truncate" style={{ letterSpacing: '-0.01em' }}>High Bank Distillery</span>
           <span className="text-green-700 hidden sm:inline">—</span>
           <span className="text-sm text-green-600 font-medium hidden sm:inline">Level 10 Meeting</span>
@@ -1162,7 +1172,7 @@ export default function RunnerClient({
       </div>
 
       {/* ── SmartAddButton (above runner at z-[55]) ── */}
-      <SmartAddButton pageContext="meeting" className="z-[55]" />
+      <SmartAddButton pageContext="meeting" className="z-[55] bottom-6 right-6" />
 
       {/* ── Edit To-Do Modal ── */}
       {editingRunnerTodo && (() => {

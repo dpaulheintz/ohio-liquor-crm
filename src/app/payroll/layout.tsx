@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { getPayrollAccess } from '@/lib/payroll/server';
+import { createClient } from '@/lib/supabase/server';
+import { navUserFromProfile } from '@/lib/nav';
+import { MobileNav } from '@/components/nav/mobile-nav';
 import { isEosOnly } from '@/lib/eos-auth';
 import { PayrollTabs } from './payroll-tabs';
 
@@ -11,10 +14,16 @@ export const dynamic = 'force-dynamic';
 
 // Payroll lives outside the (app) group so EOS-only users with payroll_access (Jeff) can reach it.
 export default async function PayrollLayout({ children }: { children: React.ReactNode }) {
-  const access = await getPayrollAccess();
+  const supabase = await createClient();
+  const access = await getPayrollAccess(supabase);
   if (!access.userId) redirect('/login');
   if (!access.allowed) redirect('/');
   const backHref = isEosOnly(access.email) ? '/eos' : '/';
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, full_name, role, visible_pages, payroll_access')
+    .eq('id', access.userId)
+    .maybeSingle();
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -27,7 +36,7 @@ export default async function PayrollLayout({ children }: { children: React.Reac
               </Link>
               <h1 className="font-serif text-2xl font-bold tracking-wide truncate">Payroll</h1>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] text-muted-foreground shrink-0">
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] text-muted-foreground shrink-0">
               <Lock className="h-3 w-3" /> Restricted · payroll access only
             </span>
           </div>
@@ -35,7 +44,8 @@ export default async function PayrollLayout({ children }: { children: React.Reac
           <PayrollTabs />
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-nav-h)+1.5rem)] md:pb-6">{children}</main>
+      <MobileNav user={navUserFromProfile(profile, access.email)} name={profile?.full_name || null} />
     </div>
   );
 }

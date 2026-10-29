@@ -225,13 +225,13 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
   return (
     <>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Opportunities</h1>
           <p className="text-gray-500 mt-1 text-sm">Short and long-term issues to identify, discuss, and solve</p>
         </div>
         {!archived && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ArchiveButton basePath="/eos/opportunities" />
             <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
               + Add Opportunity

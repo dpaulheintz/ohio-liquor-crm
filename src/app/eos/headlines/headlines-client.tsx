@@ -162,13 +162,13 @@ export default function HeadlinesClient({ initialHeadlines, archived = false }: 
   return (
     <>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="font-serif text-3xl font-bold text-gray-900" style={{ letterSpacing: '-0.02em' }}>Headlines</h1>
           <p className="text-gray-500 mt-1 text-sm">Good news, customer wins, and team updates</p>
         </div>
         {!archived && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ArchiveButton basePath="/eos/headlines" />
             <button onClick={() => setShowModal(true)} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
               + Share Headline

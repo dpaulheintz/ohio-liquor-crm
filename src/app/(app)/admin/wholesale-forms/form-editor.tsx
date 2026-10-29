@@ -598,9 +598,9 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
       </section>
 
       {/* Sticky totals + actions */}
-      <div className="fixed bottom-16 md:bottom-0 left-0 md:left-56 right-0 z-20 border-t bg-background/95 backdrop-blur-sm">
-        {/* Right padding keeps the actions clear of the app's floating "+" button. */}
-        <div className="max-w-6xl mx-auto pl-4 sm:pl-6 pr-24 py-3 flex flex-wrap items-center gap-3">
+      <div className="fixed bottom-[var(--mobile-nav-h)] md:bottom-0 left-0 md:left-56 right-0 z-20 border-t bg-background/95 backdrop-blur-sm">
+        {/* The app's floating "+" button is hidden on these pages (src/components/nav/visit-fab.tsx). */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="mr-auto">
             <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Receipt Total · {totalBottles} bottle{totalBottles === 1 ? '' : 's'}</p>
             <p className="text-2xl font-serif font-bold tabular-nums">{formatCents(totalCents)}</p>
@@ -618,12 +618,13 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
           {!isFinal && (
             <Button variant="outline" onClick={() => save(false)} disabled={busy !== null} className="h-11">
               {busy === 'draft' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
-              Save Draft
+              Save<span className="hidden sm:inline">&nbsp;Draft</span>
             </Button>
           )}
           <Button onClick={() => save(!isFinal)} disabled={busy !== null || !canFinalize} className="h-11" title={canFinalize ? undefined : 'Needs a recipient and at least one bottle'}>
             {busy === 'final' || (isFinal && busy === 'draft') ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
-            {isFinal ? 'Save & Download PDF' : 'Finalize & Download PDF'}
+            <span className="sm:hidden">{isFinal ? 'Save PDF' : 'Finalize'}</span>
+            <span className="hidden sm:inline">{isFinal ? 'Save & Download PDF' : 'Finalize & Download PDF'}</span>
           </Button>
         </div>
       </div>

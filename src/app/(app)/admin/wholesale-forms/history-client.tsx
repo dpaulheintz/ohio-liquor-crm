@@ -137,7 +137,7 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
         </Button>
       </div>
 
-      <div className="rounded-xl border bg-card overflow-x-auto">
+      <div className="relative rounded-xl border bg-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-[11px] uppercase tracking-wider text-muted-foreground">

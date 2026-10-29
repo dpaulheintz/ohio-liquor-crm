@@ -1,10 +1,12 @@
 import { Sidebar } from '@/components/sidebar';
-import { BottomNav } from '@/components/bottom-nav';
+import { MobileNav } from '@/components/nav/mobile-nav';
+import { VisitFab } from '@/components/nav/visit-fab';
 import { TopBar } from '@/components/top-bar';
 import { UserProvider } from '@/components/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { isEosOnly } from '@/lib/eos-auth';
 import { Profile } from '@/lib/types';
+import { canOpenPath, navUserFromProfile } from '@/lib/nav';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -40,19 +42,21 @@ export default async function AppLayout({
   }
 
   const isApproved = isAdmin || profile?.role === 'rep';
+  const navUser = navUserFromProfile(profile, user?.email ?? null);
 
   return (
     <UserProvider value={{ profile, isAdmin, isApproved }}>
-      <div className="flex h-screen">
+      <div className="flex h-dvh">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar />
-          <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+          <main className="flex-1 overflow-y-auto pb-[calc(var(--mobile-nav-h)+5.5rem)] md:pb-0">
             {children}
           </main>
         </div>
       </div>
-      <BottomNav />
+      <MobileNav user={navUser} name={profile?.full_name || null} />
+      {canOpenPath(navUser, '/visits/new') && <VisitFab />}
     </UserProvider>
   );
 }

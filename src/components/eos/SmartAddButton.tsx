@@ -262,7 +262,7 @@ export default function SmartAddButton({ pageContext, className }: { pageContext
         <div className="fixed inset-0 z-[44]" onClick={() => setDropdownOpen(false)} />
       )}
 
-      <div className={cn('fixed bottom-6 right-6 z-[45]', className)}>
+      <div className={cn('fixed bottom-[calc(var(--mobile-nav-h)+1rem)] right-4 md:bottom-6 md:right-6 z-[45]', className)}>
         <div className="relative">
           {dropdownOpen && (
             <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[180px]">

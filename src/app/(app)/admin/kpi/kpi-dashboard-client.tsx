@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Cell, PieChart, Pie,
 } from 'recharts';
-import { Camera, ChevronDown, ChevronRight, Download, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Camera, ChevronDown, ChevronRight, Download, ExternalLink, TrendingUp, TrendingDown, Minus, X } from 'lucide-react';
 import Link from 'next/link';
 import { KPI_OPTIONS } from '@/lib/types';
 import { type KpiEventRow, type KpiDashboardData, type AgencyDisplayRow } from '@/app/actions/kpi';
@@ -290,6 +290,14 @@ function DisplayTrackingSection({ displays, onCreateAssignment }: {
       {/* Photo modal */}
       {photoModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPhotoModal(null)}>
+          <button
+            type="button"
+            onClick={() => setPhotoModal(null)}
+            className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            aria-label="Close photo"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <img src={photoModal} alt="Display photo" className="max-h-[80vh] max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
         </div>
       )}

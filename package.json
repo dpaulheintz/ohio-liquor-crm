@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:payroll-assistant-block": "node scripts/test-assistant-payroll-block.js"
+    "test:payroll-assistant-block": "node scripts/test-assistant-payroll-block.js",
+    "test:nav": "tsx scripts/test-nav-access.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
