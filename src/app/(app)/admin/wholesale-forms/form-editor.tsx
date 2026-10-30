@@ -104,6 +104,7 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
   const defaultWarehouse = warehouses.find((w) => w.is_default) ?? warehouses[0];
   const [formId, setFormId] = useState<string | null>(initial?.id ?? null);
   const [warehouseId, setWarehouseId] = useState<string | null>(initial?.warehouse_id ?? defaultWarehouse?.id ?? null);
+  const [warehouseAutoSet, setWarehouseAutoSet] = useState(false);
   const [customRows, setCustomRows] = useState<CustomRow[]>(() =>
     (initial?.lines ?? []).filter((l) => !l.product_id).map((l) => ({
       key: `c${++customKey}`, brand_code: l.brand_code, description: l.description, unit_type: l.unit_type,
@@ -179,7 +180,11 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
   function pickCustomer(c: WholesaleCustomer) {
     const r = fromCustomer(c);
     setCustomerId(c.id);
-    if (!formId && c.default_warehouse_id) setWarehouseId(c.default_warehouse_id);
+    // Finalized forms keep the warehouse they were issued from.
+    if (!isFinal && c.default_warehouse_id) {
+      setWarehouseId(c.default_warehouse_id);
+      setWarehouseAutoSet(true);
+    }
     setRecipient(r);
     setBaseline(r);
     setIsNewWholesaler(false);
@@ -191,6 +196,10 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
 
   function startNewWholesaler() {
     setCustomerId(null);
+    if (!isFinal) {
+      setWarehouseId(defaultWarehouse?.id ?? null);
+      setWarehouseAutoSet(false);
+    }
     setBaseline(null);
     setRecipient({ ...EMPTY_RECIPIENT, name: search.trim() });
     setIsNewWholesaler(true);
@@ -407,13 +416,15 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
               type="button"
               role="radio"
               aria-checked={warehouseId === wh.id}
-              onClick={() => setWarehouseId(wh.id)}
-              className={cn('h-11 px-4 text-sm font-medium', warehouseId === wh.id ? 'bg-primary text-white' : 'bg-white text-muted-foreground hover:text-foreground')}
+              disabled={!isAdmin}
+              onClick={() => { setWarehouseId(wh.id); setWarehouseAutoSet(false); }}
+              className={cn('h-11 px-4 text-sm font-medium', warehouseId === wh.id ? 'bg-primary text-white' : 'bg-white text-muted-foreground', isAdmin && warehouseId !== wh.id && 'hover:text-foreground', !isAdmin && 'cursor-default')}
             >
               {wh.name} <span className={cn('ml-1 text-xs', warehouseId === wh.id ? 'text-white/80' : 'text-muted-foreground')}>#{wh.agency_number}</span>
             </button>
           ))}
         </div>
+        {warehouseAutoSet && <p data-warehouse-auto className="text-xs font-medium text-muted-foreground">Auto-set from wholesaler</p>}
         {(() => {
           const wh = warehouses.find((x) => x.id === warehouseId);
           return wh ? <p className="text-xs text-muted-foreground">A-3a: {wh.a3a_address} · {wh.a3a_phone} · {wh.a3a_email}</p> : null;

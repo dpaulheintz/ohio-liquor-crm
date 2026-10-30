@@ -5,7 +5,7 @@ import { formatFileDate } from '@/lib/wholesale-forms';
 export const RETAIL_REQ_PATH = '/admin/retail-requisitions';
 
 export const REQ_LOCATIONS = ['Grandview', 'Gahanna', 'Westerville'] as const;
-export const REQ_PURPOSES = ['Sales', 'Batch', 'Bar', 'Retail'] as const;
+export const REQ_PURPOSES = ['Sales', 'Retail'] as const;
 export type ReqLocation = (typeof REQ_LOCATIONS)[number];
 export type ReqPurpose = (typeof REQ_PURPOSES)[number];
 export type ReqStatus = 'draft' | 'final';
@@ -30,7 +30,8 @@ export interface RetailReqLine {
 export interface RetailRequisition {
   id: string;
   location: ReqLocation;
-  purpose: ReqPurpose;
+  /** ReqPurpose, or an older value kept on requisitions saved before the list was narrowed. */
+  purpose: string;
   req_date: string;
   status: ReqStatus;
   requested_by_name: string | null;

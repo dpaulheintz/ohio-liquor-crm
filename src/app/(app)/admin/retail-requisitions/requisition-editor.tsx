@@ -19,7 +19,6 @@ import {
   formatSentDate,
   requisitionFileName,
   type ReqLocation,
-  type ReqPurpose,
   type RetailReqProduct,
   type RetailRequisition,
 } from '@/lib/retail-requisitions';
@@ -85,7 +84,7 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
   const router = useRouter();
   const start = useMemo(() => splitLines(products, initial?.lines ?? []), [products, initial]);
   const [location, setLocation] = useState<ReqLocation>(initial?.location ?? 'Grandview');
-  const [purpose, setPurpose] = useState<ReqPurpose | null>(initial?.purpose ?? null);
+  const [purpose, setPurpose] = useState<string | null>(initial?.purpose ?? null);
   const [reqDate, setReqDate] = useState(initial?.req_date ?? today);
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [quantities, setQuantities] = useState<Record<string, string>>(start.quantities);
@@ -97,6 +96,9 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
   const [sentAt, setSentAt] = useState(initial?.sent_at ?? null);
 
   const id = initial?.id ?? null;
+  // A requisition saved with an older purpose keeps showing it; new ones only get the current list.
+  const purposeOptions: readonly string[] =
+    initial && !(REQ_PURPOSES as readonly string[]).includes(initial.purpose) ? [...REQ_PURPOSES, initial.purpose] : REQ_PURPOSES;
   const isFinal = initial?.status === 'final';
 
   // Web Share with files (mostly phones); checked after mount so server and client render the same.
@@ -271,7 +273,7 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
         </div>
         <div className="space-y-1.5">
           <Label>Purpose</Label>
-          <Segmented label="Purpose" value={purpose} options={REQ_PURPOSES} onChange={setPurpose} />
+          <Segmented label="Purpose" value={purpose} options={purposeOptions} onChange={setPurpose} />
           {!purpose && <p className="text-xs text-muted-foreground">Required — pick one.</p>}
         </div>
         <div className="flex flex-wrap items-end gap-3">

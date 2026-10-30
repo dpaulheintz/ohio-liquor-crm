@@ -133,6 +133,17 @@ export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionRes
       if (error) return { ok: false, error: friendly(error) };
     }
 
+    // Only admins can override the warehouse the wholesaler sets.
+    if (!access.isAdmin && input.warehouseId) {
+      const [{ data: customer }, { data: existing }, { data: fallback }] = await Promise.all([
+        customerId ? supabase.from('wholesale_customers').select('default_warehouse_id').eq('id', customerId).maybeSingle() : Promise.resolve({ data: null }),
+        input.formId ? supabase.from('wholesale_forms').select('warehouse_id').eq('id', input.formId).maybeSingle() : Promise.resolve({ data: null }),
+        supabase.from('wholesale_warehouses').select('id').eq('is_default', true).maybeSingle(),
+      ]);
+      const allowed = [customer?.default_warehouse_id ?? fallback?.id, existing?.warehouse_id];
+      if (!allowed.includes(input.warehouseId)) return { ok: false, error: 'Only admins can change the warehouse.' };
+    }
+
     const r = input.recipient;
     const { data: id, error } = await supabase.rpc('save_wholesale_form', {
       p_form_id: input.formId,

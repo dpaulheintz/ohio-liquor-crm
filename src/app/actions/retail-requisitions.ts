@@ -60,7 +60,13 @@ export async function saveRequisition(input: SaveRequisitionInput): Promise<Acti
     if (input.id && !UUID_RE.test(input.id)) return { ok: false, error: 'Invalid requisition.' };
     if (input.status !== 'draft' && input.status !== 'final') return { ok: false, error: 'Invalid status.' };
     if (!(REQ_LOCATIONS as readonly string[]).includes(input.location)) return { ok: false, error: 'Pick a location.' };
-    if (!(REQ_PURPOSES as readonly string[]).includes(input.purpose)) return { ok: false, error: 'Pick a purpose.' };
+    if (!(REQ_PURPOSES as readonly string[]).includes(input.purpose)) {
+      // An older purpose is only accepted on the requisition that already has it.
+      const { data: existing } = input.id
+        ? await supabase.from('retail_requisitions').select('purpose').eq('id', input.id).maybeSingle()
+        : { data: null };
+      if (existing?.purpose !== input.purpose) return { ok: false, error: 'Pick a purpose.' };
+    }
     if (!DATE_RE.test(input.reqDate)) return { ok: false, error: 'Enter a valid date.' };
 
     let items = 0;
