@@ -22,13 +22,13 @@ const SHADE = hex('DEEAF6');
 const LABEL_GRAY = hex('404040');
 const BLACK = hex('000000');
 
-interface Fonts {
+export interface Fonts {
   regular: PDFFont;
   bold: PDFFont;
   serif: PDFFont;
 }
 
-class Writer {
+export class Writer {
   constructor(private page: PDFPage, private fonts: Fonts) {}
 
   /** Replace characters the standard (WinAnsi) fonts can't encode. */

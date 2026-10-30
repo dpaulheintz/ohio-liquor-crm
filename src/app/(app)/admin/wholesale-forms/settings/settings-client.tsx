@@ -94,7 +94,7 @@ function RecipientsCard({ recipients }: { recipients: string[] }) {
     <section className="max-w-xl space-y-3">
       <div>
         <h2 className="font-serif text-lg font-semibold">Send recipients</h2>
-        <p className="text-sm text-muted-foreground">Finalized forms are emailed (PDF attached) to these addresses when someone taps Send.</p>
+        <p className="text-sm text-muted-foreground">Finalized wholesale forms and retail requisitions are emailed (PDF attached) to these addresses when someone taps Send.</p>
       </div>
       <div className="rounded-xl border bg-card p-5 space-y-3">
         <Label htmlFor="recipients">One email per line</Label>

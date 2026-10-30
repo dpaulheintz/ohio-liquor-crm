@@ -9,7 +9,7 @@ import {
   Home, Building2, Users, Shield, FileUp, BarChart3, ClipboardCheck, ClipboardList, UserCog,
   GlassWater, BarChart2, Layers, TrendingUp, UtensilsCrossed, AlertTriangle, Package, Sparkles,
   Wine, Eye, FileText, Wallet, LayoutDashboard, Gauge, Target, CheckSquare, Lightbulb, Newspaper,
-  Handshake,
+  Handshake, ClipboardPen,
 } from 'lucide-react';
 import { isEosOnly, isEosUser } from '@/lib/eos-auth';
 
@@ -45,6 +45,7 @@ export const NAV_MODULES: NavModule[] = [
 
   { href: '/admin/barrel-picks', label: 'Barrel Picks', short: 'Barrels', icon: Wine, group: 'Operations', priority: 75 },
   { href: '/admin/wholesale-forms', label: 'Wholesale Forms', short: 'Wholesale', icon: FileText, group: 'Operations', priority: 80 },
+  { href: '/admin/retail-requisitions', label: 'Retail Requisitions', short: 'Requisitions', icon: ClipboardPen, group: 'Operations', priority: 78 },
   { href: '/payroll', label: 'Payroll', icon: Wallet, group: 'Operations', priority: 45 },
   { href: '/admin/sales-upload', label: 'Sales Upload', short: 'Upload', icon: BarChart2, group: 'Operations', priority: 10 },
   { href: '/admin/import', label: 'Import Agencies', short: 'Import', icon: FileUp, group: 'Operations', priority: 5 },
@@ -83,7 +84,7 @@ export function pathInVisiblePages(visiblePages: string[], path: string): boolea
 /**
  * Whether this user can open `path` — the same chain of checks the request goes through:
  * proxy (pending, visible_pages, /admin for admins) → EOS layout (email allowlist) → Payroll layout
- * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, secret shopper).
+ * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, secret shopper).
  */
 export function canOpenPath(u: NavUser, path: string): boolean {
   if (u.role === 'pending') return path === '/pending-approval';
@@ -104,6 +105,10 @@ export function canOpenPath(u: NavUser, path: string): boolean {
     const canUse = u.role === 'admin' || (u.visible_pages ?? []).includes('/admin/wholesale-forms');
     const adminOnly = path.endsWith('/settings') || path.endsWith('/price-list');
     return canUse && (!adminOnly || u.role === 'admin');
+  }
+  if (path === '/admin/retail-requisitions' || path.startsWith('/admin/retail-requisitions/')) {
+    const canUse = u.role === 'admin' || (u.visible_pages ?? []).includes('/admin/retail-requisitions');
+    return canUse && (!path.endsWith('/sku-list') || u.role === 'admin');
   }
   if (path === '/admin/secret-shopper' || path.startsWith('/admin/secret-shopper/')) {
     return u.role === 'admin' || u.role === 'demo';

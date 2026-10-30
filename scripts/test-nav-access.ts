@@ -6,7 +6,7 @@
 //     checks below) for every static page route — so the nav never shows a page that would bounce,
 //     and never hides one the user can open.
 //  2. Desktop sidebar list === mobile list (tab bar ⊆ More menu, More menu === sidebar).
-//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages.
+//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages and Retail Requisitions.
 //  4. Spot checks for the reported bug and the user types in the brief.
 
 import { config } from 'dotenv';
@@ -25,6 +25,7 @@ const ROUTES = [
   '/admin/sales-upload', '/admin/account-groups', '/admin/import', '/admin/approvals', '/admin/samples',
   '/admin/secret-shopper', '/admin/wholesale-forms', '/admin/wholesale-forms/new',
   '/admin/wholesale-forms/wholesalers', '/admin/wholesale-forms/price-list', '/admin/wholesale-forms/settings',
+  '/admin/retail-requisitions', '/admin/retail-requisitions/new', '/admin/retail-requisitions/sku-list',
   '/admin/kpi', '/admin/users',
   '/eos', '/eos/scorecard', '/eos/barrels', '/eos/todos', '/eos/opportunities', '/eos/headlines', '/eos/meetings',
   '/payroll', '/payroll/employees', '/payroll/jobs', '/payroll/paycodes', '/payroll/locations',
@@ -53,6 +54,11 @@ function routeGateAllows(u: NavUser, path: string): boolean {
     const canUse = u.role === 'admin' || (vp ?? []).includes('/admin/wholesale-forms');
     if (path.endsWith('/settings') || path.endsWith('/price-list')) return canUse && u.role === 'admin';
     return canUse;
+  }
+  // src/app/(app)/admin/retail-requisitions/layout.tsx (can_use_retail_requisitions) + sku-list page
+  if (path.startsWith('/admin/retail-requisitions')) {
+    const canUse = u.role === 'admin' || (vp ?? []).includes('/admin/retail-requisitions');
+    return canUse && (!path.endsWith('/sku-list') || u.role === 'admin');
   }
   // src/app/(app)/admin/secret-shopper/page.tsx
   if (path.startsWith('/admin/secret-shopper')) return u.role === 'admin' || u.role === 'demo';
@@ -121,7 +127,7 @@ async function main() {
     // 3. nothing lost vs the old sidebar
     const old = oldSidebar(u);
     for (const h of old) if (!desktop.includes(h)) fail(`${label}: lost ${h} from the sidebar`);
-    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h)) fail(`${label}: new non-EOS item ${h}`);
+    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h) && h !== '/admin/retail-requisitions') fail(`${label}: new non-EOS item ${h}`);
 
     const allowed = PAGE_ROUTES.filter((r) => routeGateAllows(u, r));
     console.log(`\n■ ${label} <${u.email}>  role=${u.role}${u.visible_pages ? ' visible_pages=' + u.visible_pages.join(',') : ''}${u.payroll_access ? ' payroll' : ''}`);
@@ -134,8 +140,8 @@ async function main() {
   const by = (email: string) => users.find((x) => x.u.email === email)!.u;
   const list = (email: string) => navModulesForUser(by(email)).map((m) => m.href);
   const eq = (a: string[], b: string[]) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
-  if (!eq(list('distillery@highbankco.com'), ['/admin/sales-dashboard', '/admin/barrel-picks', '/admin/samples', '/admin/wholesale-forms']))
-    fail('distillery: expected exactly Sales Dashboard, Barrel Picks, Samples, Wholesale Forms');
+  if (!eq(list('distillery@highbankco.com'), ['/admin/sales-dashboard', '/admin/barrel-picks', '/admin/samples', '/admin/wholesale-forms', '/admin/retail-requisitions']))
+    fail('distillery: expected exactly Sales Dashboard, Barrel Picks, Samples, Wholesale Forms, Retail Requisitions');
   if (pickTabModules(navModulesForUser(by('distillery@highbankco.com')), {}).length !== 4) fail('distillery: expected 4 tabs');
   if (list('ajones@highbankco.com').some((h) => h.startsWith('/eos'))) fail('Amy should not see EOS (not on the allowlist)');
   if (!list('pheintzman@highbankco.com').includes('/eos') || !list('ahines@highbankco.com').includes('/eos')) fail('Paul/Adam should see EOS');

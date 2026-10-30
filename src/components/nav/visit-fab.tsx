@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Pages with their own bottom action bar, where the button would sit on top of it.
-const HIDE_ON = ['/admin/wholesale-forms'];
+const HIDE_ON = ['/admin/wholesale-forms', '/admin/retail-requisitions'];
 
 /** Log Visit button — sits above the mobile tab bar, bottom-right on desktop. */
 export function VisitFab() {
