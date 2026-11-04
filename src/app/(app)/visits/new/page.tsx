@@ -55,8 +55,12 @@ interface KpiEntry {
   type: string;
   quantity: number;
   soldStatus: 'sold' | 'unsold';
+  /** Still the automatic default (the rep hasn't tapped Sold/Unsold). */
+  soldAuto: boolean;
   displayType: string;
 }
+
+const SOLD_TYPES = ['Menu', 'Feature'];
 
 export default function NewVisitPage() {
   return (
@@ -104,6 +108,32 @@ function NewVisitForm() {
   const [newContactTitle, setNewContactTitle]       = useState('');
 
   const [loadingAccount, setLoadingAccount] = useState(!!presetAccountId);
+
+  // Sold/Unsold default for Menu/Feature KPIs, from the account's purchase history
+  const [soldDefault, setSoldDefault] = useState<{ key: string; sold: boolean; hint: string } | null>(null);
+  const visitDate = visitedAt.slice(0, 10);
+  const soldKey = creatingNewAccount ? 'new' : accountId ? `${accountId}|${visitDate}` : '';
+  const currentDefault = soldDefault && soldDefault.key === soldKey ? soldDefault : null;
+  const autoSold = (current: { sold: boolean } | null): 'sold' | 'unsold' => (current ? (current.sold ? 'sold' : 'unsold') : 'sold');
+
+  useEffect(() => {
+    if (!soldKey) return;
+    let cancelled = false;
+    const apply = (d: { key: string; sold: boolean; hint: string }) => {
+      if (cancelled) return;
+      setSoldDefault(d);
+      setKpis((prev) => prev.map((k) => (k.soldAuto && SOLD_TYPES.includes(k.type) ? { ...k, soldStatus: d.sold ? 'sold' : 'unsold' } : k)));
+    };
+    if (soldKey === 'new') {
+      apply({ key: soldKey, sold: false, hint: 'Unsold – new account, no High Bank purchases yet' });
+    } else {
+      const [id, date] = soldKey.split('|');
+      import('@/app/actions/kpi').then(({ getKpiSoldDefault }) => getKpiSoldDefault(id, date)).then((d) => {
+        if (d) import('@/lib/kpi-sold-default').then(({ soldDefaultHint }) => apply({ key: soldKey, sold: d.sold, hint: soldDefaultHint(d, date) }));
+      }).catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [soldKey]);
 
   // Display tracking state
   const [hasTrackedDisplay, setHasTrackedDisplay] = useState(false);
@@ -161,7 +191,7 @@ function NewVisitForm() {
   const hasDisplayKpi = kpis.some(k => k.type === 'Display');
 
   function addKpi() {
-    setKpis([...kpis, { type: '', quantity: 1, soldStatus: 'sold', displayType: '' }]);
+    setKpis([...kpis, { type: '', quantity: 1, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '' }]);
   }
 
   function removeKpi(index: number) {
@@ -170,7 +200,7 @@ function NewVisitForm() {
 
   function updateKpiType(index: number, type: string) {
     const updated = [...kpis];
-    updated[index] = { ...updated[index], type, soldStatus: 'sold', displayType: '' };
+    updated[index] = { ...updated[index], type, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '' };
     setKpis(updated);
   }
 
@@ -288,7 +318,7 @@ function NewVisitForm() {
         accountId: resolvedAccountId,
         visitType,
         notes: notes || undefined,
-        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldStatus, displayType: k.displayType || undefined })) : undefined,
+        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldAuto && !currentDefault ? undefined : k.soldStatus, displayType: k.displayType || undefined })) : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: visitType === 'in_person' && photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -511,7 +541,7 @@ function NewVisitForm() {
                     onClick={() => {
                       setDisplayAnswer('up');
                       if (!kpis.some(k => k.type === 'Display')) {
-                        setKpis(prev => [...prev, { type: 'Display', quantity: 1, soldStatus: 'sold', displayType: trackedDisplayType ?? '' }]);
+                        setKpis(prev => [...prev, { type: 'Display', quantity: 1, soldStatus: 'sold', soldAuto: true, displayType: trackedDisplayType ?? '' }]);
                       }
                     }}
                   >
@@ -634,12 +664,12 @@ function NewVisitForm() {
                         <div className="flex rounded border border-border overflow-hidden text-xs">
                           <button
                             type="button"
-                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'sold' }; setKpis(u); }}
+                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'sold', soldAuto: false }; setKpis(u); }}
                             className={`px-2 py-1 transition-colors ${kpi.soldStatus === 'sold' ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                           >Sold</button>
                           <button
                             type="button"
-                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'unsold' }; setKpis(u); }}
+                            onClick={() => { const u = [...kpis]; u[i] = { ...u[i], soldStatus: 'unsold', soldAuto: false }; setKpis(u); }}
                             className={`px-2 py-1 border-l border-border transition-colors ${kpi.soldStatus === 'unsold' ? 'bg-amber-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                           >Unsold</button>
                         </div>
@@ -647,6 +677,9 @@ function NewVisitForm() {
                       <button type="button" onClick={() => removeKpi(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                         <X className="h-4 w-4" />
                       </button>
+                      {SOLD_TYPES.includes(kpi.type) && kpi.soldAuto && currentDefault && (
+                        <p data-sold-hint className="basis-full text-xs text-muted-foreground">{currentDefault.hint}</p>
+                      )}
                     </div>
                   ))}
                 </div>

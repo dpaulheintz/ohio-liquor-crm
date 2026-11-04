@@ -43,7 +43,7 @@ export function AccountFormDialog({
   account,
 }: AccountFormDialogProps) {
   const [type, setType] = useState<string>(account?.type || 'wholesale');
-  const [status, setStatus] = useState<string>(account?.status || 'customer');
+  const [status, setStatus] = useState<string>(account?.status?.toLowerCase() || 'customer');
   const [deliveryDay, setDeliveryDay] = useState<string>(account?.delivery_day || '');
   const [orderDay, setOrderDay] = useState<string>(account?.order_day || '');
   const [d8Permit, setD8Permit] = useState<boolean>(account?.d8_permit ?? false);

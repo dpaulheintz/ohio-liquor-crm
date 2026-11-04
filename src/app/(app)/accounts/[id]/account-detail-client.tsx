@@ -172,8 +172,8 @@ export function AccountDetailClient({ account: initialAccount }: AccountDetailCl
                   {account.type === 'agency' ? 'Agency' : 'Wholesale'}
                 </Badge>
                 {account.type === 'wholesale' && (
-                  <Badge variant={account.status === 'prospect' ? 'outline' : 'default'}>
-                    {account.status === 'prospect' ? 'Prospect' : 'Customer'}
+                  <Badge variant={account.status?.toLowerCase() === 'prospect' ? 'outline' : 'default'}>
+                    {account.status?.toLowerCase() === 'prospect' ? 'Prospect' : 'Customer'}
                   </Badge>
                 )}
               </div>

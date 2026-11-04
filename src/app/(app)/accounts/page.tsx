@@ -240,7 +240,7 @@ function AccountList() {
                   <Badge variant={account.type === 'agency' ? 'default' : 'secondary'} className="shrink-0 text-xs">
                     {account.type === 'agency' ? 'Agency' : 'Wholesale'}
                   </Badge>
-                  {account.type === 'wholesale' && account.status === 'prospect' && (
+                  {account.type === 'wholesale' && account.status?.toLowerCase() === 'prospect' && (
                     <Badge variant="outline" className="shrink-0 text-xs">
                       Prospect
                     </Badge>

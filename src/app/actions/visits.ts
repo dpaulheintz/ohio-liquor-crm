@@ -76,7 +76,8 @@ export async function getVisitsByAccount(accountId: string) {
 const kpiEntrySchema = z.object({
   type:        z.enum(KPI_OPTIONS),
   quantity:    z.number().int().min(1).max(99).default(1),
-  soldStatus:  z.enum(['sold', 'unsold']).default('sold'),
+  // Left out → the database picks it from the account's purchase history (visit_kpis trigger).
+  soldStatus:  z.enum(['sold', 'unsold']).optional(),
   displayType: z.enum(['Wood', 'Box', 'Shelves']).optional(),
 });
 
@@ -136,7 +137,7 @@ export async function createVisit(input: {
       visit_id:     visit.id,
       kpi_type:     k.type,
       kpi_quantity: k.quantity,
-      sold_status:  k.soldStatus ?? 'sold',
+      sold_status:  k.soldStatus ?? null,
       display_type: k.type === 'Display' ? (k.displayType ?? null) : null,
     }));
     const { error: kpiError } = await supabase.from('visit_kpis').insert(kpiRecords);

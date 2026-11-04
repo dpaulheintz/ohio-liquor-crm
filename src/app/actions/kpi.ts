@@ -1,6 +1,7 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import type { KpiSoldDefault } from '@/lib/kpi-sold-default';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -348,4 +349,16 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
     weeklyMetrics,
     agencyDisplays,
   };
+}
+
+// ─── Sold/Unsold default for a new Menu/Feature KPI ───────────────────────────
+
+/** Whether the account counts as sold for a visit on visitDate ("YYYY-MM-DD"); null if unknown. */
+export async function getKpiSoldDefault(accountId: string, visitDate: string): Promise<KpiSoldDefault | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(accountId) || !/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('kpi_sold_default', { p_account_id: accountId, p_visit_date: visitDate });
+  const row = Array.isArray(data) ? data[0] : null;
+  if (error || !row) return null;
+  return { sold: row.sold === true, lastPurchaseMonth: row.last_purchase_month ?? null, accountStatus: row.account_status ?? null };
 }
