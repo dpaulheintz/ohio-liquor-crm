@@ -9,8 +9,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: `v${pkg.version.split('.')[1]}`,
   },
   // Barrel Arcade kids game: serve public/play/index.html at /play
+  // Rusty Bucket Arcade sales demo: serve public/demo/rusty-bucket-arcade/index.html
   rewrites: async () => [
     { source: '/play', destination: '/play/index.html' },
+    { source: '/demo/rusty-bucket-arcade', destination: '/demo/rusty-bucket-arcade/index.html' },
   ],
   headers: async () => [
     {

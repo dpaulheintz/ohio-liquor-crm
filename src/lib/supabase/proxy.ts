@@ -7,6 +7,10 @@ export async function updateSession(request: NextRequest) {
   if (reqPath === '/play' || reqPath.startsWith('/play/')) {
     return NextResponse.next({ request });
   }
+  // Rusty Bucket Arcade sales demo: public, static, no auth. Scoped to exactly this prefix, not all of /demo.
+  if (reqPath === '/demo/rusty-bucket-arcade' || reqPath.startsWith('/demo/rusty-bucket-arcade/')) {
+    return NextResponse.next({ request });
+  }
 
   let supabaseResponse = NextResponse.next({
     request,
