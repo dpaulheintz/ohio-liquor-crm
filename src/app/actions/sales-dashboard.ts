@@ -126,6 +126,53 @@ export interface SalesDashboardData {
 
 // ─── Server action ────────────────────────────────────────────────────────────
 
+type CompactAgencySku = {
+  skus: [string, string | null, string | null, string | null][];
+  agencies: [string, string | null][];
+  rows: [string, number, number, boolean, number | null, number | null][];
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function decodeAgencySkuMonthly(raw: any): AgencySkuRow[] {
+  let rows: AgencySkuRow[];
+  if (Array.isArray(raw)) {
+    // legacy shape: one object per row
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rows = raw.map((r: any) => ({
+      month:          String(r.month),
+      brand_code:     String(r.brand_code ?? ''),
+      product_name:   String(r.product_name ?? ''),
+      brand_family:   String(r.brand_family ?? 'Unknown'),
+      size:           String(r.size ?? ''),
+      agency_id:      String(r.agency_id ?? ''),
+      agency_name:    r.agency_name ? String(r.agency_name) : null,
+      is_hb_agency:   Boolean(r.is_hb_agency),
+      retail_bottles: Number(r.retail_bottles ?? 0),
+      retail_amount:  Number(r.retail_amount ?? 0),
+    }));
+  } else {
+    const c = (raw ?? { skus: [], agencies: [], rows: [] }) as CompactAgencySku;
+    rows = c.rows.map(([month, s, a, hb, bottles, amount]) => {
+      const [code, name, family, size] = c.skus[s];
+      const [agencyId, agencyName] = c.agencies[a];
+      return {
+        month:          String(month),
+        brand_code:     String(code ?? ''),
+        product_name:   String(name ?? ''),
+        brand_family:   String(family ?? 'Unknown'),
+        size:           String(size ?? ''),
+        agency_id:      String(agencyId ?? ''),
+        agency_name:    agencyName ? String(agencyName) : null,
+        is_hb_agency:   Boolean(hb),
+        retail_bottles: Number(bottles ?? 0),
+        retail_amount:  Number(amount ?? 0),
+      };
+    });
+  }
+  return rows.sort((a, b) => a.month.localeCompare(b.month));
+}
+
+
 export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   // One RPC call to get_dashboard_data() — a SECURITY DEFINER Postgres function
   // that aggregates everything server-side and returns a single JSON object.
@@ -225,19 +272,9 @@ export async function getSalesDashboardData(): Promise<SalesDashboardData> {
   }));
 
   // ── agencySkuMonthly (month × brand_code × agency) ───────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const agencySkuMonthly: AgencySkuRow[] = (d.agency_sku_monthly ?? []).map((r: any) => ({
-    month:          String(r.month),
-    brand_code:     String(r.brand_code ?? ''),
-    product_name:   String(r.product_name ?? ''),
-    brand_family:   String(r.brand_family ?? 'Unknown'),
-    size:           String(r.size ?? ''),
-    agency_id:      String(r.agency_id ?? ''),
-    agency_name:    r.agency_name ? String(r.agency_name) : null,
-    is_hb_agency:   Boolean(r.is_hb_agency),
-    retail_bottles: Number(r.retail_bottles ?? 0),
-    retail_amount:  Number(r.retail_amount ?? 0),
-  })).sort((a: AgencySkuRow, b: AgencySkuRow) => a.month.localeCompare(b.month));
+  // get_dashboard_data() sends this block compactly (dictionaries + positional rows) to keep the RPC
+  // under the database statement timeout; older function versions sent an array of objects. Accept both.
+  const agencySkuMonthly: AgencySkuRow[] = decodeAgencySkuMonthly(d.agency_sku_monthly);
 
   // ── wholesaleSplit (month → hb vs outside wholesale) ─────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
