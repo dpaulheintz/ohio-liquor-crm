@@ -1,0 +1,194 @@
+/* "Scam or Legit?" — High Bank arcade look: a rickhouse at night, lit by whiskey amber.
+   High contrast + big targets for older phones in a dim restaurant. Everything is scoped under .ft. */
+.ft {
+  --night: #130e0b; --char: #221914; --char-2: #30241c; --line: #4a382b;
+  --bone: #f6efe4; --ash: #c9bba8; --amber: #e39536; --gold: #f3c15a; --ink: #1b120c;
+  --go: #9ad27f; --stop: #ff7a5c; --glow: #4b2a15;
+  --display: var(--ft-display), "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: var(--ft-body), "Outfit", ui-rounded, system-ui, -apple-system, sans-serif;
+  position: fixed; inset: 0; overflow: hidden; background: var(--night); color: var(--bone);
+  font-family: var(--body); -webkit-tap-highlight-color: transparent; color-scheme: dark;
+  overscroll-behavior: none;
+}
+.ft [hidden] { display: none !important; }
+/* reset with zero specificity so component classes (.ft-big, .ft-answer...) always win */
+:where(.ft) :where(button) { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; touch-action: manipulation; }
+.ft button:focus-visible, .ft input:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.ft-screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column; box-sizing: border-box;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.ft-glow { background: radial-gradient(120% 55% at 50% -5%, var(--glow), var(--night) 70%); }
+.ft-wrap { width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* type */
+.ft-kick { font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--amber); }
+.ft-title { margin: 0; font-family: var(--display); font-weight: 900; text-transform: uppercase; line-height: .86; font-size: clamp(54px, 17vw, 84px); letter-spacing: -.01em; }
+.ft-title span { color: var(--gold); display: block; }
+.ft-h2 { margin: 0; font-family: var(--display); font-weight: 900; text-transform: uppercase; line-height: .9; font-size: clamp(34px, 10vw, 44px); }
+.ft-lede { margin: 0; font-size: 19px; line-height: 1.35; color: var(--bone); }
+.ft-muted { color: var(--ash); }
+.ft-small { font-size: 15px; line-height: 1.35; color: var(--ash); }
+
+/* buttons */
+.ft-big { min-height: 64px; width: 100%; border-radius: 18px; background: var(--amber); color: var(--ink) !important; font-family: var(--display); font-weight: 900; font-size: 28px; letter-spacing: .04em; text-transform: uppercase; transition: transform .1s ease; }
+.ft-big:active { transform: scale(.97); }
+.ft-big.gold { background: var(--gold); }
+.ft-big:disabled { opacity: .55; }
+.ft-ghost { min-height: 54px; width: 100%; border-radius: 16px; border: 2px solid var(--line) !important; font-weight: 600; font-size: 18px; }
+.ft-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--char); border: 1px solid var(--line) !important; font-size: 15px; font-weight: 600; }
+.ft-answer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ft-answer { min-height: 72px; border-radius: 18px; font-family: var(--display); font-weight: 900; font-size: 30px; letter-spacing: .05em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .1s ease; }
+.ft-answer:active { transform: scale(.96); }
+.ft-answer.scam { background: var(--stop); color: #1b0a05 !important; }
+.ft-answer.legit { background: var(--go); color: #0f1d08 !important; }
+.ft-answer small { font-family: var(--body); font-weight: 600; font-size: 13px; letter-spacing: 0; text-transform: none; opacity: .75; }
+
+/* intro */
+.ft-howto { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ft-howto li { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; font-size: 18px; line-height: 1.3; }
+.ft-howto .n { width: 40px; height: 40px; border-radius: 50%; background: var(--char-2); display: grid; place-items: center; color: var(--amber); }
+.ft-howto b { color: var(--gold); }
+.ft-quarter { align-self: flex-start; font-family: var(--display); font-weight: 900; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; background: var(--gold); color: var(--ink); padding: 6px 12px; border-radius: 10px; }
+
+/* game HUD */
+.ft-hud { display: flex; flex-direction: column; gap: 8px; }
+.ft-hudrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ft-progress { height: 10px; border-radius: 999px; background: var(--char-2); overflow: hidden; }
+.ft-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), var(--gold)); border-radius: 999px; transition: width .4s ease; }
+.ft-score { font-weight: 300; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ft-streak { display: inline-flex; align-items: center; gap: 4px; font-family: var(--display); font-weight: 900; font-size: 20px; color: var(--gold); }
+.ft-streak svg { width: 22px; height: 22px; color: #ff9b3d; animation: ft-flicker .6s ease-in-out infinite alternate; }
+@keyframes ft-flicker { to { transform: scale(1.15) rotate(-6deg); } }
+.ft-iconbtn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--char); border: 1px solid var(--line) !important; }
+.ft-iconbtn svg { width: 20px; height: 20px; }
+
+/* card stage + flip */
+.ft-stage { position: relative; flex: 1; min-height: 360px; display: flex; align-items: stretch; justify-content: center; perspective: 1400px; margin: 4px 0; }
+.ft-cardwrap { position: relative; width: 100%; max-width: 420px; touch-action: none; will-change: transform; }
+.ft-cardwrap.enter { animation: ft-enter .35s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes ft-enter { from { transform: translateY(24px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+.ft-cardwrap.shake { animation: ft-shake .45s ease; }
+@keyframes ft-shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+.ft-flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.3, .7, .2, 1); }
+.ft-flip.flipped { transform: rotateY(180deg); }
+.ft-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 24px; overflow: hidden; box-shadow: 0 14px 40px rgba(0, 0, 0, .45); }
+.ft-back { transform: rotateY(180deg); background: var(--char); border: 2px solid var(--line); display: flex; flex-direction: column; }
+/* Swap faces at the halfway point instead of trusting backface-visibility (WebKit drops it here). */
+.ft-flip .ft-face { transition: visibility 0s linear .27s; }
+.ft-flip:not(.flipped) .ft-back, .ft-flip.flipped .ft-face:not(.ft-back) { visibility: hidden; }
+.ft-stamp { position: absolute; top: 18px; z-index: 3; font-family: var(--display); font-weight: 900; font-size: 40px; letter-spacing: .06em; padding: 2px 14px; border: 5px solid; border-radius: 12px; text-transform: uppercase; pointer-events: none; opacity: 0; }
+.ft-stamp.scam { right: 16px; color: var(--stop); border-color: var(--stop); transform: rotate(12deg); background: rgba(19, 14, 11, .85); }
+.ft-stamp.legit { left: 16px; color: var(--go); border-color: var(--go); transform: rotate(-12deg); background: rgba(19, 14, 11, .85); }
+.ft-flash { position: fixed; inset: 0; pointer-events: none; z-index: 20; opacity: 0; }
+.ft-flash.good { background: radial-gradient(circle, rgba(154, 210, 127, .35), transparent 70%); animation: ft-flash .6s ease; }
+.ft-flash.bad { background: radial-gradient(circle, rgba(255, 122, 92, .4), transparent 70%); animation: ft-flash .6s ease; }
+@keyframes ft-flash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+
+/* back of card (the lesson) */
+.ft-verdict { padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 4px; }
+.ft-verdict.good { background: linear-gradient(180deg, rgba(154, 210, 127, .22), transparent); }
+.ft-verdict.bad { background: linear-gradient(180deg, rgba(255, 122, 92, .22), transparent); }
+.ft-verdict h3 { margin: 0; font-family: var(--display); font-weight: 900; font-size: 38px; line-height: .9; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.ft-verdict.good h3 { color: var(--go); } .ft-verdict.bad h3 { color: var(--stop); }
+.ft-verdict h3 svg { width: 34px; height: 34px; }
+.ft-verdict p { margin: 0; font-size: 17px; font-weight: 600; }
+.ft-points { font-family: var(--display); font-weight: 900; font-size: 22px; color: var(--gold); }
+.ft-lesson { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.ft-lesson h4 { margin: 0 0 3px; font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); }
+.ft-lesson p { margin: 0; font-size: 18px; line-height: 1.35; }
+.ft-rulechip { align-self: flex-start; font-size: 15px; line-height: 1.35; font-weight: 600; color: var(--gold); border: 1px solid rgba(243, 193, 90, .5); border-radius: 12px; padding: 7px 12px; }
+
+/* card front: shared */
+.ft-front { background: #fff; color: #111; display: flex; flex-direction: column; }
+.ft-link { color: #0a64d6; text-decoration: underline; word-break: break-all; }
+
+/* text thread */
+.ft-sms-head { background: #f2f2f7; border-bottom: 1px solid #d8d8de; padding: 14px 16px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ft-avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(#a3a8b4, #858a96); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 600; }
+.ft-sms-name { font-size: 16px; font-weight: 600; color: #111; }
+.ft-sms-body { flex: 1; padding: 14px 14px 18px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+.ft-stamp-time { align-self: center; font-size: 13px; color: #8a8a8e; margin-bottom: 4px; }
+.ft-bubble { align-self: flex-start; max-width: 88%; background: #e9e9eb; color: #111; border-radius: 20px; padding: 11px 15px; font-size: 19px; line-height: 1.32; }
+.ft-bubble .who { display: block; font-size: 13px; color: #6b6b70; font-weight: 600; margin-bottom: 2px; }
+.ft-insta-head { background: linear-gradient(90deg, #833ab4, #fd1d1d, #fcb045); color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+.ft-insta-head .ft-avatar { width: 40px; height: 40px; font-size: 16px; background: rgba(255, 255, 255, .3); }
+
+/* incoming call */
+.ft-call { background: linear-gradient(180deg, #2b3a55 0%, #121a2b 100%); color: #fff; padding: 22px 18px 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; box-sizing: border-box; }
+.ft-call .lbl { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: #b9c4d8; }
+.ft-call .name { font-size: 30px; font-weight: 400; text-align: center; line-height: 1.1; }
+.ft-call .num { font-size: 16px; color: #b9c4d8; }
+.ft-transcript { margin-top: 10px; width: 100%; background: rgba(255, 255, 255, .1); border-radius: 18px; padding: 14px 16px; font-size: 19px; line-height: 1.35; flex: 1; box-sizing: border-box; }
+.ft-transcript .q { display: block; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #b9c4d8; margin-bottom: 4px; }
+.ft-callbtns { display: flex; justify-content: space-around; width: 100%; padding-top: 12px; }
+.ft-callbtns span { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; }
+.ft-callbtns svg { width: 26px; height: 26px; }
+
+/* email */
+.ft-mail-top { background: #f6f6f6; border-bottom: 1px solid #e1e1e1; padding: 10px 14px; font-size: 14px; color: #0a64d6; font-weight: 600; }
+.ft-mail-meta { padding: 14px 16px 10px; border-bottom: 1px solid #ececec; display: flex; flex-direction: column; gap: 3px; }
+.ft-mail-from { font-size: 18px; font-weight: 700; color: #111; }
+.ft-mail-addr { font-size: 15px; color: #555; word-break: break-all; }
+.ft-mail-subj { font-size: 18px; font-weight: 600; color: #111; margin-top: 6px; }
+.ft-mail-body { padding: 14px 16px; font-size: 18px; line-height: 1.4; white-space: pre-line; color: #222; flex: 1; }
+
+/* door + floor scenes */
+.ft-scene { background: linear-gradient(180deg, #3a2a1f, #1f1712); color: var(--bone); display: flex; flex-direction: column; height: 100%; }
+.ft-scene-art { flex: 0 0 auto; display: flex; justify-content: center; padding-top: 10px; }
+.ft-scene-art svg { width: 100%; max-height: 190px; }
+.ft-scene-who { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); padding: 0 18px; }
+.ft-speech { margin: 8px 16px 16px; background: #fffaf0; color: #1b120c; border-radius: 18px; padding: 14px 16px; font-size: 19px; line-height: 1.35; position: relative; }
+.ft-speech::before { content: ""; position: absolute; top: -10px; left: 50%; border: 10px solid transparent; border-top: 0; border-bottom-color: #fffaf0; transform: translateX(-50%); }
+.ft-scene-text { margin: 10px 16px 16px; background: rgba(0, 0, 0, .35); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; font-size: 19px; line-height: 1.35; }
+
+/* round title */
+.ft-round { align-items: center; justify-content: center; text-align: center; gap: 16px; }
+.ft-round .big-n { font-family: var(--display); font-weight: 900; font-size: 120px; line-height: .8; color: var(--gold); }
+
+/* end */
+.ft-result { background: var(--char); border: 2px solid var(--line); border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+.ft-result .score { font-weight: 300; font-size: 68px; line-height: .9; font-variant-numeric: tabular-nums; }
+.ft-badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 900; font-size: 28px; text-transform: uppercase; padding: 8px 16px; border-radius: 14px; background: var(--gold); color: var(--ink); }
+.ft-badge.rookie { background: var(--char-2); color: var(--bone); border: 2px solid var(--line); }
+.ft-badge svg { width: 28px; height: 28px; }
+.ft-section { background: var(--char); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.ft-section h3 { margin: 0; font-family: var(--display); font-weight: 900; font-size: 26px; text-transform: uppercase; }
+.ft-miss { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.ft-miss:first-of-type { border-top: 0; padding-top: 0; }
+.ft-miss .tag { font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
+.ft-miss .tag.scam { color: var(--stop); } .ft-miss .tag.legit { color: var(--go); }
+.ft-miss .quote { font-size: 16px; color: var(--ash); font-style: italic; }
+.ft-miss p { margin: 0; font-size: 17px; line-height: 1.35; }
+.ft-rules { margin: 0; padding: 0; list-style: none; counter-reset: r; display: flex; flex-direction: column; gap: 10px; }
+.ft-rules li { counter-increment: r; display: grid; grid-template-columns: 34px 1fr; gap: 10px; font-size: 17px; line-height: 1.35; }
+.ft-rules li::before { content: counter(r); width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: var(--ink); display: grid; place-items: center; font-family: var(--display); font-weight: 900; font-size: 20px; }
+.ft-field { display: flex; flex-direction: column; gap: 6px; }
+.ft-field label { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+.ft-input { min-height: 56px; border-radius: 14px; border: 2px solid var(--line); background: var(--night); color: var(--bone); font-size: 20px; padding: 0 14px; font-family: var(--body); }
+.ft-locs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ft-loc { min-height: 56px; border-radius: 14px; border: 2px solid var(--line) !important; font-size: 19px; font-weight: 600; }
+.ft-loc.on { background: var(--amber); color: var(--ink) !important; border-color: var(--amber) !important; }
+.ft-error { color: var(--stop); font-weight: 600; font-size: 17px; margin: 0; }
+.ft-warn { background: rgba(255, 122, 92, .14); border: 1px solid rgba(255, 122, 92, .5); border-radius: 16px; padding: 12px 14px; font-size: 17px; line-height: 1.35; }
+
+/* certificate */
+.ft-cert { background: linear-gradient(160deg, #fbf3df, #f3dfae); color: #1b120c; border-radius: 22px; padding: 22px 20px; display: flex; flex-direction: column; gap: 10px; text-align: center; border: 6px double #b8862f; position: relative; overflow: hidden; }
+.ft-cert .kick { font-family: var(--display); font-weight: 800; letter-spacing: .22em; font-size: 14px; text-transform: uppercase; color: #8a5a17; }
+.ft-cert .name { font-family: var(--display); font-weight: 900; font-size: clamp(38px, 11vw, 52px); line-height: .9; text-transform: uppercase; }
+.ft-cert dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 6px 0 0; text-align: left; font-size: 17px; }
+.ft-cert dt { font-family: var(--display); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 14px; color: #8a5a17; align-self: center; }
+.ft-cert dd { margin: 0; font-weight: 600; text-align: right; }
+.ft-code { font-family: var(--display); font-weight: 900; font-size: 44px; letter-spacing: .12em; background: #1b120c; color: var(--gold); border-radius: 14px; padding: 6px 0; }
+
+/* confetti */
+.ft-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; }
+.ft-confetti i { position: absolute; top: -24px; width: 9px; height: 15px; border-radius: 2px; animation: ft-fall linear forwards; }
+@keyframes ft-fall { to { transform: translate3d(var(--dx), 112vh, 0) rotate(var(--rot)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-flip { transition: none; }
+  .ft-cardwrap.enter, .ft-cardwrap.shake, .ft-streak svg { animation: none; }
+  .ft-confetti { display: none; }
+}

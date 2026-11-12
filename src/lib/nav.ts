@@ -9,7 +9,7 @@ import {
   Home, Building2, Users, Shield, FileUp, BarChart3, ClipboardCheck, ClipboardList, UserCog,
   GlassWater, BarChart2, Layers, TrendingUp, UtensilsCrossed, AlertTriangle, Package, Sparkles,
   Wine, Eye, FileText, Wallet, LayoutDashboard, Gauge, Target, CheckSquare, Lightbulb, Newspaper,
-  Handshake, ClipboardPen, Trophy, Receipt,
+  Handshake, ClipboardPen, Trophy, Receipt, ShieldAlert,
 } from 'lucide-react';
 import { isEosOnly, isEosUser } from '@/lib/eos-auth';
 import { canUseBottleSales } from '@/lib/bottle-sales';
@@ -44,6 +44,7 @@ export const NAV_MODULES: NavModule[] = [
   { href: '/admin/restaurant-analytics/anomalies', label: 'Weekly Anomalies', short: 'Anomalies', icon: AlertTriangle, group: 'Restaurant', priority: 20 },
   { href: '/admin/secret-shopper', label: 'Secret Shopper', short: 'Shopper', icon: Eye, group: 'Restaurant', priority: 20 },
   { href: '/admin/arcade-leaderboards', label: 'Arcade Leaderboards', short: 'Arcade', icon: Trophy, group: 'Restaurant', priority: 12 },
+  { href: '/admin/fraud-training', label: 'Fraud Training', short: 'Fraud', icon: ShieldAlert, group: 'Restaurant', priority: 14 },
 
   { href: '/admin/barrel-picks', label: 'Barrel Picks', short: 'Barrels', icon: Wine, group: 'Operations', priority: 75 },
   { href: '/admin/wholesale-forms', label: 'Wholesale Forms', short: 'Wholesale', icon: FileText, group: 'Operations', priority: 80 },
@@ -87,7 +88,7 @@ export function pathInVisiblePages(visiblePages: string[], path: string): boolea
 /**
  * Whether this user can open `path` — the same chain of checks the request goes through:
  * proxy (pending, visible_pages, /admin for admins) → EOS layout (email allowlist) → Payroll layout
- * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, bottle sales, secret shopper, arcade leaderboards).
+ * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, bottle sales, secret shopper, arcade leaderboards, fraud training).
  */
 export function canOpenPath(u: NavUser, path: string): boolean {
   if (u.role === 'pending') return path === '/pending-approval';
@@ -118,6 +119,9 @@ export function canOpenPath(u: NavUser, path: string): boolean {
   }
   if (path === '/admin/bottle-sales' || path.startsWith('/admin/bottle-sales/')) {
     return canUseBottleSales(u.email); // bottle_sales_can_use(): distillery@, pheintzman@, accounting@ only
+  }
+  if (path === '/admin/fraud-training' || path.startsWith('/admin/fraud-training/')) {
+    return u.role === 'admin'; // page checks is_admin()
   }
   if (path === '/admin/arcade-leaderboards' || path.startsWith('/admin/arcade-leaderboards/')) {
     return u.role === 'admin';

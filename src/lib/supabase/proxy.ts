@@ -46,7 +46,8 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public routes that don't require auth
-  const publicRoutes = ['/login', '/auth/callback', '/samples', '/secret-shopper', '/api/'];
+  // /training/fraud: the "Scam or Legit?" fraud training (public link, no login).
+  const publicRoutes = ['/login', '/auth/callback', '/samples', '/secret-shopper', '/training/fraud', '/api/'];
   const isPublicRoute = publicRoutes.some((route) => path.startsWith(route));
 
   // Redirect unauthenticated users to login
