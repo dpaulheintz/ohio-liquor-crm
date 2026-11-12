@@ -9,9 +9,10 @@ import {
   Home, Building2, Users, Shield, FileUp, BarChart3, ClipboardCheck, ClipboardList, UserCog,
   GlassWater, BarChart2, Layers, TrendingUp, UtensilsCrossed, AlertTriangle, Package, Sparkles,
   Wine, Eye, FileText, Wallet, LayoutDashboard, Gauge, Target, CheckSquare, Lightbulb, Newspaper,
-  Handshake, ClipboardPen, Trophy,
+  Handshake, ClipboardPen, Trophy, Receipt,
 } from 'lucide-react';
 import { isEosOnly, isEosUser } from '@/lib/eos-auth';
+import { canUseBottleSales } from '@/lib/bottle-sales';
 
 export type NavGroup = 'Sales' | 'Restaurant' | 'Operations' | 'EOS' | 'Admin';
 export const NAV_GROUPS: NavGroup[] = ['Sales', 'Restaurant', 'Operations', 'EOS', 'Admin'];
@@ -47,6 +48,7 @@ export const NAV_MODULES: NavModule[] = [
   { href: '/admin/barrel-picks', label: 'Barrel Picks', short: 'Barrels', icon: Wine, group: 'Operations', priority: 75 },
   { href: '/admin/wholesale-forms', label: 'Wholesale Forms', short: 'Wholesale', icon: FileText, group: 'Operations', priority: 80 },
   { href: '/admin/retail-requisitions', label: 'Retail Requisitions', short: 'Requisitions', icon: ClipboardPen, group: 'Operations', priority: 78 },
+  { href: '/admin/bottle-sales', label: 'Bottle Sales', short: 'Bottles', icon: Receipt, group: 'Operations', priority: 76 },
   { href: '/payroll', label: 'Payroll', icon: Wallet, group: 'Operations', priority: 45 },
   { href: '/admin/sales-upload', label: 'Sales Upload', short: 'Upload', icon: BarChart2, group: 'Operations', priority: 10 },
   { href: '/admin/import', label: 'Import Agencies', short: 'Import', icon: FileUp, group: 'Operations', priority: 5 },
@@ -85,7 +87,7 @@ export function pathInVisiblePages(visiblePages: string[], path: string): boolea
 /**
  * Whether this user can open `path` — the same chain of checks the request goes through:
  * proxy (pending, visible_pages, /admin for admins) → EOS layout (email allowlist) → Payroll layout
- * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, secret shopper, arcade leaderboards).
+ * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, bottle sales, secret shopper, arcade leaderboards).
  */
 export function canOpenPath(u: NavUser, path: string): boolean {
   if (u.role === 'pending') return path === '/pending-approval';
@@ -113,6 +115,9 @@ export function canOpenPath(u: NavUser, path: string): boolean {
   }
   if (path === '/admin/secret-shopper' || path.startsWith('/admin/secret-shopper/')) {
     return u.role === 'admin' || u.role === 'demo';
+  }
+  if (path === '/admin/bottle-sales' || path.startsWith('/admin/bottle-sales/')) {
+    return canUseBottleSales(u.email); // bottle_sales_can_use(): distillery@, pheintzman@, accounting@ only
   }
   if (path === '/admin/arcade-leaderboards' || path.startsWith('/admin/arcade-leaderboards/')) {
     return u.role === 'admin';
