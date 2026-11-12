@@ -6,7 +6,7 @@
 //     checks below) for every static page route — so the nav never shows a page that would bounce,
 //     and never hides one the user can open.
 //  2. Desktop sidebar list === mobile list (tab bar ⊆ More menu, More menu === sidebar).
-//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages and Retail Requisitions.
+//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages, Retail Requisitions and Arcade Leaderboards.
 //  4. Spot checks for the reported bug and the user types in the brief.
 
 import { config } from 'dotenv';
@@ -23,7 +23,7 @@ const ROUTES = [
   '/admin', '/admin/assistant', '/admin/assignments', '/admin/tastings', '/admin/barrel-picks',
   '/admin/sales-dashboard', '/admin/restaurant-analytics', '/admin/restaurant-analytics/anomalies',
   '/admin/sales-upload', '/admin/account-groups', '/admin/import', '/admin/approvals', '/admin/samples',
-  '/admin/secret-shopper', '/admin/wholesale-forms', '/admin/wholesale-forms/new',
+  '/admin/secret-shopper', '/admin/arcade-leaderboards', '/admin/wholesale-forms', '/admin/wholesale-forms/new',
   '/admin/wholesale-forms/wholesalers', '/admin/wholesale-forms/price-list', '/admin/wholesale-forms/settings',
   '/admin/retail-requisitions', '/admin/retail-requisitions/new', '/admin/retail-requisitions/sku-list',
   '/admin/kpi', '/admin/users',
@@ -62,6 +62,8 @@ function routeGateAllows(u: NavUser, path: string): boolean {
   }
   // src/app/(app)/admin/secret-shopper/page.tsx
   if (path.startsWith('/admin/secret-shopper')) return u.role === 'admin' || u.role === 'demo';
+  // src/app/(app)/admin/arcade-leaderboards/page.tsx (is_admin())
+  if (path.startsWith('/admin/arcade-leaderboards')) return u.role === 'admin';
   return true;
 }
 
@@ -127,7 +129,7 @@ async function main() {
     // 3. nothing lost vs the old sidebar
     const old = oldSidebar(u);
     for (const h of old) if (!desktop.includes(h)) fail(`${label}: lost ${h} from the sidebar`);
-    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h) && h !== '/admin/retail-requisitions') fail(`${label}: new non-EOS item ${h}`);
+    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h) && h !== '/admin/retail-requisitions' && h !== '/admin/arcade-leaderboards') fail(`${label}: new non-EOS item ${h}`);
 
     const allowed = PAGE_ROUTES.filter((r) => routeGateAllows(u, r));
     console.log(`\n■ ${label} <${u.email}>  role=${u.role}${u.visible_pages ? ' visible_pages=' + u.visible_pages.join(',') : ''}${u.payroll_access ? ' payroll' : ''}`);

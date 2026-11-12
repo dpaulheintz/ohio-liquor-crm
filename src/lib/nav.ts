@@ -9,7 +9,7 @@ import {
   Home, Building2, Users, Shield, FileUp, BarChart3, ClipboardCheck, ClipboardList, UserCog,
   GlassWater, BarChart2, Layers, TrendingUp, UtensilsCrossed, AlertTriangle, Package, Sparkles,
   Wine, Eye, FileText, Wallet, LayoutDashboard, Gauge, Target, CheckSquare, Lightbulb, Newspaper,
-  Handshake, ClipboardPen,
+  Handshake, ClipboardPen, Trophy,
 } from 'lucide-react';
 import { isEosOnly, isEosUser } from '@/lib/eos-auth';
 
@@ -42,6 +42,7 @@ export const NAV_MODULES: NavModule[] = [
   { href: '/admin/restaurant-analytics', label: 'Restaurant Analytics', short: 'Restaurant', icon: UtensilsCrossed, group: 'Restaurant', priority: 50 },
   { href: '/admin/restaurant-analytics/anomalies', label: 'Weekly Anomalies', short: 'Anomalies', icon: AlertTriangle, group: 'Restaurant', priority: 20 },
   { href: '/admin/secret-shopper', label: 'Secret Shopper', short: 'Shopper', icon: Eye, group: 'Restaurant', priority: 20 },
+  { href: '/admin/arcade-leaderboards', label: 'Arcade Leaderboards', short: 'Arcade', icon: Trophy, group: 'Restaurant', priority: 12 },
 
   { href: '/admin/barrel-picks', label: 'Barrel Picks', short: 'Barrels', icon: Wine, group: 'Operations', priority: 75 },
   { href: '/admin/wholesale-forms', label: 'Wholesale Forms', short: 'Wholesale', icon: FileText, group: 'Operations', priority: 80 },
@@ -84,7 +85,7 @@ export function pathInVisiblePages(visiblePages: string[], path: string): boolea
 /**
  * Whether this user can open `path` — the same chain of checks the request goes through:
  * proxy (pending, visible_pages, /admin for admins) → EOS layout (email allowlist) → Payroll layout
- * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, secret shopper).
+ * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, secret shopper, arcade leaderboards).
  */
 export function canOpenPath(u: NavUser, path: string): boolean {
   if (u.role === 'pending') return path === '/pending-approval';
@@ -112,6 +113,9 @@ export function canOpenPath(u: NavUser, path: string): boolean {
   }
   if (path === '/admin/secret-shopper' || path.startsWith('/admin/secret-shopper/')) {
     return u.role === 'admin' || u.role === 'demo';
+  }
+  if (path === '/admin/arcade-leaderboards' || path.startsWith('/admin/arcade-leaderboards/')) {
+    return u.role === 'admin';
   }
   return true;
 }
