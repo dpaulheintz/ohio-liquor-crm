@@ -26,6 +26,8 @@ export interface NavModule {
   group: NavGroup;
   /** Default rank for the mobile tab bar until the user's own usage takes over (higher = first). */
   priority: number;
+  /** Set on the single "EOS" link that stands in for all EOS pages outside EOS (see contextNavModules). */
+  collapsedEos?: boolean;
 }
 
 export const NAV_MODULES: NavModule[] = [
@@ -131,6 +133,29 @@ export function canOpenPath(u: NavUser, path: string): boolean {
 
 export function navModulesForUser(u: NavUser): NavModule[] {
   return NAV_MODULES.filter((m) => canOpenPath(u, m.href));
+}
+
+export const isEosPath = (pathname: string) => pathname === '/eos' || pathname.startsWith('/eos/');
+
+/**
+ * What the nav shows on this page (desktop sidebars and the mobile menu all use this).
+ * Outside EOS, the EOS pages fold into one "EOS" link to the EOS home. Inside EOS everything is
+ * listed; NavList then expands EOS, collapses the other sections and adds "Back to CRM".
+ */
+export function contextNavModules(modules: NavModule[], pathname: string): NavModule[] {
+  if (isEosPath(pathname)) return modules;
+  const home = modules.find((m) => m.href === '/eos');
+  if (!home) return modules;
+  return [...modules.filter((m) => m.group !== 'EOS'), { ...home, label: 'EOS', short: 'EOS', collapsedEos: true }];
+}
+
+/** Candidates for the mobile tab bar: inside EOS, the EOS pages; elsewhere the contextual list. */
+export function tabCandidates(modules: NavModule[], pathname: string): NavModule[] {
+  if (isEosPath(pathname)) {
+    const eos = modules.filter((m) => m.group === 'EOS');
+    return eos.length ? eos : modules;
+  }
+  return contextNavModules(modules, pathname);
 }
 
 /** Modules by group. Inside EOS the EOS group leads; everywhere else the standard order. */

@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { isEosAdmin, isEosOnly, isEosUser } from '../src/lib/eos-auth';
 const BOTTLE_SALES = ['distillery@highbankco.com', 'pheintzman@highbankco.com', 'accounting@highbankco.com']; // bottle_sales_can_use()
 import {
-  canOpenPath, navModulesForUser, navUserFromProfile, pickTabModules, NAV_MODULES, type NavUser,
+  canOpenPath, contextNavModules, navModulesForUser, navUserFromProfile, pickTabModules, tabCandidates, NAV_MODULES, type NavUser,
 } from '../src/lib/nav';
 
 config({ path: process.env.ENV_FILE ?? '.env.local', quiet: true });
@@ -142,6 +142,21 @@ async function main() {
     console.log(`  desktop sidebar (${desktop.length}): ${desktop.join('  ') || '—'}`);
     console.log(`  mobile tabs: ${tabs.join('  ') || '—'}  + More (${more.length}): ${JSON.stringify(more) === JSON.stringify(desktop) ? 'same list as desktop ✓' : 'DIFFERENT'}`);
     console.log(`  routes open (${allowed.length}/${PAGE_ROUTES.length}): ${allowed.join('  ') || '—'}`);
+  }
+
+  // 5. EOS collapses to one item on CRM pages and expands inside EOS (desktop + mobile use the same list)
+  for (const { label, u } of users) {
+    const mods = navModulesForUser(u);
+    const eosAll = mods.filter((m) => m.group === 'EOS');
+    if (!eosAll.length) continue;
+    const onCrm = contextNavModules(mods, '/').filter((m) => m.group === 'EOS');
+    if (onCrm.length !== 1 || onCrm[0].href !== '/eos' || onCrm[0].label !== 'EOS') fail(`${label}: on a CRM page EOS should be one "EOS" item`);
+    if (tabCandidates(mods, '/').some((m) => m.group === 'EOS' && m.href !== '/eos')) fail(`${label}: EOS sub-pages leak into CRM tabs`);
+    const inEos = contextNavModules(mods, '/eos/todos').filter((m) => m.group === 'EOS');
+    if (inEos.length !== eosAll.length) fail(`${label}: inside EOS all EOS pages should be listed`);
+    if (tabCandidates(mods, '/eos').some((m) => m.group !== 'EOS')) fail(`${label}: inside EOS the tabs should be EOS pages`);
+    const backToCrm = mods.some((m) => m.href === '/');
+    if (isEosOnly(u.email) && backToCrm) fail(`${label}: EOS-only user would get Back to CRM`);
   }
 
   // 4. spot checks

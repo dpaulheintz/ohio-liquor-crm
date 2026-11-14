@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { startMeeting, endMeeting, saveSectionNote, upsertPersonRating } from '@/lib/eos/meetings';
 import { createTodo, updateTodo, type Todo } from '@/lib/eos/todos';
+import { newYorkDatePlusDays } from '@/lib/date-utils';
 import { createOpportunity, type Opportunity } from '@/lib/eos/opportunities';
 import { createHeadline, type Headline } from '@/lib/eos/headlines';
 import { updateBarrel } from '@/lib/eos/barrels';
@@ -49,10 +50,7 @@ export async function createMeetingTodoAction(
 }
 
 export async function carryForwardTodoAction(id: string): Promise<void> {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  const due = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  await updateTodo(id, { due_date: due });
+  await updateTodo(id, { due_date: newYorkDatePlusDays(7) }); // 7 days out, Eastern (the server runs in UTC)
 }
 
 export async function flagForIDSAction(title: string): Promise<Opportunity> {

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email';
 import { todoAssignedEmail } from '@/lib/eos/email-templates';
+import { EOS_TEAM_MEMBERS } from '@/lib/eos/team';
 
 export type Todo = {
   id: string;
@@ -89,6 +90,13 @@ export async function createTodo(data: {
       (t) => String(t.title ?? '').trim().toLowerCase() === normalized,
     );
     if (match) return match as Todo;
+  }
+
+  // Owner picked by name only (meeting runner, quick-add)? Fill in their email from the EOS team list,
+  // so the assignment email and the daily reminder (which needs owner_email) reach them.
+  if (data.owner_name && !data.owner_email) {
+    const m = EOS_TEAM_MEMBERS.find((t) => t.name.toLowerCase() === data.owner_name!.trim().toLowerCase());
+    if (m) data = { ...data, owner_email: m.email };
   }
 
   const { data: result, error } = await supabase

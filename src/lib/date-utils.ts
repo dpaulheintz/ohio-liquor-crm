@@ -34,6 +34,13 @@ export function todayInNewYork(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
+/** "YYYY-MM-DD" that is `days` days after today in America/New_York (e.g. a default due date). */
+export function newYorkDatePlusDays(days: number): string {
+  const [y, m, d] = todayInNewYork().split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days)); // calendar math in UTC: no DST or local-zone drift
+  return dt.toISOString().slice(0, 10);
+}
+
 /**
  * Format a UTC date string as "Monday, April 13 (2 days ago)" in EST.
  */

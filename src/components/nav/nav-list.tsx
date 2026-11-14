@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { activeNavHref, groupNavModules, type NavModule } from '@/lib/nav';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { activeNavHref, contextNavModules, groupNavModules, isEosPath, type NavModule } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 
 export interface NavLinkOverrides {
@@ -55,41 +56,69 @@ export function NavList({
   onNavigate?: () => void;
 }) {
   const s = STYLES[variant];
-  const active = activeNavHref(modules, pathname);
+  const shown = contextNavModules(modules, pathname);
+  const active = activeNavHref(shown, pathname);
+  const inEos = isEosPath(pathname);
+  // "Back to CRM" only for people who can open the CRM (EOS-only users can't, so they don't see it).
+  const canCrm = modules.some((m) => m.href === '/');
+
+  const link = (m: NavModule) => {
+    const Icon = m.icon;
+    const isActive = m.href === active;
+    const live = m.href === '/eos/meetings' && !!overrides?.liveMeetingId;
+    return (
+      <Link
+        key={m.href}
+        href={navHref(m, overrides)}
+        data-nav-href={m.href}
+        data-nav-collapsed-eos={m.collapsedEos ? '' : undefined}
+        aria-current={isActive ? 'page' : undefined}
+        onClick={onNavigate}
+        className={cn(s.link, isActive ? s.active : s.idle)}
+      >
+        <Icon className={cn(s.icon, 'shrink-0')} />
+        <span className="flex-1 truncate">{m.label}</span>
+        {live && (
+          <span className="flex items-center gap-1 shrink-0 text-[10px] font-medium text-green-600">
+            <span className="h-2 w-2 rounded-full bg-green-600 animate-pulse" />
+            Live
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <div data-nav-list={variant}>
-      {groupNavModules(modules, pathname).map(({ group, modules: items }) => (
-        <section key={group} aria-label={group}>
-          <h2 className={s.heading}>{group}</h2>
-          <div className="space-y-0.5">
-            {items.map((m) => {
-              const Icon = m.icon;
-              const isActive = m.href === active;
-              const live = m.href === '/eos/meetings' && !!overrides?.liveMeetingId;
-              return (
-                <Link
-                  key={m.href}
-                  href={navHref(m, overrides)}
-                  data-nav-href={m.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={onNavigate}
-                  className={cn(s.link, isActive ? s.active : s.idle)}
-                >
-                  <Icon className={cn(s.icon, 'shrink-0')} />
-                  <span className="flex-1 truncate">{m.label}</span>
-                  {live && (
-                    <span className="flex items-center gap-1 shrink-0 text-[10px] font-medium text-green-600">
-                      <span className="h-2 w-2 rounded-full bg-green-600 animate-pulse" />
-                      Live
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      {inEos && canCrm && (
+        <Link href="/" onClick={onNavigate} data-nav-back-crm className={cn(s.link, s.idle, 'mt-3 font-semibold')}>
+          <ArrowLeft className={cn(s.icon, 'shrink-0')} />
+          <span className="flex-1 truncate">Back to CRM</span>
+        </Link>
+      )}
+      {groupNavModules(shown, pathname).map(({ group, modules: items }) => {
+        // Outside EOS: one "EOS" link, no section heading.
+        if (items.every((m) => m.collapsedEos)) {
+          return <section key={group} aria-label={group} className="pt-3">{items.map(link)}</section>;
+        }
+        // Inside EOS: the other CRM sections collapse (tap the heading to open).
+        if (inEos && group !== 'EOS') {
+          return (
+            <details key={group} className="group/nav" data-nav-group={group}>
+              <summary className={cn(s.heading, 'flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden')}>
+                <ChevronRight className="h-3 w-3 transition-transform group-open/nav:rotate-90" />{group}
+              </summary>
+              <div className="space-y-0.5">{items.map(link)}</div>
+            </details>
+          );
+        }
+        return (
+          <section key={group} aria-label={group} data-nav-group={group}>
+            <h2 className={s.heading}>{group}</h2>
+            <div className="space-y-0.5">{items.map(link)}</div>
+          </section>
+        );
+      })}
     </div>
   );
 }

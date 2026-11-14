@@ -13,6 +13,8 @@ export type Opportunity = {
   sort_order: number | null;
   /** Resolved display name of the creator (from profiles by created_by email). */
   creator_name: string | null;
+  /** Number of photos/files attached (eos_opportunity_attachments). */
+  attachment_count?: number;
   created_at: string;
   updated_at: string;
 };
@@ -43,6 +45,14 @@ async function creatorNameMap(
   return m;
 }
 
+/** opportunity_id → number of attachments (for the 📎 badge). */
+async function attachmentCounts(supabase: Awaited<ReturnType<typeof createClient>>): Promise<Map<string, number>> {
+  const { data } = await supabase.from('eos_opportunity_attachments').select('opportunity_id').limit(10000);
+  const m = new Map<string, number>();
+  for (const r of data ?? []) m.set(r.opportunity_id as string, (m.get(r.opportunity_id as string) ?? 0) + 1);
+  return m;
+}
+
 /** Manual order first (sort_order asc), then newest created first as a tiebreak. */
 function bySortOrder(a: Opportunity, b: Opportunity): number {
   const ao = a.sort_order, bo = b.sort_order;
@@ -66,10 +76,11 @@ export async function getOpportunities(archived = false): Promise<Opportunity[]>
   const { data, error } = await query;
   if (error) throw error;
 
-  const byEmail = await creatorNameMap(supabase);
+  const [byEmail, counts] = await Promise.all([creatorNameMap(supabase), attachmentCounts(supabase)]);
   const rows = (data ?? []).map((r) => ({
     ...(r as Omit<Opportunity, 'creator_name'>),
     creator_name: displayNameFromEmail((r as { created_by: string | null }).created_by, byEmail),
+    attachment_count: counts.get((r as { id: string }).id) ?? 0,
   })) as Opportunity[];
 
   return rows.sort(bySortOrder);
@@ -149,6 +160,14 @@ export async function reorderOpportunities(orderedIds: string[]): Promise<void> 
 
 export async function deleteOpportunity(id: string): Promise<void> {
   const supabase = await createClient();
+  // Note the files first: deleting the opportunity cascades to its attachment rows.
+  const { data: files } = await supabase.from('eos_opportunity_attachments').select('storage_path').eq('opportunity_id', id);
   const { error } = await supabase.from('eos_opportunities').delete().eq('id', id);
   if (error) throw error;
+  const paths = (files ?? []).map((f) => f.storage_path as string);
+  if (paths.length) {
+    // The rows are gone now, so storage RLS lets any EOS user clear the leftover objects.
+    const { error: rmErr } = await supabase.storage.from('eos-opportunity-files').remove(paths);
+    if (rmErr) console.error('EOS opportunity delete: could not remove files', rmErr.message);
+  }
 }

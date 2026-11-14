@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogOut, Menu, X } from 'lucide-react';
 import { signOut } from '@/app/actions/auth';
-import { activeNavHref, NAV_MODULES, navModulesForUser, pickTabModules, type NavUser } from '@/lib/nav';
+import { activeNavHref, NAV_MODULES, navModulesForUser, pickTabModules, tabCandidates, type NavUser } from '@/lib/nav';
 import { NavList, navHref, type NavLinkOverrides } from '@/components/nav/nav-list';
 import { cn } from '@/lib/utils';
 
@@ -74,7 +74,8 @@ export function MobileNav({
   );
   const key = usageKey(user.email);
   const usage = useFrozenUsage(key);
-  const picked = new Set(pickTabModules(modules, usage).map((m) => m.href));
+  // Inside EOS the tabs are EOS pages; elsewhere EOS counts as one item (src/lib/nav.ts).
+  const picked = new Set(pickTabModules(tabCandidates(modules, pathname), usage).map((m) => m.href));
   const tabs = NAV_MODULES.filter((m) => picked.has(m.href)); // keep the config order, so tabs read left-to-right consistently
   const active = activeNavHref(modules, pathname);
 

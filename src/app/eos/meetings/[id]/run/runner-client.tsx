@@ -15,6 +15,8 @@ import ScorecardGrid from '@/components/eos/ScorecardGrid';
 import BarrelsListView from '@/components/eos/BarrelsListView';
 import BarrelDetailPanel from '@/components/eos/BarrelDetailPanel';
 import SmartAddButton from '@/components/eos/SmartAddButton';
+import { AttachmentBadge, OpportunityAttachments } from '@/components/eos/OpportunityAttachments';
+import { newYorkDatePlusDays } from '@/lib/date-utils';
 import {
   saveSectionNoteAction,
   endMeetingAction,
@@ -221,7 +223,12 @@ export default function RunnerClient({
   // ── Inline forms ──
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoOwner, setNewTodoOwner] = useState('');
-  const [newTodoDue, setNewTodoDue] = useState('');
+  const [newTodoDue, setNewTodoDue] = useState(() => newYorkDatePlusDays(7));
+  // IDS "Create To-Do from Discussion": its own fields (title, owner, due date defaulting to 7 days out)
+  const [idsTodoTitle, setIdsTodoTitle] = useState('');
+  const [idsTodoOwner, setIdsTodoOwner] = useState('');
+  const [idsTodoDue, setIdsTodoDue] = useState(() => newYorkDatePlusDays(7));
+  const [idsTodoMsg, setIdsTodoMsg] = useState('');
   const [newHeadlineTitle, setNewHeadlineTitle] = useState('');
   const [newHeadlineType, setNewHeadlineType] = useState('good_news');
 
@@ -341,8 +348,7 @@ export default function RunnerClient({
   }
 
   async function handleCarryForward(id: string) {
-    const d = new Date(); d.setDate(d.getDate() + 7);
-    const dueStr = d.toISOString().slice(0, 10);
+    const dueStr = newYorkDatePlusDays(7);
     setTodos(prev => prev.map(t => t.id === id ? { ...t, due_date: dueStr } : t));
     try { await carryForwardTodoAction(id); } catch { /* best effort */ }
   }
@@ -355,8 +361,20 @@ export default function RunnerClient({
       const todo = await createMeetingTodoAction(newTodoTitle, newTodoOwner, newTodoDue, meeting.id);
       setTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
       setMeetingTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
-      setNewTodoTitle(''); setNewTodoOwner(''); setNewTodoDue('');
+      setNewTodoTitle(''); setNewTodoOwner(''); setNewTodoDue(newYorkDatePlusDays(7));
     } catch { console.error('Failed to create to-do.'); }
+  }
+
+  async function handleCreateIdsTodo() {
+    if (!idsTodoTitle.trim()) return;
+    setIdsTodoMsg('');
+    try {
+      const todo = await createMeetingTodoAction(idsTodoTitle, idsTodoOwner, idsTodoDue, meeting.id);
+      setTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
+      setMeetingTodos(prev => (prev.some(t => t.id === todo.id) ? prev : [...prev, todo]));
+      setIdsTodoTitle(''); setIdsTodoOwner(''); setIdsTodoDue(newYorkDatePlusDays(7));
+      setIdsTodoMsg(`Added to To-Dos${todo.due_date ? ` · due ${fmtShortDate(todo.due_date)}` : ''}`);
+    } catch { setIdsTodoMsg('Could not add the to-do. Try again.'); }
   }
 
   // Drag reorder for the IDS open-issues list (subset of all opportunities).
@@ -849,6 +867,7 @@ export default function RunnerClient({
                     >
                       <div className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
                       <span className="flex-1 text-sm text-gray-900 min-w-0 truncate">{opp.title}</span>
+                      <AttachmentBadge count={opp.attachment_count} />
                       <span className="text-[10px] text-gray-400 shrink-0 hidden sm:inline">{opp.owner_name || 'Unassigned'}</span>
                       <span className="text-[10px] uppercase tracking-wider text-gray-400 shrink-0">{opp.term}-term</span>
                     </button>
@@ -887,26 +906,32 @@ export default function RunnerClient({
             </div>
           )}
 
-          {/* Quick add todo from IDS */}
-          <div className="mt-4 border-t border-gray-200 pt-4">
-            <h4 className="text-xs font-medium text-gray-500 mb-2">Create To-Do from Discussion</h4>
-            <div className="flex gap-2 items-end">
+          {/* Create a to-do from the discussion: title, owner and due date (default 7 days out) */}
+          <div className="mt-4 border-t border-gray-200 pt-4" data-ids-todo>
+            <h4 className="text-xs font-medium text-gray-500 mb-2">Create To-Do from Discussion{selectedOpp ? <span className="text-gray-400"> · {selectedOpp.title}</span> : null}</h4>
+            <div className="flex flex-wrap gap-2 items-end">
               <input
                 type="text"
-                value={newTodoTitle}
-                onChange={e => setNewTodoTitle(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleCreateTodo()}
-                className={cn(inputCls, 'flex-1')}
+                value={idsTodoTitle}
+                onChange={e => setIdsTodoTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCreateIdsTodo()}
+                className={cn(inputCls, 'flex-1 min-w-[180px]')}
                 placeholder="Action item…"
+                aria-label="To-do title"
               />
-              <select value={newTodoOwner} onChange={e => setNewTodoOwner(e.target.value)} className={cn(inputCls, 'w-36')}>
+              <select value={idsTodoOwner} onChange={e => setIdsTodoOwner(e.target.value)} className={cn(inputCls, 'w-36')} aria-label="Owner">
                 <option value="">— Owner —</option>
                 {EOS_TEAM_MEMBERS.map(m => (
                   <option key={m.email} value={m.name}>{m.name}</option>
                 ))}
               </select>
-              <button onClick={handleCreateTodo} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-100 text-green-600 text-sm font-medium transition-colors shrink-0">+ Add</button>
+              <label className="flex flex-col text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Due
+                <input type="date" value={idsTodoDue} onChange={e => setIdsTodoDue(e.target.value)} className={cn(inputCls, 'w-36 normal-case tracking-normal')} aria-label="Due date" />
+              </label>
+              <button onClick={handleCreateIdsTodo} disabled={!idsTodoTitle.trim()} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-green-600 text-sm font-medium transition-colors shrink-0">+ Add</button>
             </div>
+            {idsTodoMsg && <p className="mt-1.5 text-xs text-gray-500" role="status">{idsTodoMsg}</p>}
           </div>
         </div>
 
@@ -924,6 +949,12 @@ export default function RunnerClient({
                 </button>
               </div>
               {selectedOpp.description && <p className="text-sm text-gray-500 leading-relaxed">{selectedOpp.description}</p>}
+              <OpportunityAttachments
+                key={selectedOpp.id}
+                opportunityId={selectedOpp.id}
+                className="border-t border-gray-200 pt-3"
+                onCountChange={(n) => setOpportunities(prev => prev.map(o => (o.id === selectedOpp.id ? { ...o, attachment_count: n } : o)))}
+              />
               <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                 <span>{selectedOpp.owner_name || 'Unassigned'}</span>
                 <span className="uppercase">{selectedOpp.priority ?? 'medium'} priority</span>

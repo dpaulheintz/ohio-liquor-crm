@@ -12,6 +12,7 @@ import {
   type OpportunityFormData,
 } from './actions';
 import OwnerSelect from '@/components/eos/OwnerSelect';
+import { AttachmentBadge, OpportunityAttachments } from '@/components/eos/OpportunityAttachments';
 import SmartAddButton from '@/components/eos/SmartAddButton';
 import { ArchiveBanner, ArchiveButton } from '@/components/eos/ArchiveControls';
 import { SortableList, reorderFullFromSubset } from '@/components/eos/SortableList';
@@ -51,11 +52,13 @@ function OppModal({
   opp,
   onSave,
   onClose,
+  onAttachCount,
 }: {
   mode: 'create' | 'edit';
   opp?: Opportunity;
   onSave: (data: OpportunityFormData) => Promise<void>;
   onClose: () => void;
+  onAttachCount?: (n: number) => void;
 }) {
   const [form, setForm] = useState<OpportunityFormData>({
     title: opp?.title ?? '',
@@ -85,7 +88,7 @@ function OppModal({
 
   return (
     <div className="fixed inset-0 bg-gray-50/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-lg">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92dvh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">{mode === 'create' ? 'Add Opportunity' : 'Edit Opportunity'}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl w-7 h-7 flex items-center justify-center transition-colors">×</button>
@@ -145,6 +148,13 @@ function OppModal({
             </button>
           </div>
         </form>
+        <div className="border-t border-gray-200 px-6 py-4">
+          {mode === 'edit' && opp ? (
+            <OpportunityAttachments opportunityId={opp.id} onCountChange={onAttachCount} />
+          ) : (
+            <p className="text-xs text-gray-400">Add photos and files after you save the opportunity.</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -308,7 +318,11 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                 {/* Main content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-gray-900 flex-1 min-w-0">{opp.title}</p>
+                    {archived ? (
+                      <p className="text-sm font-medium text-gray-900 flex-1 min-w-0">{opp.title}</p>
+                    ) : (
+                      <button type="button" onClick={() => setEditingOpp(opp)} className="text-sm font-medium text-gray-900 flex-1 min-w-0 text-left hover:underline">{opp.title}</button>
+                    )}
                     {/* Term badge */}
                     <span className={cn(
                       'shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
@@ -323,6 +337,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-xs text-gray-400">{opp.owner_name || 'Unassigned'}</span>
                     <span className="text-xs text-gray-400">{fmtDate(opp.created_at)}</span>
+                    <AttachmentBadge count={opp.attachment_count} />
                     {archived ? (
                       <span className="text-xs text-gray-400">Solved {fmtSolvedDate(opp.updated_at)}</span>
                     ) : (
@@ -341,7 +356,7 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
 
                 {/* Actions (hidden in archive view — read-only) */}
                 {!archived && (
-                <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                <div className="shrink-0 flex items-center gap-2 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity">
                   {opp.status !== 'solved' && (
                     activeMeetingId ? (
                       <Link
@@ -378,7 +393,12 @@ export default function OpportunitiesClient({ initialOpportunities, activeMeetin
       </div>
 
       {!archived && showModal && <OppModal mode="create" onSave={handleCreate} onClose={() => setShowModal(false)} />}
-      {!archived && editingOpp && <OppModal mode="edit" opp={editingOpp} onSave={handleUpdate} onClose={() => setEditingOpp(null)} />}
+      {!archived && editingOpp && (
+        <OppModal
+          mode="edit" opp={editingOpp} onSave={handleUpdate} onClose={() => setEditingOpp(null)}
+          onAttachCount={(n) => setOpps(prev => prev.map(o => (o.id === editingOpp.id ? { ...o, attachment_count: n } : o)))}
+        />
+      )}
       {!archived && <SmartAddButton pageContext="opportunities" />}
     </>
   );
