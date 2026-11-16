@@ -60,6 +60,8 @@ export async function getRepActivityData(): Promise<RepActivityData> {
         kpi_quantity,
         sold_status,
         display_type,
+        barrel_type,
+        is_half_barrel,
         visit:visit_logs!visit_kpis_visit_id_fkey(
           id,
           visited_at,
@@ -100,6 +102,8 @@ export async function getRepActivityData(): Promise<RepActivityData> {
       kpi_quantity:     Number(r.kpi_quantity ?? 1),
       sold_status:      (r.sold_status ?? 'sold') as 'sold' | 'unsold',
       display_type:     r.display_type ? String(r.display_type) : null,
+      barrel_type:      r.barrel_type ? String(r.barrel_type) : null,
+      is_half_barrel:   r.is_half_barrel === true,
       notes:            v?.notes ? String(v.notes) : null,
       visit_type:       (v?.visit_type ?? 'in_person') as 'in_person' | 'phone_call',
       rep_id:           String(v?.rep_id ?? ''),

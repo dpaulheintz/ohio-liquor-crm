@@ -66,8 +66,12 @@ export interface Contact {
   account?: Account;
 }
 
-export const KPI_OPTIONS = ['Display', 'Menu', 'Feature', 'Event'] as const;
+export const KPI_OPTIONS = ['Display', 'Menu', 'Feature', 'Event', 'Barrel Pick'] as const;
 export type KpiType = typeof KPI_OPTIONS[number];
+
+/** Barrel Pick KPIs must name one of these (payout rates: src/lib/kpi-payouts.ts). */
+export const BARREL_TYPES = ['Barrel Select', 'Cigar Cask', 'Double Double Oaked', 'Double Oaked'] as const;
+export type BarrelType = typeof BARREL_TYPES[number];
 
 export type VisitType = 'in_person' | 'phone_call';
 
@@ -77,6 +81,11 @@ export interface VisitKpi {
   kpi_type: string;
   kpi_quantity: number;
   sold_status: 'sold' | 'unsold';
+  display_type?: string | null;
+  /** Barrel Pick only */
+  barrel_type?: string | null;
+  /** Barrel Pick only — paid at half the full-barrel rate */
+  is_half_barrel?: boolean;
   created_at: string;
 }
 

@@ -175,7 +175,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   for (const k of thisMonthKpis) {
     kpiCounts[k.kpi_type] = (kpiCounts[k.kpi_type] || 0) + 1;
   }
-  const kpiBreakdown = ['Display', 'Menu', 'Feature', 'Event'].map(
+  const kpiBreakdown = ['Display', 'Menu', 'Feature', 'Event', 'Barrel Pick'].map(
     (name) => ({
       name,
       count: kpiCounts[name] || 0,

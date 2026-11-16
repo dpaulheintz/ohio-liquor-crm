@@ -440,7 +440,8 @@ export function AccountFormDialog({
                         <SelectValue placeholder="Select KPI (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        {KPI_OPTIONS.map((option) => (
+                        {/* Barrel Picks need a barrel type — log those from the visit form */}
+                        {KPI_OPTIONS.filter((option) => option !== 'Barrel Pick').map((option) => (
                           <SelectItem key={option} value={option}>
                             {option}
                           </SelectItem>

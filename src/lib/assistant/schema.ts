@@ -41,9 +41,24 @@ visit_logs (id uuid, account_id uuid FK accounts, rep_id uuid FK profiles,
 visit_kpis (id uuid, visit_id uuid FK visit_logs,
   kpi_type text — VERIFIED: 'Menu' (34) | 'Display' (26) | 'Event' (15) | 'Feature' (8),
   kpi_quantity int, sold_status text — VERIFIED: 'sold' (73) | 'unsold' (10),
-  display_type text [ALL NULL — never filter on it], created_at)
+  display_type text [ALL NULL — never filter on it], created_at,
+  barrel_type text — 'Barrel Select' | 'Cigar Cask' | 'Double Double Oaked' | 'Double Oaked'
+     [set ONLY on kpi_type = 'Barrel Pick' rows, where it is required; NULL otherwise],
+  is_half_barrel boolean [default false; only true on 'Barrel Pick' rows])
   This is the CURRENT KPI table. A legacy visit_logs.kpi column also exists and
   UNDERCOUNTS — always use visit_kpis.
+  kpi_type 'Barrel Pick' (added Nov 2026) = a rep logged a barrel pick on a visit. It is the rep's
+  KPI only — it is NOT the barrel_picks table (the Barrel Picks module); never join the two.
+  KPI PAYOUT RULES (rep bonus, paid quarterly; computed in app code, not stored):
+    Menu: $25 sold / $100 unsold, × kpi_quantity
+    Feature: $10 sold / $40 unsold, × kpi_quantity
+    Event: $40 × kpi_quantity
+    Display: $50 per account per month (only the first Display that month pays; quantity ignored)
+    Barrel Pick: full-barrel rate × kpi_quantity, half barrel = half the rate; sold_status ignored.
+      Barrel Select $500 | Cigar Cask $500 | Double Double Oaked $500 | Double Oaked $300
+      (half: $250 | $250 | $250 | $150)
+    SQL for Barrel Pick payout: kpi_quantity * CASE barrel_type WHEN 'Double Oaked' THEN 300 ELSE 500 END
+      * CASE WHEN is_half_barrel THEN 0.5 ELSE 1 END
 
 visit_photos (id uuid, visit_id uuid FK visit_logs, photo_url text, caption text, created_at)
 
@@ -259,6 +274,7 @@ getting them wrong silently returns the wrong number):
   "in-person" / "visited face to face"      → visit_logs.visit_type = 'in_person'
   "calls"                                   → visit_logs.visit_type = 'phone_call'
   "displays"→kpi_type='Display'; "menus"→'Menu'; "features"→'Feature'; "events"→'Event'
+  "barrel picks" logged as KPIs / barrel pick payouts → visit_kpis.kpi_type='Barrel Pick'
   "unstaffed tastings"                      → tastings.status = 'needs_staff'
   "prospects"                               → LOWER(accounts.status) = 'prospect'
   "our restaurants" / "our locations"       → the locations table (restaurant side)

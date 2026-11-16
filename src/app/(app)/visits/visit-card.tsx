@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { formatVisitDate } from '@/lib/date-utils';
 import { Phone, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { barrelPickPayout, fmtPayout, kpiLabel } from '@/lib/kpi-payouts';
 
 interface VisitCardProps {
   visit: VisitLog;
@@ -20,7 +21,18 @@ const KPI_COLORS: Record<string, string> = {
   Menu:    '#60a5fa',
   Feature: '#34d399',
   Event:   '#f472b6',
+  'Barrel Pick': '#B8743A',
 };
+
+/** "Menu ×2" / "Barrel Pick · Cigar Cask (Half) · $250" */
+function kpiBadgeText(k: VisitKpi): string {
+  if (k.kpi_type === 'Barrel Pick') {
+    const label = kpiLabel({ kpi: k.kpi_type, barrel_type: k.barrel_type, is_half_barrel: k.is_half_barrel });
+    const qty = k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : '';
+    return `${label}${qty} · ${fmtPayout(barrelPickPayout(k.barrel_type, k.is_half_barrel === true, k.kpi_quantity))}`;
+  }
+  return `${k.kpi_type}${k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''}`;
+}
 
 // ─── Photo lightbox ───────────────────────────────────────────────────────────
 function PhotoLightbox({
@@ -111,7 +123,7 @@ function KpiBadges({ kpis }: { kpis: VisitKpi[] }) {
         className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
         style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
       >
-        {k.kpi_type}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''}
+        {kpiBadgeText(k)}
       </span>
     );
   }
@@ -125,7 +137,7 @@ function KpiBadges({ kpis }: { kpis: VisitKpi[] }) {
             className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
             style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
           >
-            {k.kpi_type}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''}
+            {kpiBadgeText(k)}
           </span>
         );
       })}

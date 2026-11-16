@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/date-time-picker';
 import { Camera, ImageIcon, X, Plus, Phone, MapPin } from 'lucide-react';
+import { BarrelPickFields } from '@/components/kpi/barrel-pick-fields';
+import { barrelPickPayout, fmtPayout, kpiLabel } from '@/lib/kpi-payouts';
 import { toast } from 'sonner';
 
 interface EditVisitDialogProps {
@@ -47,7 +49,7 @@ function toDatetimeLocal(isoString: string): string {
 }
 
 interface NewPhoto { file: File; preview: string; caption: string; }
-interface NewKpi   { type: string; quantity: number; }
+interface NewKpi   { type: string; quantity: number; barrelType: string; isHalfBarrel: boolean; }
 
 const MAX_PHOTOS = 5;
 
@@ -57,6 +59,7 @@ const KPI_COLORS: Record<string, string> = {
   Menu:    '#60a5fa',
   Feature: '#34d399',
   Event:   '#f472b6',
+  'Barrel Pick': '#B8743A',
 };
 
 export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVisitDialogProps) {
@@ -129,7 +132,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
 
   // ── KPI handlers ────────────────────────────────────────────────────────────
   function addNewKpi() {
-    setNewKpis((prev) => [...prev, { type: '', quantity: 1 }]);
+    setNewKpis((prev) => [...prev, { type: '', quantity: 1, barrelType: '', isHalfBarrel: false }]);
   }
 
   function removeNewKpi(idx: number) {
@@ -137,7 +140,11 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
   }
 
   function updateNewKpiType(idx: number, type: string) {
-    setNewKpis((prev) => prev.map((k, i) => i === idx ? { ...k, type } : k));
+    setNewKpis((prev) => prev.map((k, i) => i === idx ? { ...k, type, barrelType: '', isHalfBarrel: false } : k));
+  }
+
+  function updateNewKpiBarrel(idx: number, next: { barrelType: string; isHalf: boolean }) {
+    setNewKpis((prev) => prev.map((k, i) => i === idx ? { ...k, barrelType: next.barrelType, isHalfBarrel: next.isHalf } : k));
   }
 
   function updateNewKpiQty(idx: number, qty: number) {
@@ -156,6 +163,9 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
     const validNewKpis = newKpis.filter((k) => k.type);
     if (newKpis.length > 0 && validNewKpis.length < newKpis.length) {
       toast.error('Please select a KPI type for each entry'); return;
+    }
+    if (validNewKpis.some((k) => k.type === 'Barrel Pick' && !k.barrelType)) {
+      toast.error('Choose a barrel type for each Barrel Pick'); return;
     }
 
     setLoading(true);
@@ -187,7 +197,11 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
         notes:          notes || undefined,
         visitedAt:      new Date(visitedAt).toISOString(),
         repId:          isAdmin && repId !== visit.rep_id ? repId : undefined,
-        addKpis:        !isPhone && validNewKpis.length > 0 ? validNewKpis : undefined,
+        addKpis:        !isPhone && validNewKpis.length > 0
+          ? validNewKpis.map((k) => k.type === 'Barrel Pick'
+              ? { type: k.type, quantity: k.quantity, barrelType: k.barrelType, isHalfBarrel: k.isHalfBarrel }
+              : { type: k.type, quantity: k.quantity })
+          : undefined,
         removeKpiIds:   removeKpiIds.length > 0 ? removeKpiIds : undefined,
         addPhotos,
         removePhotoIds: removePhotoIds.length > 0 ? removePhotoIds : undefined,
@@ -245,8 +259,11 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
                         className="flex-1 inline-flex items-center gap-1.5 text-sm font-medium"
                         style={{ color }}
                       >
-                        {k.kpi_type}
+                        {kpiLabel({ kpi: k.kpi_type, barrel_type: k.barrel_type, is_half_barrel: k.is_half_barrel })}
                         {k.kpi_quantity > 1 && <span className="text-xs text-muted-foreground">×{k.kpi_quantity}</span>}
+                        {k.kpi_type === 'Barrel Pick' && (
+                          <span className="text-xs text-muted-foreground">· {fmtPayout(barrelPickPayout(k.barrel_type, k.is_half_barrel === true, k.kpi_quantity))}</span>
+                        )}
                       </span>
                       <button
                         type="button"
@@ -262,7 +279,7 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
 
                 {/* New KPIs being added */}
                 {newKpis.map((k, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-md border border-primary/30 p-2">
+                  <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 p-2">
                     <Select value={k.type} onValueChange={(v) => updateNewKpiType(i, v)}>
                       <SelectTrigger className="flex-1 h-8">
                         <SelectValue placeholder="KPI type" />
@@ -283,6 +300,14 @@ export function EditVisitDialog({ visit, open, onOpenChange, onSuccess }: EditVi
                     <button type="button" onClick={() => removeNewKpi(i)} className="text-muted-foreground hover:text-destructive">
                       <X className="h-4 w-4" />
                     </button>
+                    {k.type === 'Barrel Pick' && (
+                      <BarrelPickFields
+                        barrelType={k.barrelType}
+                        isHalf={k.isHalfBarrel}
+                        quantity={k.quantity}
+                        onChange={(next) => updateNewKpiBarrel(i, next)}
+                      />
+                    )}
                   </div>
                 ))}
 

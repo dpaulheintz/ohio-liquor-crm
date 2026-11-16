@@ -50,6 +50,9 @@ export interface KpiEventRow {
   kpi_quantity:     number;
   sold_status:      'sold' | 'unsold';
   display_type:     string | null;
+  /** Barrel Pick only */
+  barrel_type:      string | null;
+  is_half_barrel:   boolean;
   notes:            string | null;
   visit_type:       'in_person' | 'phone_call';
   rep_id:           string;
@@ -72,6 +75,8 @@ export interface WeeklyMetrics {
   whiskyFeaturesPrior: number;
   activeDisplays:      number; // current month
   activeDisplaysPrior: number; // last month
+  barrelPicks:         number;
+  barrelPicksPrior:    number;
   tastings:            number;
   tastingsPrior:       number;
 }
@@ -152,6 +157,8 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
         kpi_quantity,
         sold_status,
         display_type,
+        barrel_type,
+        is_half_barrel,
         visit:visit_logs!visit_kpis_visit_id_fkey(
           id,
           visited_at,
@@ -230,6 +237,8 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
       kpi_quantity:     Number(r.kpi_quantity ?? 1),
       sold_status:      (r.sold_status ?? 'sold') as 'sold' | 'unsold',
       display_type:     r.display_type ? String(r.display_type) : null,
+      barrel_type:      r.barrel_type ? String(r.barrel_type) : null,
+      is_half_barrel:   r.is_half_barrel === true,
       notes:            v?.notes ? String(v.notes) : null,
       visit_type:       (v?.visit_type ?? 'in_person') as 'in_person' | 'phone_call',
       rep_id:           String(v?.rep_id ?? ''),
@@ -256,6 +265,8 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
   const whiskyEventsPrior   = countKpi(priorRows, ['Event']);
   const whiskyFeatures      = countKpi(weekRows,  ['Menu', 'Feature']);
   const whiskyFeaturesPrior = countKpi(priorRows, ['Menu', 'Feature']);
+  const barrelPicks         = countKpi(weekRows,  ['Barrel Pick']);
+  const barrelPicksPrior    = countKpi(priorRows, ['Barrel Pick']);
   const tastings            = weekTastingsResult.data?.length  ?? 0;
   const tastingsPrior       = priorTastingsResult.data?.length ?? 0;
 
@@ -339,6 +350,7 @@ export async function getKpiDashboardData(): Promise<KpiDashboardData> {
     weekStart, weekEnd,
     whiskyEvents, whiskyEventsPrior,
     whiskyFeatures, whiskyFeaturesPrior,
+    barrelPicks, barrelPicksPrior,
     activeDisplays, activeDisplaysPrior,
     tastings, tastingsPrior,
   };

@@ -4,15 +4,42 @@
  */
 
 import type { KpiEventRow } from '@/app/actions/kpi';
+import type { BarrelType } from '@/lib/types';
 
 // ─── Rates ────────────────────────────────────────────────────────────────────
+// The iOS app mirrors these for its payout preview (VisitKpi.swift) — change both together.
 
 export const PAYOUT_RATES = {
   Menu:    { unsold: 100, sold: 25 },
   Feature: { unsold: 40,  sold: 10 },
   Event:   { flat: 40 },
   Display: { perMonth: 50 },
+  /** Full-barrel rate per barrel type; a half barrel pays half. */
+  'Barrel Pick': {
+    'Barrel Select':       500,
+    'Cigar Cask':          500,
+    'Double Double Oaked': 500,
+    'Double Oaked':        300,
+  } satisfies Record<BarrelType, number>,
 } as const;
+
+/** Barrel Pick payout: full-barrel rate (half for a half barrel) × quantity. Unknown type → $0. */
+export function barrelPickPayout(barrelType: string | null | undefined, isHalf: boolean, quantity = 1): number {
+  const rate = (PAYOUT_RATES['Barrel Pick'] as Record<string, number>)[barrelType ?? ''] ?? 0;
+  const qty = quantity > 0 ? quantity : 1;
+  return (isHalf ? rate / 2 : rate) * qty;
+}
+
+/** "Barrel Pick · Cigar Cask (Half)" — the KPI's name plus its barrel/display detail. */
+export function kpiLabel(k: { kpi: string; display_type?: string | null; barrel_type?: string | null; is_half_barrel?: boolean }): string {
+  if (k.kpi === 'Barrel Pick') {
+    return `Barrel Pick${k.barrel_type ? ` · ${k.barrel_type}` : ''}${k.is_half_barrel ? ' (Half)' : ''}`;
+  }
+  return `${k.kpi}${k.display_type ? ` · ${k.display_type}` : ''}`;
+}
+
+/** Sold/Unsold only means something for Menu and Feature. */
+export const SOLD_STATUS_TYPES: readonly string[] = ['Menu', 'Feature'];
 
 // ─── Per-event payout ─────────────────────────────────────────────────────────
 
@@ -22,7 +49,7 @@ export const PAYOUT_RATES = {
  * the full event set); use `computePayouts` for a real payout figure on
  * Display rows, which always pay a flat $50/month regardless of quantity.
  */
-function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status' | 'kpi_quantity'>): number {
+function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status' | 'kpi_quantity' | 'barrel_type' | 'is_half_barrel'>): number {
   const qty = e.kpi_quantity > 0 ? e.kpi_quantity : 1;
   switch (e.kpi) {
     case 'Menu':
@@ -33,6 +60,8 @@ function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status' | 'kpi_quant
       return PAYOUT_RATES.Event.flat * qty;
     case 'Display':
       return PAYOUT_RATES.Display.perMonth; // flat — quantity never applies
+    case 'Barrel Pick':
+      return barrelPickPayout(e.barrel_type, e.is_half_barrel, qty);
     default:
       return 0;
   }
@@ -46,6 +75,7 @@ function baseEventPayout(e: Pick<KpiEventRow, 'kpi' | 'sold_status' | 'kpi_quant
  * (account, month) pair earns the $50; every later log of the same display
  * that month pays $0. Menu/Feature/Event pay rate × kpi_quantity (sold/unsold
  * status sets the rate for Menu/Feature; Event is always the flat rate).
+ * Barrel Picks pay the barrel type's rate (half for a half barrel) × kpi_quantity.
  */
 export function computePayouts(events: readonly KpiEventRow[]): Map<string, number> {
   // Earliest Display event per (account_id, month) wins the month's $50.

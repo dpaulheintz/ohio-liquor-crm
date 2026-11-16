@@ -24,6 +24,7 @@ import {
 import { AccountSearchDialog } from '@/components/account-search-dialog';
 import { DateTimePicker } from '@/components/date-time-picker';
 import { KPI_OPTIONS } from '@/lib/types';
+import { BarrelPickFields } from '@/components/kpi/barrel-pick-fields';
 import {
   ArrowLeft,
   Camera,
@@ -58,6 +59,9 @@ interface KpiEntry {
   /** Still the automatic default (the rep hasn't tapped Sold/Unsold). */
   soldAuto: boolean;
   displayType: string;
+  /** Barrel Pick only */
+  barrelType: string;
+  isHalfBarrel: boolean;
 }
 
 const SOLD_TYPES = ['Menu', 'Feature'];
@@ -191,7 +195,7 @@ function NewVisitForm() {
   const hasDisplayKpi = kpis.some(k => k.type === 'Display');
 
   function addKpi() {
-    setKpis([...kpis, { type: '', quantity: 1, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '' }]);
+    setKpis([...kpis, { type: '', quantity: 1, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '', barrelType: '', isHalfBarrel: false }]);
   }
 
   function removeKpi(index: number) {
@@ -200,13 +204,19 @@ function NewVisitForm() {
 
   function updateKpiType(index: number, type: string) {
     const updated = [...kpis];
-    updated[index] = { ...updated[index], type, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '' };
+    updated[index] = { ...updated[index], type, soldStatus: autoSold(currentDefault), soldAuto: true, displayType: '', barrelType: '', isHalfBarrel: false };
     setKpis(updated);
   }
 
   function updateKpiDisplayType(index: number, displayType: string) {
     const updated = [...kpis];
     updated[index] = { ...updated[index], displayType };
+    setKpis(updated);
+  }
+
+  function updateKpiBarrel(index: number, next: { barrelType: string; isHalf: boolean }) {
+    const updated = [...kpis];
+    updated[index] = { ...updated[index], barrelType: next.barrelType, isHalfBarrel: next.isHalf };
     setKpis(updated);
   }
 
@@ -243,6 +253,9 @@ function NewVisitForm() {
     const validKpis = kpis.filter(k => k.type);
     if (kpis.length > 0 && validKpis.length < kpis.length) {
       toast.error('Please select a KPI type for each entry'); return;
+    }
+    if (validKpis.some(k => k.type === 'Barrel Pick' && !k.barrelType)) {
+      toast.error('Choose a barrel type for each Barrel Pick'); return;
     }
 
     setLoading(true);
@@ -318,7 +331,7 @@ function NewVisitForm() {
         accountId: resolvedAccountId,
         visitType,
         notes: notes || undefined,
-        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.soldAuto && !currentDefault ? undefined : k.soldStatus, displayType: k.displayType || undefined })) : undefined,
+        kpis: visitType === 'in_person' && validKpis.length > 0 ? validKpis.map(k => ({ type: k.type, quantity: k.quantity, soldStatus: k.type === 'Barrel Pick' || (k.soldAuto && !currentDefault) ? undefined : k.soldStatus, displayType: k.displayType || undefined, barrelType: k.type === 'Barrel Pick' ? k.barrelType : undefined, isHalfBarrel: k.type === 'Barrel Pick' ? k.isHalfBarrel : undefined })) : undefined,
         visitedAt: new Date(visitedAt).toISOString(),
         photoUrls: visitType === 'in_person' && photoUrls.length > 0 ? photoUrls : undefined,
       });
@@ -541,7 +554,7 @@ function NewVisitForm() {
                     onClick={() => {
                       setDisplayAnswer('up');
                       if (!kpis.some(k => k.type === 'Display')) {
-                        setKpis(prev => [...prev, { type: 'Display', quantity: 1, soldStatus: 'sold', soldAuto: true, displayType: trackedDisplayType ?? '' }]);
+                        setKpis(prev => [...prev, { type: 'Display', quantity: 1, soldStatus: 'sold', soldAuto: true, displayType: trackedDisplayType ?? '', barrelType: '', isHalfBarrel: false }]);
                       }
                     }}
                   >
@@ -677,6 +690,14 @@ function NewVisitForm() {
                       <button type="button" onClick={() => removeKpi(i)} className="text-muted-foreground hover:text-destructive transition-colors">
                         <X className="h-4 w-4" />
                       </button>
+                      {kpi.type === 'Barrel Pick' && (
+                        <BarrelPickFields
+                          barrelType={kpi.barrelType}
+                          isHalf={kpi.isHalfBarrel}
+                          quantity={kpi.quantity}
+                          onChange={(next) => updateKpiBarrel(i, next)}
+                        />
+                      )}
                       {SOLD_TYPES.includes(kpi.type) && kpi.soldAuto && currentDefault && (
                         <p data-sold-hint className="basis-full text-xs text-muted-foreground">{currentDefault.hint}</p>
                       )}

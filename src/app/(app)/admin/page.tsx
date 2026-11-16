@@ -64,6 +64,7 @@ const kpiChartConfig = {
   Menu: { label: 'Menu', color: 'var(--chart-2)' },
   Feature: { label: 'Feature', color: 'var(--chart-3)' },
   Event: { label: 'Event', color: 'var(--chart-4)' },
+  'Barrel Pick': { label: 'Barrel Pick', color: 'var(--chart-5)' },
 } satisfies ChartConfig;
 
 // ---------- Helpers ----------
@@ -430,7 +431,7 @@ export default function AdminDashboard() {
                     tickLine={false}
                     axisLine={false}
                     fontSize={12}
-                    width={60}
+                    width={80}
                   />
                   <XAxis
                     type="number"

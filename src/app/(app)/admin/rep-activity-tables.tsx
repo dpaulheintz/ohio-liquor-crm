@@ -160,14 +160,15 @@ function WeeklyKpisTable({
     const feature = weekEvents.filter((e) => e.kpi === 'Feature').length;
     const event = weekEvents.filter((e) => e.kpi === 'Event').length;
     const display = weekEvents.filter((e) => e.kpi === 'Display').length;
+    const barrel = weekEvents.filter((e) => e.kpi === 'Barrel Pick').length;
     const payout = weekEvents.reduce((s, e) => s + (payoutMap.get(e.id) ?? 0), 0);
-    return { monday, total: weekEvents.length, menu, feature, event, display, payout };
+    return { monday, total: weekEvents.length, menu, feature, event, display, barrel, payout };
   }), [weeks, events, payoutMap]);
 
   const totals = useMemo(() => rows.reduce((t, r) => ({
     total: t.total + r.total, menu: t.menu + r.menu, feature: t.feature + r.feature,
-    event: t.event + r.event, display: t.display + r.display, payout: t.payout + r.payout,
-  }), { total: 0, menu: 0, feature: 0, event: 0, display: 0, payout: 0 }), [rows]);
+    event: t.event + r.event, display: t.display + r.display, barrel: t.barrel + r.barrel, payout: t.payout + r.payout,
+  }), { total: 0, menu: 0, feature: 0, event: 0, display: 0, barrel: 0, payout: 0 }), [rows]);
 
   return (
     <div>
@@ -178,7 +179,7 @@ function WeeklyKpisTable({
         headers={[
           { label: 'Week' }, { label: 'Total', align: 'right' }, { label: 'Menu', align: 'right' },
           { label: 'Feature', align: 'right' }, { label: 'Event', align: 'right' }, { label: 'Display', align: 'right' },
-          { label: 'Payout', align: 'right' }, { label: 'Flag' },
+          { label: 'Barrel Pick', align: 'right' }, { label: 'Payout', align: 'right' }, { label: 'Flag' },
         ]}
         caption={`${totals.total} total KPIs · ${fmtPayout(totals.payout)} earned`}
         totalsRow={
@@ -189,6 +190,7 @@ function WeeklyKpisTable({
             <td className="px-3 py-2 text-right font-mono text-foreground">{totals.feature}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{totals.event}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{totals.display}</td>
+            <td className="px-3 py-2 text-right font-mono text-foreground">{totals.barrel}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{fmtPayout(totals.payout)}</td>
             <td className="px-3 py-2" />
           </tr>
@@ -202,6 +204,7 @@ function WeeklyKpisTable({
             <td className="px-3 py-2 text-right font-mono text-foreground">{r.feature}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{r.event}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{r.display}</td>
+            <td className="px-3 py-2 text-right font-mono text-foreground">{r.barrel}</td>
             <td className="px-3 py-2 text-right font-mono text-foreground">{fmtPayout(r.payout)}</td>
             <td className="px-3 py-2">{r.total === 0 && <ZeroFlag label="ZERO KPIS" />}</td>
           </tr>

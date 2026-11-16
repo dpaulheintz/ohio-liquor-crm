@@ -9,15 +9,20 @@ import { Camera, ChevronDown, ChevronRight, Download, ExternalLink, TrendingUp, 
 import Link from 'next/link';
 import { KPI_OPTIONS } from '@/lib/types';
 import { type KpiEventRow, type KpiDashboardData, type AgencyDisplayRow } from '@/app/actions/kpi';
-import { computePayouts, quarterRange, quarterOf, fmtPayout } from '@/lib/kpi-payouts';
+import { computePayouts, quarterRange, quarterOf, fmtPayout, kpiLabel, SOLD_STATUS_TYPES } from '@/lib/kpi-payouts';
 import { PayoutTracker } from './payout-tracker';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GOLD = '#C5A572';
 const KPI_COLORS: Record<string, string> = {
-  Display: '#C5A572', Menu: '#60a5fa', Feature: '#34d399', Event: '#f472b6',
+  Display: '#C5A572', Menu: '#60a5fa', Feature: '#34d399', Event: '#f472b6', 'Barrel Pick': '#B8743A',
 };
+
+/** CSV cells for the Barrel Pick columns; blank for other KPI types. Sold/Unsold is blank for Barrel Picks. */
+const barrelTypeCell = (e: KpiEventRow) => (e.kpi === 'Barrel Pick' ? e.barrel_type ?? '' : '');
+const halfBarrelCell = (e: KpiEventRow) => (e.kpi === 'Barrel Pick' ? (e.is_half_barrel ? 'Y' : 'N') : '');
+const soldCell       = (e: KpiEventRow) => (e.kpi === 'Barrel Pick' ? '' : e.sold_status);
 const TYPE_COLORS: Record<string, string> = {
   Wood: '#C5A572', Box: '#60a5fa', Shelves: '#34d399',
 };
@@ -84,13 +89,14 @@ function agencyLabel(name: string, agencyId: string | null, city: string | null)
  * payout summary block appended after a blank separator row.
  */
 function exportCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filenameSuffix: string) {
-  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Display Type', 'Photos (Y/N)', 'Notes', 'Payout'];
+  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Display Type', 'Barrel Type', 'Half Barrel', 'Photos (Y/N)', 'Notes', 'Payout'];
   const rows = events.map(e => {
     const payout = payoutMap.get(e.id) ?? 0;
     return [
       fmtDate(e.visited_at), e.rep_name || e.rep_email,
       e.account_name, e.account_agency_id ?? '', e.account_city ?? '',
-      e.kpi, String(e.kpi_quantity), e.sold_status, e.display_type ?? '',
+      e.kpi, String(e.kpi_quantity), soldCell(e), e.display_type ?? '',
+      barrelTypeCell(e), halfBarrelCell(e),
       e.photo_count > 0 ? 'Y' : 'N', e.notes ?? '',
       payout.toFixed(2),
     ];
@@ -126,11 +132,11 @@ function exportCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filena
  * Display Type column, no per-rep summary block, Photos as a numeric count.
  */
 function exportVisitLogCsv(events: KpiEventRow[], payoutMap: Map<string, number>, filenameSuffix: string) {
-  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Payout', 'Photos (count)', 'Notes'];
+  const headers = ['Date', 'Rep', 'Account', 'Agency ID', 'City', 'KPI Type', 'Quantity', 'Sold/Unsold', 'Barrel Type', 'Half Barrel', 'Payout', 'Photos (count)', 'Notes'];
   const rows = events.map(e => [
     fmtDate(e.visited_at), e.rep_name || e.rep_email,
     e.account_name, e.account_agency_id ?? '', e.account_city ?? '',
-    e.kpi, String(e.kpi_quantity), e.sold_status,
+    e.kpi, String(e.kpi_quantity), soldCell(e), barrelTypeCell(e), halfBarrelCell(e),
     (payoutMap.get(e.id) ?? 0).toFixed(2),
     String(e.photo_count), e.notes ?? '',
   ]);
@@ -787,12 +793,13 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">
             Last Week · {fmtWeekRange(weeklyMetrics.weekStart, weeklyMetrics.weekEnd)}
           </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <WeeklyCard label="Whiskey Events" value={weeklyMetrics.whiskyEvents} prior={weeklyMetrics.whiskyEventsPrior} color="#f472b6" />
             <WeeklyCard label="Whiskey Features" value={weeklyMetrics.whiskyFeatures} prior={weeklyMetrics.whiskyFeaturesPrior} color="#34d399" />
             <WeeklyCard label="Active Displays" value={weeklyMetrics.activeDisplays} prior={weeklyMetrics.activeDisplaysPrior} color={GOLD}
               sub="this month vs last" />
             <WeeklyCard label="Tastings" value={weeklyMetrics.tastings} prior={weeklyMetrics.tastingsPrior} color="#60a5fa" />
+            <WeeklyCard label="Barrel Picks" value={weeklyMetrics.barrelPicks} prior={weeklyMetrics.barrelPicksPrior} color={KPI_COLORS['Barrel Pick']} />
           </div>
         </div>
 
@@ -872,7 +879,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                   <BarChart layout="vertical" data={typeChartData} margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
                     <XAxis type="number" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} width={58} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#666666', fontSize: 11 }} axisLine={false} tickLine={false} width={78} />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(200,16,46,0.06)' }} />
                     <Bar dataKey="count" name="Events" radius={[0, 3, 3, 0]} maxBarSize={24}>
                       {typeChartData.map((e, i) => <Cell key={i} fill={e.fill} />)}
@@ -977,7 +984,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                             return (
                               <span key={k.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
                                 style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>
-                                {k.kpi}{k.display_type ? ` (${k.display_type})` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
+                                {k.kpi === 'Barrel Pick' ? kpiLabel(k) : `${k.kpi}${k.display_type ? ` (${k.display_type})` : ''}`}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
                               </span>
                             );
                           })}
@@ -1013,7 +1020,7 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                             return (
                               <span key={k.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                                 style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>
-                                {k.kpi}{k.display_type ? ` · ${k.display_type}` : ''}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
+                                {kpiLabel(k)}{k.kpi_quantity > 1 ? ` ×${k.kpi_quantity}` : ''} · {fmtPayout(payout)}
                               </span>
                             );
                           })}
@@ -1059,12 +1066,12 @@ export function KpiDashboardClient({ kpiEvents, totalVisitCount, weeklyMetrics, 
                                   <div key={k.id} className="flex items-center gap-1.5">
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                                       style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>
-                                      {k.kpi}{k.display_type ? ` · ${k.display_type}` : ''}
+                                      {kpiLabel(k)}
                                     </span>
                                     {k.kpi_quantity > 1 && (
                                       <span className="text-xs font-bold text-foreground bg-muted px-1.5 py-0.5 rounded">×{k.kpi_quantity}</span>
                                     )}
-                                    {(k.kpi === 'Menu' || k.kpi === 'Feature') && (
+                                    {SOLD_STATUS_TYPES.includes(k.kpi) && (
                                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${k.sold_status === 'sold' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                         {k.sold_status}
                                       </span>

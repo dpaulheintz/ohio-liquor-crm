@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { KPI_OPTIONS, MAX_PHOTOS } from '@/lib/types';
+import { BARREL_TYPES, KPI_OPTIONS, MAX_PHOTOS } from '@/lib/types';
 import { autoCompleteAssignmentsForVisit } from './assignments';
 
 // ─── getVisits ────────────────────────────────────────────────────────────────
@@ -79,7 +79,38 @@ const kpiEntrySchema = z.object({
   // Left out → the database picks it from the account's purchase history (visit_kpis trigger).
   soldStatus:  z.enum(['sold', 'unsold']).optional(),
   displayType: z.enum(['Wood', 'Box', 'Shelves']).optional(),
+  // Barrel Pick only
+  barrelType:   z.enum(BARREL_TYPES).optional(),
+  isHalfBarrel: z.boolean().optional(),
+}).refine((k) => k.type !== 'Barrel Pick' || !!k.barrelType, {
+  message: 'Choose a barrel type for the Barrel Pick',
+  path: ['barrelType'],
 });
+
+type KpiEntry = z.infer<typeof kpiEntrySchema>;
+
+/** One visit_kpis row. Sold/Unsold only applies to Menu/Feature (the DB trigger fills the rest). */
+function kpiRecord(visitId: string, k: KpiEntry) {
+  const isBarrel = k.type === 'Barrel Pick';
+  return {
+    visit_id:       visitId,
+    kpi_type:       k.type,
+    kpi_quantity:   k.quantity,
+    sold_status:    isBarrel ? null : k.soldStatus ?? null,
+    display_type:   k.type === 'Display' ? (k.displayType ?? null) : null,
+    barrel_type:    isBarrel ? k.barrelType ?? null : null,
+    is_half_barrel: isBarrel ? k.isHalfBarrel === true : false,
+  };
+}
+
+type KpiInput = {
+  type: string;
+  quantity: number;
+  soldStatus?: 'sold' | 'unsold';
+  displayType?: string;
+  barrelType?: string;
+  isHalfBarrel?: boolean;
+};
 
 const visitSchema = z.object({
   accountId: z.string().uuid('Invalid account ID'),
@@ -103,7 +134,7 @@ export async function createVisit(input: {
   accountId: string;
   visitType?: 'in_person' | 'phone_call';
   notes?: string;
-  kpis?: { type: string; quantity: number; soldStatus?: 'sold' | 'unsold'; displayType?: string }[];
+  kpis?: KpiInput[];
   visitedAt?: string;
   photoUrls?: { url: string; caption?: string; sort_order: number }[];
 }) {
@@ -133,13 +164,7 @@ export async function createVisit(input: {
 
   // Save KPI entries to visit_kpis (in-person only)
   if (parsed.visitType !== 'phone_call' && parsed.kpis && parsed.kpis.length > 0) {
-    const kpiRecords = parsed.kpis.map((k) => ({
-      visit_id:     visit.id,
-      kpi_type:     k.type,
-      kpi_quantity: k.quantity,
-      sold_status:  k.soldStatus ?? null,
-      display_type: k.type === 'Display' ? (k.displayType ?? null) : null,
-    }));
+    const kpiRecords = parsed.kpis.map((k) => kpiRecord(visit.id, k));
     const { error: kpiError } = await supabase.from('visit_kpis').insert(kpiRecords);
     if (kpiError) throw kpiError;
   }
@@ -218,7 +243,7 @@ export async function updateVisit(
     notes?: string;
     visitedAt?: string;
     repId?: string;
-    addKpis?: { type: string; quantity: number }[];
+    addKpis?: KpiInput[];
     removeKpiIds?: string[];
     addPhotos?: { url: string; caption?: string; sort_order: number }[];
     removePhotoIds?: string[];
@@ -271,11 +296,7 @@ export async function updateVisit(
 
   // Add new KPI entries (only for in-person visits)
   if (parsed.addKpis && parsed.addKpis.length > 0 && existing.visit_type !== 'phone_call') {
-    const records = parsed.addKpis.map((k) => ({
-      visit_id:     id,
-      kpi_type:     k.type,
-      kpi_quantity: k.quantity,
-    }));
+    const records = parsed.addKpis.map((k) => kpiRecord(id, k));
     const { error } = await supabase.from('visit_kpis').insert(records);
     if (error) throw error;
   }
@@ -331,7 +352,7 @@ export async function getPhotoAudit({
        rep:profiles!visit_logs_rep_id_fkey(id, full_name, email),
        account:accounts!visit_logs_account_id_fkey(id, display_name),
        visit_photos!inner(*),
-       visit_kpis(id, kpi_type, kpi_quantity)`,
+       visit_kpis(id, kpi_type, kpi_quantity, barrel_type, is_half_barrel)`,
       { count: 'exact' }
     )
     .order('visited_at', { ascending: false });

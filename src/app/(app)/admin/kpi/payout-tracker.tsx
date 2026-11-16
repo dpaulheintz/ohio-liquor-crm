@@ -11,9 +11,9 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GOLD = '#C5A572';
-const KPI_TYPES = ['Menu', 'Feature', 'Event', 'Display'] as const;
+const KPI_TYPES = ['Menu', 'Feature', 'Event', 'Display', 'Barrel Pick'] as const;
 const KPI_COLORS: Record<string, string> = {
-  Display: GOLD, Menu: '#60a5fa', Feature: '#34d399', Event: '#f472b6',
+  Display: GOLD, Menu: '#60a5fa', Feature: '#34d399', Event: '#f472b6', 'Barrel Pick': '#B8743A',
 };
 
 function quarterKey(q: QuarterOption): string { return `${q.year}-Q${q.quarter}`; }
@@ -41,7 +41,7 @@ export function PayoutTracker({ kpiEvents }: { kpiEvents: KpiEventRow[] }) {
     for (const e of quarterEvents) {
       const payout = payoutMap.get(e.id) ?? 0;
       if (!map.has(e.rep_id)) {
-        map.set(e.rep_id, { repId: e.rep_id, name: e.rep_name || e.rep_email, total: 0, byType: { Menu: 0, Feature: 0, Event: 0, Display: 0 } });
+        map.set(e.rep_id, { repId: e.rep_id, name: e.rep_name || e.rep_email, total: 0, byType: { Menu: 0, Feature: 0, Event: 0, Display: 0, 'Barrel Pick': 0 } });
       }
       const r = map.get(e.rep_id)!;
       r.total += payout;
@@ -107,7 +107,7 @@ export function PayoutTracker({ kpiEvents }: { kpiEvents: KpiEventRow[] }) {
 
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1 border-t border">
                     {KPI_TYPES.map(t => (
-                      <div key={t} className="flex items-center justify-between text-xs">
+                      <div key={t} data-payout-type={t} className="flex items-center justify-between text-xs">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: KPI_COLORS[t] }} />
                           {t}s
