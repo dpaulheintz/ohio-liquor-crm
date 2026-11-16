@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
   ],
   headers: async () => [
     {
+      // OHLQ concept demo: never indexed (also set in the proxy and page metadata)
+      source: '/demo/ohlq/:path*',
+      headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+    },
+    {
       // All pages/routes — prevent stale cached HTML on mobile browsers
       source: '/((?!_next/static|_next/image|favicon.ico).*)',
       headers: [

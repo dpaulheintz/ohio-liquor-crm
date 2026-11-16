@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { hasDemoAccess } from '@/lib/ohlq-demo/access-token';
+import { ACCESS_COOKIE } from '@/lib/ohlq-demo/shared';
 
 export async function updateSession(request: NextRequest) {
   // Barrel Arcade kids game: public page reached by QR code on the kids menu.
@@ -10,6 +12,24 @@ export async function updateSession(request: NextRequest) {
   // Rusty Bucket Arcade sales demo: public, static, no auth. Scoped to exactly this prefix, not all of /demo.
   if (reqPath === '/demo/rusty-bucket-arcade' || reqPath.startsWith('/demo/rusty-bucket-arcade/')) {
     return NextResponse.next({ request });
+  }
+
+  // OHLQ Ops concept demo: outside CRM auth entirely. Gated by its own access code (OHLQ_DEMO_CODE,
+  // remembered in a cookie). The customer signing link needs no code — its token is the credential.
+  if (reqPath === '/demo/ohlq' || reqPath.startsWith('/demo/ohlq/')) {
+    const open = reqPath === '/demo/ohlq/access' || reqPath.startsWith('/demo/ohlq/sign/');
+    if (open || (await hasDemoAccess(request.cookies.get(ACCESS_COOKIE)?.value))) {
+      const res = NextResponse.next({ request });
+      res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      return res;
+    }
+    if (reqPath.startsWith('/demo/ohlq/api/')) {
+      return NextResponse.json({ error: 'Demo access code required' }, { status: 401, headers: { 'X-Robots-Tag': 'noindex, nofollow' } });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = '/demo/ohlq/access';
+    url.search = `?next=${encodeURIComponent(reqPath + request.nextUrl.search)}`;
+    return NextResponse.redirect(url);
   }
 
   let supabaseResponse = NextResponse.next({
