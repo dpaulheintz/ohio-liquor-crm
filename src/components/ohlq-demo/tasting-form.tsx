@@ -10,7 +10,7 @@ import {
   type Agency, type ApplicantType, type Product, type Signature, type Tasting,
 } from '@/lib/ohlq-demo/shared';
 import { SignaturePad } from './signature-pad';
-import { DemoDelivered, Field, Section } from './ui';
+import { DemoNotSent, Field, Section } from './ui';
 
 export interface ApplicantProfile {
   employer?: string; phone?: string; fax?: string; email?: string; conductor_name?: string; solicitor_reg_no?: string;
@@ -68,7 +68,7 @@ export function TastingForm({ agencies, products, profile, from }: { agencies: A
     });
     setBusy(false);
     if (!r.ok) { setServerErr(r.error); return; }
-    toast.success('Application submitted — confirmation emailed (Demo: delivered to Paul)');
+    toast.success('Application submitted — confirmation shown under Messages (not sent in the demo)');
     router.push(`${DEMO_BASE}/tastings/${r.id}?submitted=1`);
   }
 
@@ -151,7 +151,7 @@ export function TastingForm({ agencies, products, profile, from }: { agencies: A
           <Field label="Name of employer"><input className="ohlq-input" value={employer} onChange={(e) => setEmployer(e.target.value)} /></Field>
           <Field label="Phone number"><input className="ohlq-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
           <Field label="Fax number"><input className="ohlq-input" type="tel" value={fax} onChange={(e) => setFax(e.target.value)} /></Field>
-          <Field label="Email address" help={<DemoDelivered />}><input className="ohlq-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+          <Field label="Email address" help={<DemoNotSent />}><input className="ohlq-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         </div>
         <p className="ohlq-help">Saved to your applicant profile and filled in next time.</p>
       </Section>
@@ -167,7 +167,7 @@ export function TastingForm({ agencies, products, profile, from }: { agencies: A
       {serverErr && <p className="ohlq-error" role="alert" style={{ fontSize: 16 }}>{serverErr}</p>}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
         <button type="button" className="ohlq-btn" onClick={submit} disabled={busy || (tried && !valid)}><Send aria-hidden /> {busy ? 'Submitting…' : 'Submit application'}</button>
-        <span className="ohlq-help" style={{ alignSelf: 'center', margin: 0 }}>You&rsquo;ll get an email confirmation with the completed LIQ-19-0004 attached. <DemoDelivered /></span>
+        <span className="ohlq-help" style={{ alignSelf: 'center', margin: 0 }}>You&rsquo;ll get a confirmation with the completed LIQ-19-0004. <DemoNotSent /></span>
       </div>
     </>
   );

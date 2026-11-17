@@ -8,10 +8,9 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import {
   addAudit, db, escapeHtml, getAgencies, getProducts, getSale, getSinTaxConfig, getTasting, getTastings,
-  nextRef, requestOrigin, sendDemoMessage, setSetting,
+  logDemoMessage, nextRef, requestOrigin, setSetting,
 } from '@/lib/ohlq-demo/server';
 import { resetDemo } from '@/lib/ohlq-demo/seed';
-import { renderA3aPdf, renderTastingPdf } from '@/lib/ohlq-demo/pdf';
 import {
   DEMO_BASE, OPS_ACTOR, PARTNER, SUPPLIER_ACTOR, TASTING_MAX_MINUTES,
   describeDevice, earliestTastingDate, fmtCents, fmtDate, fmtShortDay, fmtTime, isSignature, minutesOf, todayET,
@@ -158,7 +157,7 @@ async function ensureToken(id: string, existing: string | null): Promise<string>
   return token;
 }
 
-export async function sendForSignature(id: string, input: { method: 'email' | 'sms'; to: string }): Promise<Result<{ delivered: string; status: string }>> {
+export async function sendForSignature(id: string, input: { method: 'email' | 'sms'; to: string }): Promise<Result<{ link: string }>> {
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (!['draft', 'returned', 'awaiting_customer'].includes(sale.status)) return fail('This sale can’t be sent for signature now.');
@@ -173,20 +172,19 @@ export async function sendForSignature(id: string, input: { method: 'email' | 's
     updated_at: new Date().toISOString(),
   }).eq('id', id);
   const rows = sale.lines.map((l) => `<tr><td style="padding:4px 8px">${escapeHtml(l.brand_code)}</td><td style="padding:4px 8px">${escapeHtml(l.description)} ${escapeHtml(l.size_label ?? '')}</td><td style="padding:4px 8px;text-align:right">${l.quantity}</td><td style="padding:4px 8px;text-align:right">${fmtCents(l.line_total_cents)}</td></tr>`).join('');
-  const msg = await sendDemoMessage({
-    requestedTo: to, channel: input.method,
+  await logDemoMessage({
+    entity: { type: 'wholesale', id }, requestedTo: to, channel: input.method, links: [{ label: 'Open the signing link', href: link }],
     subject: `Please sign: ${PARTNER.name} direct sale ${sale.ref_no} (${fmtCents(sale.total_cents)})`,
     html: `<div style="font:15px Georgia,serif;color:#222">
       <p>${escapeHtml(PARTNER.name)} recorded a direct sale to <b>${escapeHtml(sale.customer_dba || sale.customer_name || '')}</b> on ${fmtDate(sale.sales_date)}. Please review and sign.</p>
       <table style="border-collapse:collapse;font:14px Georgia,serif">${rows}<tr><td colspan="3" style="padding:6px 8px;text-align:right"><b>Invoice total</b></td><td style="padding:6px 8px;text-align:right"><b>${fmtCents(sale.total_cents)}</b></td></tr></table>
       <p style="margin:18px 0"><a href="${link}" style="background:#B72B35;color:#fff;padding:12px 18px;text-decoration:none;font:600 15px Arial,sans-serif;text-transform:uppercase">Review &amp; sign</a></p>
       <p style="font-size:12px;color:#666">${link}</p></div>`,
-    text: `Please review and sign ${sale.ref_no}: ${link}`,
   });
   await addAudit('wholesale', id, SUPPLIER_ACTOR, 'Sent for customer signature',
-    `${input.method === 'sms' ? 'Text' : 'Email'} to ${to} → delivered to Paul (demo)${msg.status === 'sent' ? '' : ` · ${msg.status.replace('_', ' ')}`}`);
+    `${input.method === 'sms' ? 'Text' : 'Email'} to ${to} · shown on screen in the demo (not sent)`);
   revalidateAll();
-  return { ok: true, delivered: msg.deliveredTo, status: msg.status };
+  return { ok: true, link };
 }
 
 export async function startInPersonSigning(id: string): Promise<Result<{ token: string }>> {
@@ -246,22 +244,22 @@ export async function processSale(id: string): Promise<Result> {
   return { ok: true };
 }
 
-export async function returnSale(id: string, note: string): Promise<Result<{ delivered: string }>> {
+export async function returnSale(id: string, note: string): Promise<Result> {
   const reason = clean(note, 1000);
   if (!reason) return fail('Add a note for the supplier.');
   const sale = await getSale(id);
   if (!sale || sale.status !== 'submitted') return fail('Only submitted sales can be returned.');
   await db().from('ohlq_demo_wholesale_sales').update({ status: 'returned', return_note: reason, updated_at: new Date().toISOString() }).eq('id', id);
   const link = `${await requestOrigin()}${DEMO_BASE}/wholesale/${id}`;
-  const msg = await sendDemoMessage({
-    requestedTo: PARTNER.email,
+  await logDemoMessage({
+    entity: { type: 'wholesale', id }, requestedTo: PARTNER.email, links: [{ label: 'Open the sale', href: link }],
     subject: `Returned: direct sale ${sale.ref_no} needs a correction`,
     html: `<div style="font:15px Georgia,serif;color:#222"><p>OHLQ Agency Operations returned <b>${sale.ref_no}</b> (${escapeHtml(sale.customer_dba || sale.customer_name || '')}, ${fmtDate(sale.sales_date)}).</p>
       <p style="background:#f6f6f6;padding:10px;border-left:4px solid #B72B35">${escapeHtml(reason)}</p><p><a href="${link}">Open the sale</a></p></div>`,
   });
-  await addAudit('wholesale', id, OPS_ACTOR, 'Returned to supplier', `${reason} · emailed supplier (delivered to Paul)${msg.status === 'sent' ? '' : ` · ${msg.status.replace('_', ' ')}`}`);
+  await addAudit('wholesale', id, OPS_ACTOR, 'Returned to supplier', `${reason} · supplier notified (shown on screen in the demo)`);
   revalidateAll();
-  return { ok: true, delivered: msg.deliveredTo };
+  return { ok: true };
 }
 
 // ─── Tasting applications ─────────────────────────────────────────────────────
@@ -307,7 +305,7 @@ function tastingErrors(i: TastingInput, today: string): string[] {
   return errs;
 }
 
-export async function submitTasting(input: TastingInput): Promise<Result<{ id: string; delivered: string }>> {
+export async function submitTasting(input: TastingInput): Promise<Result<{ id: string }>> {
   const errs = tastingErrors(input, todayET());
   if (errs.length) return fail(errs.join(' '));
   const agency = (await getAgencies()).find((a) => a.id === clean(input.agency_id, 10));
@@ -334,54 +332,39 @@ export async function submitTasting(input: TastingInput): Promise<Result<{ id: s
   });
   await addAudit('tasting', data.id, `${PARTNER.name} (applicant)`, 'Submitted application', await device());
 
-  const t = (await getTasting(data.id))!;
-  const pdf = Buffer.from(await renderTastingPdf(t));
-  const msg = await sendDemoMessage({
+  const pdfLink = `${await requestOrigin()}${DEMO_BASE}/api/tastings/${data.id}/pdf`;
+  await logDemoMessage({
+    entity: { type: 'tasting', id: data.id }, links: [{ label: `LIQ-19-0004 ${data.ref_no}.pdf`, href: pdfLink }],
     requestedTo: clean(input.email, 120) || PARTNER.email,
     subject: `Tasting application ${data.ref_no} received — ${agency.name} #${agency.id}, ${fmtDate(input.event_date)}`,
     html: `<div style="font:15px Georgia,serif;color:#222"><p>OHLQ received your application to conduct a spirituous liquor tasting.</p>
       <p><b>${escapeHtml(agency.name)}</b> (Agency #${agency.id}), ${escapeHtml(agency.city)}<br>${fmtDate(input.event_date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}, ${fmtTime(input.start_time)}–${fmtTime(input.end_time)}</p>
-      <p>You&rsquo;ll get an email when Agency Operations approves or rejects it. A copy of the application (LIQ-19-0004) is attached.</p></div>`,
-    attachments: [{ filename: `LIQ-19-0004 ${data.ref_no}.pdf`, content: pdf, contentType: 'application/pdf' }],
+      <p>You&rsquo;ll get an email when Agency Operations approves or rejects it. A copy of the application (LIQ-19-0004) is linked below.</p></div>`,
   });
   revalidateAll();
-  return { ok: true, id: data.id, delivered: msg.deliveredTo };
+  return { ok: true, id: data.id };
 }
 
-export async function decideTasting(id: string, decision: 'approved' | 'rejected', note: string): Promise<Result<{ delivered: string }>> {
+export async function decideTasting(id: string, decision: 'approved' | 'rejected', note: string): Promise<Result> {
   const t = await getTasting(id);
   if (!t || t.status !== 'submitted') return fail('Only pending applications can be decided.');
   const reason = clean(note, 1000);
   if (decision === 'rejected' && !reason) return fail('A reason is required to reject.');
   await db().from('ohlq_demo_tastings').update({ status: decision, decided_at: new Date().toISOString(), decision_note: reason || (decision === 'approved' ? 'Approved' : null) }).eq('id', id);
-  const updated = (await getTasting(id))!;
-  const pdf = Buffer.from(await renderTastingPdf(updated));
   const approved = decision === 'approved';
-  const msg = await sendDemoMessage({
+  const pdfLink = `${await requestOrigin()}${DEMO_BASE}/api/tastings/${id}/pdf`;
+  await logDemoMessage({
+    entity: { type: 'tasting', id }, links: [{ label: `LIQ-19-0004 ${t.ref_no} (${approved ? 'approved' : 'rejected'}).pdf`, href: pdfLink }],
     requestedTo: t.email || PARTNER.email,
     subject: `Tasting ${approved ? 'APPROVED' : 'REJECTED'}: ${t.agency_name} #${t.agency_id}, ${fmtDate(t.event_date)}`,
     html: `<div style="font:15px Georgia,serif;color:#222"><p>Your tasting application <b>${t.ref_no}</b> was <b style="color:${approved ? '#1e6b34' : '#B72B35'}">${approved ? 'approved' : 'rejected'}</b> by OHLQ Agency Operations.</p>
       <p><b>${escapeHtml(t.agency_name ?? '')}</b> (Agency #${t.agency_id})<br>${fmtDate(t.event_date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}, ${fmtTime(t.start_time)}–${fmtTime(t.end_time)}</p>
       ${reason ? `<p style="background:#f6f6f6;padding:10px;border-left:4px solid #B72B35">${escapeHtml(reason)}</p>` : ''}
-      <p>The completed form, including the Division Use section, is attached.</p></div>`,
-    attachments: [{ filename: `LIQ-19-0004 ${t.ref_no} ${approved ? 'approved' : 'rejected'}.pdf`, content: pdf, contentType: 'application/pdf' }],
+      <p>The completed form, including the Division Use section, is linked below.</p></div>`,
   });
-  await addAudit('tasting', id, OPS_ACTOR, approved ? 'Approved' : 'Rejected', `${reason ? `${reason} · ` : ''}applicant emailed (delivered to Paul)${msg.status === 'sent' ? '' : ` · ${msg.status.replace('_', ' ')}`}`);
+  await addAudit('tasting', id, OPS_ACTOR, approved ? 'Approved' : 'Rejected', `${reason ? `${reason} · ` : ''}applicant notified (shown on screen in the demo)`);
   revalidateAll();
-  return { ok: true, delivered: msg.deliveredTo };
-}
-
-/** Used by the PDF route for "email me the PDF" — kept here so the A-3a renderer is exercised server-side. */
-export async function emailSalePdf(id: string): Promise<Result<{ delivered: string }>> {
-  const sale = await getSale(id);
-  if (!sale) return fail('Sale not found.');
-  const pdf = Buffer.from(await renderA3aPdf(sale));
-  const msg = await sendDemoMessage({
-    requestedTo: PARTNER.email, subject: `A-3a ${sale.ref_no} PDF`,
-    html: `<p style="font:15px Georgia,serif">The A-3a Direct Sale to Wholesale Customer form for ${sale.ref_no} is attached.</p>`,
-    attachments: [{ filename: `A-3a ${sale.ref_no}.pdf`, content: pdf, contentType: 'application/pdf' }],
-  });
-  return { ok: true, delivered: msg.deliveredTo };
+  return { ok: true };
 }
 
 export async function getSinConfigAction() {

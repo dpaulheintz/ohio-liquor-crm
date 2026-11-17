@@ -1,7 +1,6 @@
 // OHLQ Ops concept demo — client-safe constants, types and pure rules (no server imports).
 
 export const DEMO_BASE = '/demo/ohlq';
-export const DEMO_EMAIL = 'pheintzman@highbankco.com'; // every demo email/text is delivered here
 
 export const PARTNER = {
   name: 'High Bank Distillery',
@@ -11,8 +10,8 @@ export const PARTNER = {
   state: 'OH',
   zip: '43212',
   phone: '614-826-5247',
-  email: DEMO_EMAIL,
-  user: DEMO_EMAIL,
+  email: 'pheintzman@highbankco.com',
+  user: 'pheintzman@highbankco.com',
 } as const;
 
 export const OPS_ACTOR = 'OHLQ Agency Operations (demo reviewer)';

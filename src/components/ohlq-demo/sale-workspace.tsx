@@ -14,14 +14,15 @@ import {
   type AuditEntry, type Customer, type Product, type Sale, type Signature, type SinTaxConfig,
 } from '@/lib/ohlq-demo/shared';
 import { SignaturePad, SignatureView } from './signature-pad';
-import { DemoDelivered, Dialog, Field, SaleStatusChip, Section } from './ui';
+import { DemoNotSent, Dialog, Field, MessageLog, SaleStatusChip, Section, type MessageRow } from './ui';
 
 interface Line { key: string; code: string; quantity: string }
 let keySeq = 0;
 const newLine = (code = '', quantity = ''): Line => ({ key: `l${++keySeq}`, code, quantity });
 
-export function SaleWorkspace({ sale, products, customers, counties, sinConfig, audit, initialDialog = null }: {
+export function SaleWorkspace({ sale, products, customers, counties, sinConfig, audit, messages = [], initialDialog = null }: {
   sale: Sale | null; products: Product[]; customers: Customer[]; counties: string[]; sinConfig: SinTaxConfig; audit: AuditEntry[];
+  messages?: MessageRow[];
   /** Opens the A-3a or send dialog right after a first save (…?sign=a3a|send). */
   initialDialog?: 'a3a' | 'send' | null;
 }) {
@@ -279,9 +280,20 @@ export function SaleWorkspace({ sale, products, customers, counties, sinConfig, 
             {sale?.customer_signature ? (
               <SignedBlock sig={sale.customer_signature} name={sale.customer_signer_name ?? ''} at={sale.customer_signed_at} device={`${sale.customer_device ?? ''} · agreed to sign electronically`} />
             ) : sale?.status === 'awaiting_customer' ? (
-              <p className="ohlq-value">
-                Waiting for the customer{sale.sign_sent_to ? <> — sent by {sale.sign_method === 'sms' ? 'text' : 'email'} to <b>{sale.sign_sent_to}</b> {fmtDateTime(sale.sign_sent_at)} <DemoDelivered /></> : ' (in-person signing opened)'}.
-              </p>
+              <div>
+                <p className="ohlq-value" style={{ marginTop: 0 }}>
+                  Waiting for the customer{sale.sign_sent_to ? <> — sent by {sale.sign_method === 'sms' ? 'text' : 'email'} to <b>{sale.sign_sent_to}</b> {fmtDateTime(sale.sign_sent_at)} <DemoNotSent /></> : ' (in-person signing opened)'}.
+                </p>
+                {sale.sign_token && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} data-signing-link>
+                    <a className="ohlq-btn ohlq-btn-sm" href={`${DEMO_BASE}/sign/${sale.sign_token}`} target="_blank" rel="noreferrer">Open signing link</a>
+                    <button type="button" className="ohlq-btn ohlq-btn-outline ohlq-btn-sm" onClick={async () => {
+                      try { await navigator.clipboard.writeText(`${window.location.origin}${DEMO_BASE}/sign/${sale.sign_token}`); toast.success('Signing link copied'); }
+                      catch { toast.error('Couldn’t copy — use “Open signing link”'); }
+                    }}>Copy link</button>
+                  </div>
+                )}
+              </div>
             ) : <p className="ohlq-value ohlq-muted">Not signed yet.</p>}
             {(!sale || ['draft', 'returned', 'awaiting_customer'].includes(sale.status)) && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
@@ -346,6 +358,12 @@ export function SaleWorkspace({ sale, products, customers, counties, sinConfig, 
         )}
         {sale?.status === 'submitted' && <span className="ohlq-help" style={{ margin: 0 }}>Submitted {fmtDateTime(sale.submitted_at)} — OHLQ Agency Operations will process it.</span>}
       </div>
+
+      {sale && (
+        <Section icon={<Mail aria-hidden />} title={`Messages (${messages.length})`} defaultOpen={messages.length > 0}>
+          <MessageLog messages={messages} />
+        </Section>
+      )}
 
       {sale && audit.length > 0 && (
         <Section icon={<History aria-hidden />} title="History" defaultOpen={false}>
@@ -507,14 +525,14 @@ function SendDialog({ saleId, defaultEmail, onClose, onDone }: { saleId: string;
         <input className="ohlq-input" type={method === 'email' ? 'email' : 'tel'} value={to} onChange={(e) => setTo(e.target.value)} placeholder={method === 'email' ? 'manager@restaurant.com' : '614-555-0100'} autoFocus />
       </Field>
       {method === 'sms' && <p className="ohlq-warn">Texting needs an SMS provider; email used in demo.</p>}
-      <p className="ohlq-help">The customer gets a secure link to review the order and sign on their phone — no account needed. <DemoDelivered /></p>
+      <p className="ohlq-help">The customer gets a secure link to review the order and sign on their phone — no account needed. In this demo the message isn&rsquo;t sent: it appears under Messages on the sale, with the link.</p>
       {err && <p className="ohlq-error">{err}</p>}
       <button type="button" className="ohlq-btn" style={{ marginTop: 12, width: '100%' }} disabled={busy || !to.trim()} onClick={async () => {
         setBusy(true);
         const r = await sendForSignature(saleId, { method, to });
         setBusy(false);
         if (!r.ok) { setErr(r.error); return; }
-        toast.success(r.status === 'sent' ? `Sent — (Demo: delivered to Paul)` : `Link created — email isn’t configured on this server (${r.status.replace('_', ' ')})`);
+        toast.success('Signing link created — shown on the sale (not sent in the demo)');
         onDone();
       }}><Send aria-hidden /> {busy ? 'Sending…' : 'Send link'}</button>
     </Dialog>

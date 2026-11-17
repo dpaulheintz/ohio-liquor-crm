@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Download, ShieldCheck } from 'lucide-react';
-import { getAudit, getOpsData } from '@/lib/ohlq-demo/server';
+import { getAudit, getMessages, getOpsData } from '@/lib/ohlq-demo/server';
 import { DEMO_BASE } from '@/lib/ohlq-demo/shared';
 import { FlagList, Section } from '@/components/ohlq-demo/ui';
 import { TastingDetail } from '@/components/ohlq-demo/tasting-detail';
@@ -11,7 +11,7 @@ export default async function OpsTastingPage({ params }: { params: Promise<{ id:
   const { tastings } = await getOpsData();
   const t = tastings.find((x) => x.id === id);
   if (!t) notFound();
-  const audit = await getAudit('tasting', id);
+  const [audit, messages] = await Promise.all([getAudit('tasting', id), getMessages('tasting', id)]);
   return (
     <>
       <h1 className="ohlq-title" style={{ marginBottom: 12 }}>Tasting Application {t.ref_no}</h1>
@@ -20,7 +20,7 @@ export default async function OpsTastingPage({ params }: { params: Promise<{ id:
         {t.status === 'submitted' && <OpsTastingActions id={t.id} refNo={t.ref_no} />}
         <a className="ohlq-btn ohlq-btn-outline ohlq-btn-sm" style={{ marginTop: 12 }} href={`${DEMO_BASE}/api/tastings/${t.id}/pdf`} target="_blank" rel="noreferrer"><Download aria-hidden /> PDF (LIQ-19-0004)</a>
       </Section>
-      <TastingDetail t={t} audit={audit} />
+      <TastingDetail t={t} audit={audit} messages={messages} />
     </>
   );
 }

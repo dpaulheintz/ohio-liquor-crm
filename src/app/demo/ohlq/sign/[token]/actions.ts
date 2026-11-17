@@ -4,7 +4,7 @@
 // signing that one sale while it awaits a signature.
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { addAudit, db, escapeHtml, getSaleByToken, requestOrigin, sendDemoMessage } from '@/lib/ohlq-demo/server';
+import { addAudit, db, escapeHtml, getSaleByToken, logDemoMessage, requestOrigin } from '@/lib/ohlq-demo/server';
 import { DEMO_BASE, PARTNER, describeDevice, fmtCents, isSignature, type Signature } from '@/lib/ohlq-demo/shared';
 
 export async function signAsCustomer(token: string, input: { signature: Signature; name: string; consent: boolean }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -27,7 +27,8 @@ export async function signAsCustomer(token: string, input: { signature: Signatur
 
   if (sale.sign_method !== 'in_person') {
     const link = `${await requestOrigin()}${DEMO_BASE}/wholesale/${sale.id}`;
-    await sendDemoMessage({
+    await logDemoMessage({
+      entity: { type: 'wholesale', id: sale.id }, links: [{ label: 'Open the sale', href: link }],
       requestedTo: PARTNER.email,
       subject: `Signed: ${sale.customer_dba || sale.customer_name} signed ${sale.ref_no} (${fmtCents(sale.total_cents)})`,
       html: `<p style="font:15px Georgia,serif">${escapeHtml(name)} signed direct sale <b>${sale.ref_no}</b> on ${escapeHtml(dev)}. It&rsquo;s ready to submit to OHLQ.</p><p style="font:15px Georgia,serif"><a href="${link}">Open the sale</a></p>`,

@@ -2,9 +2,8 @@
 // RLS on and no policies, so the browser can't touch them directly). The demo itself is public. Reads ohlq_products and agency rows of accounts read-only.
 import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/server';
-import { sendEmailStrict } from '@/lib/email';
 import {
-  DEFAULT_SIN_TAX, DEMO_EMAIL, tastingFlags, toCents, wholesaleFlags,
+  DEFAULT_SIN_TAX, tastingFlags, toCents, wholesaleFlags,
   type Agency, type AuditEntry, type Customer, type Product, type Sale, type SinTaxConfig, type Tasting,
 } from './shared';
 
@@ -149,54 +148,38 @@ export async function nextRef(prefix: 'WS' | 'TA'): Promise<string> {
   return `${prefix}-${max + 1}`;
 }
 
-// ─── Messages: every demo email/text goes to Paul, whatever address was typed ──
+// ─── Messages: nothing is emailed or texted — each message is logged and shown on screen ──
 
-export interface DemoMessageResult {
-  status: 'sent' | 'not_configured' | 'failed';
-  deliveredTo: string;
+export interface DemoMessage {
+  id: string;
+  channel: 'email' | 'sms';
+  requested_to: string | null;
+  subject: string;
+  body_html: string | null;
+  links: { label: string; href: string }[];
+  created_at: string;
 }
 
-export async function sendDemoMessage(opts: {
+/** Record a message the demo "sends". It appears in the Messages section of its sale or tasting. */
+export async function logDemoMessage(opts: {
+  entity: { type: 'wholesale' | 'tasting'; id: string };
   requestedTo: string | null;
   channel?: 'email' | 'sms';
   subject: string;
   html: string;
-  text?: string;
-  attachments?: { filename: string; content: Buffer; contentType?: string }[];
-}): Promise<DemoMessageResult> {
-  const channel = opts.channel ?? 'email';
-  const banner = `<div style="font:12px Arial,sans-serif;background:#FFF6D6;border:1px solid #F5C842;padding:8px 10px;margin-bottom:14px">
-    <b>OHLQ concept demo</b> · Not an official OHLQ system · Sample data.<br>
-    ${channel === 'sms' ? 'Requested by text to' : 'Addressed to'} <b>${escapeHtml(opts.requestedTo || '(none)')}</b> — delivered to Paul (${DEMO_EMAIL}) instead.
-  </div>`;
-  let status: DemoMessageResult['status'] = 'sent';
-  let error: string | null = null;
-  let providerResponse: string | null = null;
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-    status = 'not_configured';
-  } else {
-    try {
-      const info = await sendEmailStrict({
-        to: [DEMO_EMAIL],
-        subject: `[OHLQ demo] ${opts.subject}`,
-        html: banner + opts.html,
-        text: opts.text,
-        fromName: 'OHLQ Concept Demo',
-        attachments: opts.attachments,
-      });
-      const accepted = (info.accepted ?? []).map(String);
-      providerResponse = `${info.response ?? ''} · accepted: ${accepted.join(', ') || 'none'} · message-id: ${info.messageId ?? ''}`.slice(0, 500);
-      if (!accepted.includes(DEMO_EMAIL)) status = 'failed';
-    } catch (e) {
-      status = 'failed';
-      error = e instanceof Error ? e.message : String(e);
-    }
-  }
+  links?: { label: string; href: string }[];
+}): Promise<void> {
   await db().from('ohlq_demo_messages').insert({
-    channel, requested_to: opts.requestedTo, delivered_to: DEMO_EMAIL, subject: opts.subject, status, error,
-    provider_response: providerResponse,
+    channel: opts.channel ?? 'email', requested_to: opts.requestedTo, delivered_to: 'on screen (not sent)',
+    subject: opts.subject, status: 'logged', entity_type: opts.entity.type, entity_id: opts.entity.id,
+    body_html: opts.html, links: opts.links ?? [],
   });
-  return { status, deliveredTo: DEMO_EMAIL };
+}
+
+export async function getMessages(entityType: 'wholesale' | 'tasting', id: string): Promise<DemoMessage[]> {
+  const { data } = await db().from('ohlq_demo_messages').select('id, channel, requested_to, subject, body_html, links, created_at')
+    .eq('entity_type', entityType).eq('entity_id', id).order('created_at', { ascending: false });
+  return (data ?? []) as DemoMessage[];
 }
 
 export function escapeHtml(s: string): string {

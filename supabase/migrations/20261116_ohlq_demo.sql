@@ -136,3 +136,11 @@ revoke all on public.ohlq_demo_customers, public.ohlq_demo_wholesale_sales, publ
 
 -- 2026-11-17: keep the SMTP server's answer for each demo email (proof of delivery to Paul)
 alter table public.ohlq_demo_messages add column if not exists provider_response text;
+
+-- 2026-11-17: nothing is emailed any more — messages are logged and shown on their sale/tasting
+alter table public.ohlq_demo_messages
+  add column if not exists entity_type text check (entity_type in ('wholesale', 'tasting')),
+  add column if not exists entity_id uuid,
+  add column if not exists body_html text,
+  add column if not exists links jsonb not null default '[]'::jsonb;
+create index if not exists ohlq_demo_messages_entity_idx on public.ohlq_demo_messages (entity_type, entity_id, created_at);

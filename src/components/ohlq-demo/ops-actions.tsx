@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Check, Undo2, X } from 'lucide-react';
 import { decideTasting, processSale, returnSale } from '@/app/demo/ohlq/actions';
-import { DemoDelivered } from './ui';
+import { DemoNotSent } from './ui';
 
 export function OpsSaleActions({ saleId, refNo }: { saleId: string; refNo: string }) {
   const router = useRouter();
@@ -37,11 +37,11 @@ export function OpsSaleActions({ saleId, refNo }: { saleId: string; refNo: strin
               const r = await returnSale(saleId, note);
               setBusy(false);
               if (!r.ok) { setErr(r.error); return; }
-              toast.success('Returned — supplier emailed (Demo: delivered to Paul)');
+              toast.success('Returned — supplier notice shown under Messages (not sent in the demo)');
               router.refresh();
-            }}>{busy ? 'Sending…' : 'Return & email supplier'}</button>
+            }}>{busy ? 'Saving…' : 'Return & notify supplier'}</button>
             <button type="button" className="ohlq-linkbtn" onClick={() => setMode('idle')}>Cancel</button>
-            <DemoDelivered />
+            <DemoNotSent />
           </div>
         </div>
       )}
@@ -61,7 +61,7 @@ export function OpsTastingActions({ id, refNo }: { id: string; refNo: string }) 
     const r = await decideTasting(id, d, d === 'rejected' ? note : '');
     setBusy(false);
     if (!r.ok) { setErr(r.error); return; }
-    toast.success(`${refNo} ${d} — applicant emailed (Demo: delivered to Paul)`);
+    toast.success(`${refNo} ${d} — applicant notice shown under Messages (not sent in the demo)`);
     router.refresh();
   };
   return (
@@ -70,14 +70,14 @@ export function OpsTastingActions({ id, refNo }: { id: string; refNo: string }) 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button type="button" className="ohlq-btn" disabled={busy} onClick={() => decide('approved')}><Check aria-hidden /> {busy ? 'Saving…' : 'Approve'}</button>
           <button type="button" className="ohlq-btn ohlq-btn-outline" onClick={() => setMode('reject')}><X aria-hidden /> Reject</button>
-          <span className="ohlq-help" style={{ margin: 0 }}>The applicant is emailed automatically <DemoDelivered />. This replaces the &ldquo;For Division Use Only&rdquo; box.</span>
+          <span className="ohlq-help" style={{ margin: 0 }}>The applicant is notified automatically <DemoNotSent />. This replaces the &ldquo;For Division Use Only&rdquo; box.</span>
         </div>
       ) : (
         <div>
           <label className="ohlq-label" htmlFor="reject-note">Reason for rejecting (required)</label>
           <textarea id="reject-note" className="ohlq-input" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Filed less than 10 business days before the event." />
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <button type="button" className="ohlq-btn" disabled={busy || !note.trim()} onClick={() => decide('rejected')}>{busy ? 'Saving…' : 'Reject & email applicant'}</button>
+            <button type="button" className="ohlq-btn" disabled={busy || !note.trim()} onClick={() => decide('rejected')}>{busy ? 'Saving…' : 'Reject & notify applicant'}</button>
             <button type="button" className="ohlq-linkbtn" onClick={() => setMode('idle')}>Cancel</button>
           </div>
         </div>

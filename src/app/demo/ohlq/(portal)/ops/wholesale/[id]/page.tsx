@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { Building2, FileText, History, PenLine, Receipt, ShieldCheck, Users } from 'lucide-react';
-import { getAudit, getOpsData } from '@/lib/ohlq-demo/server';
+import { Building2, FileText, History, Mail, PenLine, Receipt, ShieldCheck, Users } from 'lucide-react';
+import { getAudit, getMessages, getOpsData } from '@/lib/ohlq-demo/server';
 import { DEMO_BASE, PARTNER, fmtCents, fmtDate, fmtDateTime } from '@/lib/ohlq-demo/shared';
-import { FlagList, SaleStatusChip, Section } from '@/components/ohlq-demo/ui';
+import { FlagList, MessageLog, SaleStatusChip, Section } from '@/components/ohlq-demo/ui';
 import { SignatureView } from '@/components/ohlq-demo/signature-pad';
 import { AuditList } from '@/components/ohlq-demo/sale-workspace';
 import { OpsSaleActions } from '@/components/ohlq-demo/ops-actions';
@@ -12,7 +12,7 @@ export default async function OpsSalePage({ params }: { params: Promise<{ id: st
   const { sales, book } = await getOpsData();
   const sale = sales.find((s) => s.id === id);
   if (!sale) notFound();
-  const audit = await getAudit('wholesale', id);
+  const [audit, messages] = await Promise.all([getAudit('wholesale', id), getMessages('wholesale', id)]);
   const priceBook = new Map(book.map((p) => [p.code, p]));
   const sigCard = (sig: typeof sale.a3a_signature, name: string | null, at: string | null, device: string | null, extra?: string) => (
     <div style={{ border: '1px solid #e3e3e3', padding: 10, background: '#fffefb' }}>
@@ -86,6 +86,7 @@ export default async function OpsSalePage({ params }: { params: Promise<{ id: st
         <iframe title={`A-3a ${sale.ref_no} PDF`} src={`${DEMO_BASE}/api/wholesale/${sale.id}/pdf`} style={{ width: '100%', height: 780, border: '1px solid #ddd', marginTop: 10 }} className="hidden md:block" />
       </Section>
 
+      <Section icon={<Mail aria-hidden />} title={`Messages (${messages.length})`} defaultOpen={false}><MessageLog messages={messages} /></Section>
       <Section icon={<History aria-hidden />} title="Audit trail"><AuditList audit={audit} /></Section>
     </>
   );

@@ -1,10 +1,10 @@
-import { CalendarClock, ClipboardList, History, PenLine, UserRound, Wine } from 'lucide-react';
+import { CalendarClock, ClipboardList, History, Mail, PenLine, UserRound, Wine } from 'lucide-react';
 import { APPLICANT_TYPES, fmtDate, fmtDateTime, fmtTime, type AuditEntry, type Tasting } from '@/lib/ohlq-demo/shared';
 import { SignatureView } from './signature-pad';
-import { Section, TastingStatusChip } from './ui';
+import { MessageLog, Section, TastingStatusChip, type MessageRow } from './ui';
 import { AuditList } from './sale-workspace';
 
-export function TastingDetail({ t, audit }: { t: Tasting; audit: AuditEntry[] }) {
+export function TastingDetail({ t, audit, messages }: { t: Tasting; audit: AuditEntry[]; messages: MessageRow[] }) {
   return (
     <>
       <Section icon={<CalendarClock aria-hidden />} title="Tasting Event Information" right={<TastingStatusChip status={t.status} />}>
@@ -42,6 +42,7 @@ export function TastingDetail({ t, audit }: { t: Tasting; audit: AuditEntry[] })
           <div className="ohlq-help" style={{ marginTop: 0 }}>Signed electronically {fmtDateTime(t.signed_at)}</div>
         </div>
       </Section>
+      <Section icon={<Mail aria-hidden />} title={`Messages (${messages.length})`} defaultOpen={messages.length > 0}><MessageLog messages={messages} /></Section>
       {audit.length > 0 && <Section icon={<History aria-hidden />} title="History" defaultOpen={false}><AuditList audit={audit} /></Section>}
     </>
   );

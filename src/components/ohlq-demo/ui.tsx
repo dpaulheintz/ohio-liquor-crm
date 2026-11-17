@@ -70,9 +70,50 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
   );
 }
 
-/** Shown wherever the demo sends an email or text. */
-export function DemoDelivered({ to }: { to?: string }) {
-  return <span className="ohlq-help" style={{ display: 'inline' }}>(Demo: delivered to Paul{to ? ` instead of ${to}` : ''})</span>;
+/** Shown wherever the real system would send an email or text. */
+export function DemoNotSent() {
+  return <span className="ohlq-help" style={{ display: 'inline' }}>(Demo: shown on screen, not sent)</span>;
+}
+
+export interface MessageRow {
+  id: string;
+  channel: 'email' | 'sms';
+  requested_to: string | null;
+  subject: string;
+  body_html: string | null;
+  links: { label: string; href: string }[];
+  created_at: string;
+}
+
+/** The messages the demo would have emailed or texted, readable right on the page. */
+export function MessageLog({ messages }: { messages: MessageRow[] }) {
+  if (!messages.length) return <p className="ohlq-value ohlq-muted" style={{ margin: 0 }}>No messages yet.</p>;
+  return (
+    <div style={{ display: 'grid', gap: 10 }} data-message-log>
+      <p className="ohlq-help" style={{ margin: 0 }}>In the real system these would be emailed or texted. In this demo they&rsquo;re only shown here.</p>
+      {messages.map((m, i) => (
+        <details key={m.id} open={i === 0} style={{ border: '1px solid #e3e3e3', background: '#fff' }}>
+          <summary style={{ cursor: 'pointer', padding: '10px 12px', font: '15px/1.35 var(--ohlq-serif)', listStyle: 'revert' }}>
+            <b>{m.subject}</b>
+            <span className="ohlq-help" style={{ display: 'block', marginTop: 2 }}>
+              {m.channel === 'sms' ? 'Text' : 'Email'} to {m.requested_to || '—'} · {new Date(m.created_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET
+            </span>
+          </summary>
+          <div style={{ borderTop: '1px solid #eee', padding: 12 }}>
+            {m.body_html && (
+              <iframe title={m.subject} sandbox="" srcDoc={`<!doctype html><meta charset="utf-8"><body style="margin:0">${m.body_html}</body>`}
+                style={{ width: '100%', height: 230, border: 0, background: '#fff' }} />
+            )}
+            {m.links.length > 0 && (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                {m.links.map((l) => <a key={l.href} href={l.href} target="_blank" rel="noreferrer" className="ohlq-btn ohlq-btn-outline ohlq-btn-sm">{l.label}</a>)}
+              </div>
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
 }
 
 export function Field({ label, children, help, error, htmlFor }: { label: string; children: ReactNode; help?: ReactNode; error?: string | null; htmlFor?: string }) {
