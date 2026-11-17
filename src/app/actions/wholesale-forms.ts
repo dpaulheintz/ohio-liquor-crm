@@ -4,8 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { loadEmailRecipients, loadForm, renderFormPdf, requireWholesaleAccess } from '@/lib/wholesale-forms-server';
 import { sendEmailStrict } from '@/lib/email';
 import {
+  DESCRIPTION_MAX,
   WHOLESALE_BUCKET,
   WHOLESALE_FORMS_PATH,
+  cleanDescription,
   emailSubject,
   formatCents,
   isEmail,
@@ -46,6 +48,8 @@ export interface SaveFormInput {
   customLines: (CustomLineInput & { save_to_price_list?: boolean })[];
   warehouseId: string | null;
   notes: string;
+  /** Optional, ≤ 60 chars; goes in the email subject (not printed on the form). */
+  description?: string;
 }
 
 function revalidate() {
@@ -56,7 +60,7 @@ function revalidate() {
 function friendly(err: any): string {
   const msg = String(err?.message ?? err ?? 'Something went wrong');
   if (msg.includes('wholesale_forms_final_complete')) return 'A form needs a recipient and at least one bottle before it can be finalized.';
-  if (msg.includes('wholesale_customers_account_number_key')) return 'That account # is already saved for another wholesaler.';
+  if (msg.includes('wholesale_customers_account_number_key')) return 'That account # is already saved for another wholesaler at this warehouse.';
   if (msg.includes('Not authorized') || err?.code === '42501') return 'You don’t have permission to do that.';
   return msg;
 }
@@ -87,6 +91,7 @@ export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionRes
     if (input.formId && !UUID_RE.test(input.formId)) return { ok: false, error: 'Invalid form.' };
     if (input.customerId && !UUID_RE.test(input.customerId)) return { ok: false, error: 'Invalid wholesaler.' };
     if (input.warehouseId && !UUID_RE.test(input.warehouseId)) return { ok: false, error: 'Invalid warehouse.' };
+    if ((input.description ?? '').trim().length > DESCRIPTION_MAX) return { ok: false, error: `Keep the description to ${DESCRIPTION_MAX} characters.` };
 
     const customLines: CustomLineInput[] = [];
     const toPriceList: CustomLineInput[] = [];
@@ -161,6 +166,7 @@ export async function saveWholesaleForm(input: SaveFormInput): Promise<ActionRes
         account_number: r.account_number,
         customer_id_number: r.customer_id_number,
         notes: input.notes,
+        description: cleanDescription(input.description),
         warehouse_id: input.warehouseId ?? '',
         custom_lines: customLines,
       },
@@ -378,28 +384,36 @@ export async function getEmailRecipients(): Promise<string[]> {
   return loadEmailRecipients(supabase);
 }
 
-export async function sendWholesaleForm(formId: string): Promise<ActionResult<{ sentAt: string; recipients: string[] }>> {
+/** Email the finalized form. testToMe (admins): send only to the signed-in admin, and don't mark the form sent. */
+export async function sendWholesaleForm(formId: string, opts: { testToMe?: boolean } = {}): Promise<ActionResult<{ sentAt: string; recipients: string[]; test: boolean }>> {
   try {
     if (!UUID_RE.test(formId)) return { ok: false, error: 'Invalid form.' };
-    const { supabase, access } = await requireWholesaleAccess();
+    const { supabase, access } = await requireWholesaleAccess(opts.testToMe ? { adminOnly: true } : {});
     const form = await loadForm(supabase, formId);
     if (!form) return { ok: false, error: 'Form not found.' };
     if (form.status !== 'final') return { ok: false, error: 'Finalize the form before sending it.' };
 
-    const recipients = await loadEmailRecipients(supabase);
+    let recipients = await loadEmailRecipients(supabase);
+    if (opts.testToMe) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return { ok: false, error: 'Your account has no email address.' };
+      recipients = [user.email];
+    }
     const { bytes, filename } = await renderFormPdf(supabase, form);
-    const subject = emailSubject(form.recipient_name, form.sales_date, form.receipt_total_cents);
+    const subject = emailSubject(form.recipient_name, form.sales_date, form.receipt_total_cents, form.description);
     const warehouse = form.settings_snapshot?.warehouse_name ?? form.settings_snapshot?.warehouse_label ?? 'Grandview';
     const summary = `${warehouse} warehouse · ${form.total_bottles} bottle${form.total_bottles === 1 ? '' : 's'} · ${formatCents(form.receipt_total_cents)} · completed by ${form.completed_by_name ?? '—'}`;
+    const desc = cleanDescription(form.description);
 
     await sendEmailStrict({
       to: recipients,
       subject,
-      text: `${summary}\n\nThe wholesale form PDF is attached.`,
-      html: `<p>${esc(summary)}</p><p>The wholesale form PDF is attached.</p>`,
+      text: `${desc ? `${desc}\n` : ''}${summary}\n\nThe wholesale form PDF is attached.`,
+      html: `${desc ? `<p><strong>${esc(desc)}</strong></p>` : ''}<p>${esc(summary)}</p><p>The wholesale form PDF is attached.</p>`,
       fromName: 'High Bank Wholesale Forms',
       attachments: [{ filename, content: Buffer.from(bytes), contentType: 'application/pdf' }],
     });
+    if (opts.testToMe) return { ok: true, data: { sentAt: new Date().toISOString(), recipients, test: true } };
 
     const { data: sent, error } = await supabase
       .from('wholesale_form_sends')
@@ -408,7 +422,7 @@ export async function sendWholesaleForm(formId: string): Promise<ActionResult<{ 
       .single();
     if (error) return { ok: false, error: `Email sent, but logging it failed: ${friendly(error)}` };
     revalidate();
-    return { ok: true, data: { sentAt: sent.sent_at, recipients } };
+    return { ok: true, data: { sentAt: sent.sent_at, recipients, test: false } };
   } catch (err) {
     return { ok: false, error: friendly(err) };
   }
@@ -432,7 +446,7 @@ export async function saveWarehouse(id: string, input: WarehouseInput): Promise<
     const row = Object.fromEntries(keys.map((k) => [k, String(input[k] ?? '').trim()])) as unknown as WarehouseInput;
     if (keys.some((k) => !row[k])) return { ok: false, error: 'All fields are required.' };
     if (!isEmail(row.a3a_email)) return { ok: false, error: 'Enter a valid A-3a email address.' };
-    row.label = row.label.toUpperCase();
+    // The label prints as typed under the vendor line (**GRANDVIEW**, **PO Box 21**).
     const { supabase, access } = await requireWholesaleAccess({ adminOnly: true });
     const { data, error } = await supabase
       .from('wholesale_warehouses')

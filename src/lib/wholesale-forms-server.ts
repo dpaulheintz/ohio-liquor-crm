@@ -40,7 +40,7 @@ export async function requireWholesaleAccess(opts: { adminOnly?: boolean } = {})
 const FORM_COLUMNS = `
   id, sales_date, customer_id, warehouse_id, recipient_name, recipient_address_line1, recipient_city, recipient_state,
   recipient_zip, recipient_phone, account_type, account_number, customer_id_number, total_bottles,
-  receipt_total_cents, status, finalized_at, notes, source, signed_copy_path, settings_snapshot, created_at, updated_at,
+  receipt_total_cents, status, finalized_at, notes, description, source, signed_copy_path, settings_snapshot, created_at, updated_at,
   completer:profiles!wholesale_forms_completed_by_fkey(full_name, email),
   sends:wholesale_form_sends(sent_at)
 `;

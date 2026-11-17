@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Download, FileCheck2, Plus } from 'lucide-react';
+import { Download, FileCheck2, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatSalesDate } from '@/lib/wholesale-forms';
@@ -26,6 +26,7 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
   const [purpose, setPurpose] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [q, setQ] = useState('');
 
   const filtered = useMemo(
     () =>
@@ -34,15 +35,17 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
         if (purpose && r.purpose !== purpose) return false;
         if (from && r.req_date < from) return false;
         if (to && r.req_date > to) return false;
+        const term = q.trim().toLowerCase();
+        if (term && ![r.description, r.notes, r.requested_by_name, r.location, r.purpose].some((v) => v?.toLowerCase().includes(term))) return false;
         return true;
       }),
-    [requisitions, location, purpose, from, to],
+    [requisitions, location, purpose, from, to, q],
   );
 
   function exportCsv() {
-    const header = ['Date', 'Location', 'Purpose', 'Items', 'Requested By', 'Status', 'Last Sent', 'Sent To', 'Notes'];
+    const header = ['Date', 'Location', 'Purpose', 'Description', 'Items', 'Requested By', 'Status', 'Last Sent', 'Sent To', 'Notes'];
     const rows = filtered.map((r) => [
-      r.req_date, r.location, r.purpose, r.total_items, r.requested_by_name, r.status, r.sent_at ?? '', (r.sent_to ?? []).join('; '), r.notes,
+      r.req_date, r.location, r.purpose, r.description, r.total_items, r.requested_by_name, r.status, r.sent_at ?? '', (r.sent_to ?? []).join('; '), r.notes,
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
     const a = document.createElement('a');
@@ -79,7 +82,11 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
           <label htmlFor="f-to" className="text-[11px] uppercase tracking-wider text-muted-foreground">To</label>
           <Input id="f-to" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-9 w-40" />
         </div>
-        <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0} className="h-9 sm:ml-auto">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search description, notes, requested by" aria-label="Search requisitions" className="h-9 pl-8" />
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0} className="h-9">
           <Download className="h-4 w-4 mr-1.5" /> CSV
         </Button>
         <Button asChild size="sm" className="h-9">
@@ -94,6 +101,7 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
               <th className="text-left font-medium px-3 py-2.5">Date</th>
               <th className="text-left font-medium px-3 py-2.5">Location</th>
               <th className="text-left font-medium px-3 py-2.5">Purpose</th>
+              <th className="text-left font-medium px-3 py-2.5">Description</th>
               <th className="text-right font-medium px-3 py-2.5">Items</th>
               <th className="text-left font-medium px-3 py-2.5">Requested by</th>
               <th className="text-left font-medium px-3 py-2.5">Status</th>
@@ -108,6 +116,7 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
                 </td>
                 <td className="px-3 py-2.5">{r.location}</td>
                 <td className="px-3 py-2.5">{r.purpose}</td>
+                <td className="px-3 py-2.5 max-w-[200px] truncate" title={r.description ?? undefined}>{r.description ?? <span className="text-muted-foreground">—</span>}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{r.total_items}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{r.requested_by_name ?? '—'}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
@@ -129,7 +138,7 @@ export function HistoryClient({ requisitions }: { requisitions: RetailRequisitio
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">No requisitions yet.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">No requisitions yet.</td></tr>
             )}
           </tbody>
         </table>

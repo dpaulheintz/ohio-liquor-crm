@@ -14,7 +14,7 @@ export default async function RetailRequisitionsLayout({ children }: { children:
       <div className="border-b px-4 sm:px-6 pt-5">
         <div className="max-w-4xl mx-auto">
           <h1 className="font-serif text-2xl font-bold tracking-wide">Retail Requisitions</h1>
-          <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">Grandview · Gahanna · Westerville</p>
+          <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-widest">Grandview · Gahanna · Westerville · PO Box 21</p>
           <RetailReqTabs isAdmin={access.isAdmin} />
         </div>
       </div>

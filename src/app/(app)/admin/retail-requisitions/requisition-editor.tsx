@@ -11,12 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { deleteRequisition, getLastRequisition, saveRequisition, sendRequisition } from '@/app/actions/retail-requisitions';
-import { formatSalesDate } from '@/lib/wholesale-forms';
+import { DESCRIPTION_MAX, DESCRIPTION_PLACEHOLDER, formatSalesDate } from '@/lib/wholesale-forms';
 import {
   REQ_LOCATIONS,
   REQ_PURPOSES,
   RETAIL_REQ_PATH,
   formatSentDate,
+  requisitionEmailSubject,
   requisitionFileName,
   type ReqLocation,
   type RetailReqProduct,
@@ -87,10 +88,11 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
   const [purpose, setPurpose] = useState<string | null>(initial?.purpose ?? null);
   const [reqDate, setReqDate] = useState(initial?.req_date ?? today);
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [quantities, setQuantities] = useState<Record<string, string>>(start.quantities);
   const [customRows, setCustomRows] = useState<CustomRow[]>(start.custom);
   const [search, setSearch] = useState('');
-  const [busy, setBusy] = useState<'draft' | 'final' | 'repeat' | 'send' | 'share' | 'delete' | null>(null);
+  const [busy, setBusy] = useState<'draft' | 'final' | 'repeat' | 'send' | 'test' | 'share' | 'delete' | null>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sentAt, setSentAt] = useState(initial?.sent_at ?? null);
@@ -151,6 +153,7 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
         purpose,
         reqDate,
         notes,
+        description,
         quantities: Object.fromEntries(products.filter((p) => toQty(quantities[p.id] ?? '') > 0).map((p) => [p.id, toQty(quantities[p.id])])),
         customLines: filledCustom.map((c) => ({ sku: c.sku, description: c.description, quantity: toQty(c.qty), save_to_list: isAdmin && c.save })),
       });
@@ -165,14 +168,15 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
     }
   }
 
-  async function send() {
+  async function send(testToMe = false) {
     if (!id) return;
-    setBusy('send');
+    setBusy(testToMe ? 'test' : 'send');
     try {
-      const res = await sendRequisition(id);
+      const res = await sendRequisition(id, { testToMe });
       if (!res.ok) return void toast.error(res.error);
-      setSentAt(res.data.sentAt);
       setConfirmSend(false);
+      if (res.data.test) return void toast.success(`Test sent only to ${res.data.recipients.join(', ')}`);
+      setSentAt(res.data.sentAt);
       toast.success(`Sent to ${res.data.recipients.join(', ')}`);
       router.refresh();
     } catch {
@@ -241,10 +245,16 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
             {recipients.map((r) => <li key={r} className="font-mono">{r}</li>)}
           </ul>
           {sentAt && <p className="text-xs text-muted-foreground">Already sent {formatSentDate(sentAt)} — this sends it again.</p>}
+          {initial && <p className="text-xs text-muted-foreground" data-email-subject>Subject: <span className="font-medium text-foreground">{requisitionEmailSubject(initial)}</span></p>}
           {isAdmin && <p className="text-xs text-muted-foreground">Recipients are shared with Wholesale Forms (Wholesale Forms → Settings).</p>}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={busy === 'send'}>Cancel</Button>
-            <Button onClick={send} disabled={busy === 'send'}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={busy === 'send' || busy === 'test'}>Cancel</Button>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => send(true)} disabled={busy === 'send' || busy === 'test'} title="Sends the same email only to you; the requisition isn’t marked as sent">
+                {busy === 'test' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />} Send test to me
+              </Button>
+            )}
+            <Button onClick={() => send()} disabled={busy === 'send' || busy === 'test'}>
               {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />} Send
             </Button>
           </DialogFooter>
@@ -267,6 +277,12 @@ export function RequisitionEditor({ products, recipients, isAdmin, today, initia
       </Dialog>
 
       <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="req-description">Description <span className="text-muted-foreground font-normal">(optional · goes in the email subject and on the PDF)</span></Label>
+          <Input id="req-description" value={description} maxLength={DESCRIPTION_MAX} placeholder={DESCRIPTION_PLACEHOLDER} className="h-11 text-base"
+            onChange={(e) => setDescription(e.target.value.replace(/[\r\n]+/g, ' '))} />
+          {description.length > DESCRIPTION_MAX - 15 && <p className="text-xs text-muted-foreground">{DESCRIPTION_MAX - description.length} characters left</p>}
+        </div>
         <div className="space-y-1.5">
           <Label>Location</Label>
           <Segmented label="Location" value={location} options={REQ_LOCATIONS} onChange={setLocation} />

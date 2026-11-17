@@ -73,6 +73,8 @@ export interface WholesaleForm extends RecipientSnapshot {
   completed_by_name: string | null;
   finalized_at: string | null;
   notes: string | null;
+  /** Short label for the email subject ("NEO Barrel Pick"); not printed on the official form. */
+  description: string | null;
   source: 'app' | 'imported_scan';
   signed_copy_path: string | null;
   settings_snapshot: WholesaleSettings | null;
@@ -124,10 +126,18 @@ export interface CustomLineInput {
 
 export const DEFAULT_EMAIL_RECIPIENTS = ['msmith@highbankco.com', 'dsprequest@highbankco.com'];
 
-/** "Wholesale Form – JT's Grandview – 8/30/26 – $784.90" */
-export function emailSubject(recipient: string | null, salesDate: string, totalCents: number): string {
+/** Optional one-line description on Wholesale Forms and Retail Requisitions (goes in the email subject). */
+export const DESCRIPTION_MAX = 60;
+export const DESCRIPTION_PLACEHOLDER = 'e.g. NEO Barrel Pick';
+/** Trimmed, single-line, ≤ 60 chars; '' when blank. */
+export const cleanDescription = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim().slice(0, DESCRIPTION_MAX);
+
+/** "Wholesale Form – JT's Grandview – 8/30/26 – $784.90"; with a description:
+ *  "Wholesale Form – NEO Barrel Pick – JT's Grandview – 8/30/26 – $784.90" */
+export function emailSubject(recipient: string | null, salesDate: string, totalCents: number, description?: string | null): string {
   const [y, m, d] = salesDate.split('-').map(Number);
-  return `Wholesale Form – ${recipient ?? 'Recipient'} – ${m}/${d}/${String(y).slice(-2)} – ${formatCents(totalCents)}`;
+  const desc = cleanDescription(description);
+  return `Wholesale Form – ${desc ? `${desc} – ` : ''}${recipient ?? 'Recipient'} – ${m}/${d}/${String(y).slice(-2)} – ${formatCents(totalCents)}`;
 }
 
 export function isEmail(s: string): boolean {

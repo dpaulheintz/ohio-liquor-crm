@@ -20,6 +20,10 @@ import { cn } from '@/lib/utils';
 
 type HistoryForm = Omit<WholesaleForm, 'lines'>;
 
+/** The warehouse a form was issued from (snapshotted on the form): Grandview, Gahanna, Westerville, PO Box 21. */
+const whName = (f: { settings_snapshot: { warehouse_name?: string; warehouse_label?: string } | null }) =>
+  f.settings_snapshot?.warehouse_name ?? f.settings_snapshot?.warehouse_label ?? '';
+
 function csvCell(v: unknown): string {
   if (v == null) return '';
   let s = String(v);
@@ -37,6 +41,7 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [customer, setCustomer] = useState('');
+  const [warehouse, setWarehouse] = useState('');
   const [q, setQ] = useState('');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -48,10 +53,12 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
       if (from && f.sales_date < from) return false;
       if (to && f.sales_date > to) return false;
       if (customer && f.customer_id !== customer) return false;
-      if (term && ![f.recipient_name, f.account_number, f.recipient_city, f.notes].some((v) => v?.toLowerCase().includes(term))) return false;
+      if (warehouse && whName(f) !== warehouse) return false;
+      if (term && ![f.description, f.recipient_name, f.account_number, f.recipient_city, f.notes].some((v) => v?.toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [forms, from, to, customer, q]);
+  }, [forms, from, to, customer, warehouse, q]);
+  const warehouses = useMemo(() => [...new Set(forms.map(whName).filter(Boolean))].sort(), [forms]);
 
   const totals = filtered.filter((f) => f.status === 'final').reduce(
     (acc, f) => ({ bottles: acc.bottles + f.total_bottles, cents: acc.cents + f.receipt_total_cents }),
@@ -59,9 +66,9 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
   );
 
   function exportCsv() {
-    const header = ['Sales Date', 'Warehouse', 'Recipient', 'Account #', 'Customer ID#', 'Type', 'City', 'Bottles', 'Receipt Total', 'Status', 'Last Sent', 'Signed Copy', 'Notes'];
+    const header = ['Sales Date', 'Warehouse', 'Description', 'Recipient', 'Account #', 'Customer ID#', 'Type', 'City', 'Bottles', 'Receipt Total', 'Status', 'Last Sent', 'Signed Copy', 'Notes'];
     const rows = filtered.map((f) => [
-      f.sales_date, f.settings_snapshot?.warehouse_name ?? f.settings_snapshot?.warehouse_label, f.recipient_name, f.account_number,
+      f.sales_date, whName(f), f.description, f.recipient_name, f.account_number,
       f.customer_id_number, f.account_type, f.recipient_city, f.total_bottles, centsPlain(f.receipt_total_cents), f.status,
       f.last_sent_at ?? '', f.signed_copy_path ? 'Yes' : 'No', f.notes,
     ]);
@@ -125,9 +132,16 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        <div className="space-y-1">
+          <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Warehouse</label>
+          <select aria-label="Warehouse" value={warehouse} onChange={(e) => setWarehouse(e.target.value)} className="h-9 rounded-md border bg-white px-2 text-sm">
+            <option value="">All warehouses</option>
+            {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
+          </select>
+        </div>
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search recipient, account #, city" className="h-9 pl-8" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search description, recipient, account #, city" className="h-9 pl-8" />
         </div>
         <Button variant="outline" size="sm" onClick={exportCsv} disabled={filtered.length === 0} className="h-9">
           <Download className="h-4 w-4 mr-1.5" /> CSV
@@ -142,7 +156,9 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
           <thead>
             <tr className="border-b text-[11px] uppercase tracking-wider text-muted-foreground">
               <th className="text-left font-medium px-3 py-2.5">Date</th>
+              <th className="text-left font-medium px-3 py-2.5">Description</th>
               <th className="text-left font-medium px-3 py-2.5">Recipient</th>
+              <th className="text-left font-medium px-3 py-2.5">Warehouse</th>
               <th className="text-left font-medium px-3 py-2.5">Account #</th>
               <th className="text-right font-medium px-3 py-2.5">Bottles</th>
               <th className="text-right font-medium px-3 py-2.5">Total</th>
@@ -152,14 +168,16 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
           </thead>
           <tbody className="divide-y">
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-12 text-center text-muted-foreground">
+              <tr><td colSpan={9} className="px-3 py-12 text-center text-muted-foreground">
                 {forms.length === 0 ? 'No wholesale forms yet.' : 'No forms match these filters.'}
               </td></tr>
             )}
             {filtered.map((f) => (
               <tr key={f.id} onClick={() => router.push(`${WHOLESALE_FORMS_PATH}/${f.id}`)} className="cursor-pointer hover:bg-muted/40">
                 <td className="px-3 py-2.5 whitespace-nowrap tabular-nums">{formatSalesDate(f.sales_date)}</td>
+                <td className="px-3 py-2.5 max-w-[200px] truncate" title={f.description ?? undefined}>{f.description ?? <span className="text-muted-foreground">—</span>}</td>
                 <td className="px-3 py-2.5 font-medium">{f.recipient_name ?? <span className="text-muted-foreground">—</span>}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{whName(f) || '—'}</td>
                 <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">{f.account_number ?? '—'}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{f.total_bottles}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums font-medium whitespace-nowrap">{formatCents(f.receipt_total_cents)}</td>
@@ -194,7 +212,7 @@ export function HistoryClient({ forms, customers }: { forms: HistoryForm[]; cust
           {filtered.length > 0 && (
             <tfoot>
               <tr className="border-t text-xs text-muted-foreground">
-                <td colSpan={3} className="px-3 py-2.5">{filtered.length} form{filtered.length === 1 ? '' : 's'} · finalized totals</td>
+                <td colSpan={5} className="px-3 py-2.5">{filtered.length} form{filtered.length === 1 ? '' : 's'} · finalized totals</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{totals.bottles}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-foreground">{formatCents(totals.cents)}</td>
                 <td colSpan={2} />

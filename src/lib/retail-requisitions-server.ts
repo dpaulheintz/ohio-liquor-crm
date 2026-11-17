@@ -30,7 +30,7 @@ export async function requireRetailReqAccess(opts: { adminOnly?: boolean } = {})
 }
 
 const REQ_COLUMNS = `
-  id, location, purpose, req_date, status, notes, sent_at, sent_to, created_at, updated_at,
+  id, location, purpose, req_date, status, notes, description, sent_at, sent_to, created_at, updated_at,
   requester:profiles!retail_requisitions_requested_by_fkey(full_name, email),
   lines:retail_requisition_lines(id, product_id, sku, description, quantity, sort_order)
 `;

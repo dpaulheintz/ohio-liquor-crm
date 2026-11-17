@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { sendEmailStrict } from '@/lib/email';
 import { loadEmailRecipients } from '@/lib/wholesale-forms-server';
+import { DESCRIPTION_MAX, cleanDescription } from '@/lib/wholesale-forms';
 import { loadRequisition, renderRequisitionPdf, requireRetailReqAccess } from '@/lib/retail-requisitions-server';
 import {
   REQ_LOCATIONS,
@@ -32,6 +33,8 @@ export interface SaveRequisitionInput {
   purpose: string;
   reqDate: string;
   notes: string;
+  /** Optional, ≤ 60 chars; goes in the email subject and under the PDF header. */
+  description?: string;
   quantities: Record<string, number>;
   customLines: CustomReqLine[];
 }
@@ -68,6 +71,7 @@ export async function saveRequisition(input: SaveRequisitionInput): Promise<Acti
       if (existing?.purpose !== input.purpose) return { ok: false, error: 'Pick a purpose.' };
     }
     if (!DATE_RE.test(input.reqDate)) return { ok: false, error: 'Enter a valid date.' };
+    if ((input.description ?? '').trim().length > DESCRIPTION_MAX) return { ok: false, error: `Keep the description to ${DESCRIPTION_MAX} characters.` };
 
     let items = 0;
     const quantities: Record<string, number> = {};
@@ -99,6 +103,7 @@ export async function saveRequisition(input: SaveRequisitionInput): Promise<Acti
         purpose: input.purpose,
         req_date: input.reqDate,
         notes: String(input.notes ?? '').slice(0, 2000),
+        description: cleanDescription(input.description),
       },
       p_quantities: quantities,
       p_custom: custom,
@@ -148,27 +153,35 @@ export async function deleteRequisition(id: string): Promise<ActionResult> {
   }
 }
 
-export async function sendRequisition(id: string): Promise<ActionResult<{ sentAt: string; recipients: string[] }>> {
+/** Email the finalized requisition. testToMe (admins): send only to the signed-in admin, and don't mark it sent. */
+export async function sendRequisition(id: string, opts: { testToMe?: boolean } = {}): Promise<ActionResult<{ sentAt: string; recipients: string[]; test: boolean }>> {
   try {
     if (!UUID_RE.test(id)) return { ok: false, error: 'Invalid requisition.' };
-    const { supabase, access } = await requireRetailReqAccess();
+    const { supabase, access } = await requireRetailReqAccess(opts.testToMe ? { adminOnly: true } : {});
     const req = await loadRequisition(supabase, id);
     if (!req) return { ok: false, error: 'Requisition not found.' };
     if (req.status !== 'final') return { ok: false, error: 'Finalize the requisition before sending it.' };
 
-    const recipients = await loadEmailRecipients(supabase);
+    let recipients = await loadEmailRecipients(supabase);
+    if (opts.testToMe) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return { ok: false, error: 'Your account has no email address.' };
+      recipients = [user.email];
+    }
     const { bytes, filename } = await renderRequisitionPdf(supabase, req);
     const subject = requisitionEmailSubject(req);
     const summary = `${req.location} · ${req.purpose} · ${req.total_items} item${req.total_items === 1 ? '' : 's'} · requested by ${req.requested_by_name ?? '—'}`;
+    const desc = cleanDescription(req.description);
 
     await sendEmailStrict({
       to: recipients,
       subject,
-      text: `${summary}\n\nThe retail requisition PDF is attached.`,
-      html: `<p>${esc(summary)}</p><p>The retail requisition PDF is attached.</p>`,
+      text: `${desc ? `${desc}\n` : ''}${summary}\n\nThe retail requisition PDF is attached.`,
+      html: `${desc ? `<p><strong>${esc(desc)}</strong></p>` : ''}<p>${esc(summary)}</p><p>The retail requisition PDF is attached.</p>`,
       fromName: 'High Bank Retail Requisitions',
       attachments: [{ filename, content: Buffer.from(bytes), contentType: 'application/pdf' }],
     });
+    if (opts.testToMe) return { ok: true, data: { sentAt: new Date().toISOString(), recipients, test: true } };
 
     const { data: sent, error } = await supabase
       .from('retail_requisition_sends')
@@ -182,7 +195,7 @@ export async function sendRequisition(id: string): Promise<ActionResult<{ sentAt
       .eq('id', id);
     if (updateError) return { ok: false, error: `Email sent, but logging it failed: ${friendly(updateError)}` };
     revalidate();
-    return { ok: true, data: { sentAt: sent.sent_at, recipients } };
+    return { ok: true, data: { sentAt: sent.sent_at, recipients, test: false } };
   } catch (err) {
     return { ok: false, error: friendly(err) };
   }

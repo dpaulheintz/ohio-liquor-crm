@@ -14,7 +14,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from '@/lib/utils';
 import { deleteWholesaleForm, getLastOrderQuantities, saveWholesaleForm, sendWholesaleForm, type CustomerInput } from '@/app/actions/wholesale-forms';
 import {
+  DESCRIPTION_MAX,
+  DESCRIPTION_PLACEHOLDER,
   WHOLESALE_FORMS_PATH,
+  emailSubject,
   formatCents,
   parseDollarsToCents,
   parseQuantity,
@@ -136,9 +139,10 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
     Object.fromEntries((initial?.lines ?? []).filter((l) => l.product_id && l.quantity > 0).map((l) => [l.product_id!, String(l.quantity)])),
   );
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [busy, setBusy] = useState<null | 'draft' | 'final' | 'repeat' | 'send' | 'share' | 'delete'>(null);
+  const [busy, setBusy] = useState<null | 'draft' | 'final' | 'repeat' | 'send' | 'test' | 'share' | 'delete'>(null);
 
   const selected = customers.find((c) => c.id === customerId) ?? null;
   const showFields = !!customerId || isNewWholesaler || !!recipient.name;
@@ -257,6 +261,7 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
         })),
         warehouseId,
         notes,
+        description,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -294,14 +299,15 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
     a.remove();
   }
 
-  async function send() {
+  async function send(testToMe = false) {
     if (!formId) return;
-    setBusy('send');
+    setBusy(testToMe ? 'test' : 'send');
     try {
-      const res = await sendWholesaleForm(formId);
+      const res = await sendWholesaleForm(formId, { testToMe });
       if (!res.ok) return void toast.error(res.error);
-      setLastSentAt(res.data.sentAt);
       setConfirmSend(false);
+      if (res.data.test) return void toast.success(`Test sent only to ${res.data.recipients.join(', ')}`);
+      setLastSentAt(res.data.sentAt);
       toast.success(`Sent to ${res.data.recipients.join(', ')}`);
       router.refresh();
     } catch {
@@ -379,10 +385,16 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
           <ul className="space-y-1 text-sm font-medium">
             {recipients.map((r) => <li key={r} className="font-mono">{r}</li>)}
           </ul>
+          <p className="text-xs text-muted-foreground" data-email-subject>Subject: <span className="font-medium text-foreground">{emailSubject(recipient.name || null, salesDate, totalCents, initial?.description)}</span></p>
           {lastSentAt && <p className="text-xs text-muted-foreground">Already sent {formatSentAt(lastSentAt)} — this sends it again.</p>}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={busy === 'send'}>Cancel</Button>
-            <Button onClick={send} disabled={busy === 'send'}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmSend(false)} disabled={busy === 'send' || busy === 'test'}>Cancel</Button>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => send(true)} disabled={busy === 'send' || busy === 'test'} title="Sends the same email only to you; the form isn’t marked as sent">
+                {busy === 'test' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />} Send test to me
+              </Button>
+            )}
+            <Button onClick={() => send()} disabled={busy === 'send' || busy === 'test'}>
               {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />} Send
             </Button>
           </DialogFooter>
@@ -405,6 +417,14 @@ export function FormEditor({ rows, customers, warehouses, recipients, isAdmin, t
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Description: goes in the email subject only (the official form has no place for it) */}
+      <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-1.5">
+        <Label htmlFor="description">Description <span className="text-muted-foreground font-normal">(optional · goes in the email subject, not on the form)</span></Label>
+        <Input id="description" value={description} maxLength={DESCRIPTION_MAX} placeholder={DESCRIPTION_PLACEHOLDER} className={inputCls}
+          onChange={(e) => setDescription(e.target.value.replace(/[\r\n]+/g, ' '))} />
+        {description.length > DESCRIPTION_MAX - 15 && <p className="text-xs text-muted-foreground">{DESCRIPTION_MAX - description.length} characters left</p>}
+      </section>
 
       {/* From warehouse */}
       <section className="rounded-xl border bg-card p-4 sm:p-5 space-y-2">

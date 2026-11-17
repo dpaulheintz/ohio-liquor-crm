@@ -1,10 +1,10 @@
 // Shared (client + server) types and helpers for Retail Requisitions.
 
-import { formatFileDate } from '@/lib/wholesale-forms';
+import { cleanDescription, formatFileDate } from '@/lib/wholesale-forms';
 
 export const RETAIL_REQ_PATH = '/admin/retail-requisitions';
 
-export const REQ_LOCATIONS = ['Grandview', 'Gahanna', 'Westerville'] as const;
+export const REQ_LOCATIONS = ['Grandview', 'Gahanna', 'Westerville', 'PO Box 21'] as const;
 export const REQ_PURPOSES = ['Sales', 'Retail'] as const;
 export type ReqLocation = (typeof REQ_LOCATIONS)[number];
 export type ReqPurpose = (typeof REQ_PURPOSES)[number];
@@ -36,6 +36,8 @@ export interface RetailRequisition {
   status: ReqStatus;
   requested_by_name: string | null;
   notes: string | null;
+  /** Short label for the email subject and PDF ("NEO Barrel Pick"). */
+  description: string | null;
   sent_at: string | null;
   sent_to: string[] | null;
   created_at: string;
@@ -56,9 +58,11 @@ export function requisitionFileName(r: Pick<RetailRequisition, 'location' | 'pur
   return `HBD Retail Requisition ${r.location.toUpperCase()} ${r.purpose.toUpperCase()} ${formatFileDate(r.req_date)}.pdf`;
 }
 
-/** "Retail Requisition – Grandview – Sales – 10/28/26 – 6 items" */
-export function requisitionEmailSubject(r: Pick<RetailRequisition, 'location' | 'purpose' | 'req_date' | 'total_items'>): string {
-  return `Retail Requisition – ${r.location} – ${r.purpose} – ${shortDate(r.req_date)} – ${r.total_items} item${r.total_items === 1 ? '' : 's'}`;
+/** "Retail Requisition – Grandview – Sales – 10/28/26 – 6 items"; with a description:
+ *  "Retail Requisition – NEO Barrel Pick – Grandview – Sales – 10/28/26 – 6 items" */
+export function requisitionEmailSubject(r: Pick<RetailRequisition, 'location' | 'purpose' | 'req_date' | 'total_items'> & { description?: string | null }): string {
+  const desc = cleanDescription(r.description);
+  return `Retail Requisition – ${desc ? `${desc} – ` : ''}${r.location} – ${r.purpose} – ${shortDate(r.req_date)} – ${r.total_items} item${r.total_items === 1 ? '' : 's'}`;
 }
 
 export function formatSentDate(iso: string): string {
