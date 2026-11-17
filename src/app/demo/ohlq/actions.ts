@@ -1,21 +1,19 @@
 'use server';
 
-// OHLQ Ops concept demo — server actions. Every action (except entering the access code) checks the
-// demo access cookie; all writes use the service role. Prices are always re-read from the price book
+// OHLQ Ops concept demo — server actions. The demo is public (no login or access code); all writes
+// use the service role and only touch the ohlq_demo_* tables. Prices are always re-read from the price book
 // here, never trusted from the browser.
 import { randomBytes } from 'crypto';
-import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { accessTokenFor } from '@/lib/ohlq-demo/access-token';
 import {
-  addAudit, assertDemoAccess, db, escapeHtml, getAgencies, getProducts, getSale, getSinTaxConfig, getTasting, getTastings,
+  addAudit, db, escapeHtml, getAgencies, getProducts, getSale, getSinTaxConfig, getTasting, getTastings,
   nextRef, requestOrigin, sendDemoMessage, setSetting,
 } from '@/lib/ohlq-demo/server';
 import { resetDemo } from '@/lib/ohlq-demo/seed';
 import { renderA3aPdf, renderTastingPdf } from '@/lib/ohlq-demo/pdf';
 import {
-  ACCESS_COOKIE, ACCESS_COOKIE_DAYS, DEMO_BASE, OPS_ACTOR, PARTNER, SUPPLIER_ACTOR, TASTING_MAX_MINUTES,
+  DEMO_BASE, OPS_ACTOR, PARTNER, SUPPLIER_ACTOR, TASTING_MAX_MINUTES,
   describeDevice, earliestTastingDate, fmtCents, fmtDate, fmtShortDay, fmtTime, isSignature, minutesOf, todayET,
   type ApplicantType, type Signature,
 } from '@/lib/ohlq-demo/shared';
@@ -34,23 +32,7 @@ async function device(): Promise<string> {
   return describeDevice((await headers()).get('user-agent'));
 }
 
-// ─── Access ───────────────────────────────────────────────────────────────────
-
-export async function enterAccessCode(_prev: { error: string }, form: FormData): Promise<{ error: string }> {
-  const expected = process.env.OHLQ_DEMO_CODE;
-  const code = clean(form.get('code'), 100);
-  if (!expected) return { error: 'The demo access code isn’t set up on this server.' };
-  if (code !== expected.trim()) return { error: 'That code didn’t work. Check it and try again.' };
-  (await cookies()).set(ACCESS_COOKIE, await accessTokenFor(expected), {
-    httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax',
-    path: DEMO_BASE, maxAge: ACCESS_COOKIE_DAYS * 86400,
-  });
-  const next = clean(form.get('next'), 300);
-  redirect(next.startsWith(`${DEMO_BASE}/`) && !next.startsWith('//') ? next : `${DEMO_BASE}/wholesale`);
-}
-
 export async function resetDemoAction(): Promise<Result<{ summary: string }>> {
-  await assertDemoAccess();
   const r = await resetDemo();
   revalidateAll();
   return { ok: true, summary: `Restored ${r.sales} wholesale sales, ${r.tastings} tasting applications and ${r.customers} customers.` };
@@ -64,7 +46,6 @@ export interface CustomerInput {
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Result<{ id: string }>> {
-  await assertDemoAccess();
   const name = clean(input.name), permit = clean(input.permit_number, 40);
   if (!name) return fail('Customer name is required.');
   if (!permit) return fail('Permit number is required.');
@@ -82,7 +63,6 @@ export async function createCustomer(input: CustomerInput): Promise<Result<{ id:
 
 /** Lines from this customer's most recent sale (for "Repeat last order"). */
 export async function lastOrderFor(customerId: string): Promise<Result<{ ref: string; lines: { code: string; quantity: number }[] }>> {
-  await assertDemoAccess();
   const { data } = await db().from('ohlq_demo_wholesale_sales')
     .select('ref_no, lines:ohlq_demo_wholesale_lines(brand_code, quantity, sort_order)')
     .eq('customer_id', customerId).order('sales_date', { ascending: false }).order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -107,7 +87,6 @@ export interface SaleInput {
 }
 
 export async function saveSale(input: SaleInput): Promise<Result<{ id: string }>> {
-  await assertDemoAccess();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sales_date)) return fail('Sales date is required.');
   if (!clean(input.customer_name)) return fail('Choose or enter the wholesale customer.');
   if (!clean(input.permit_number)) return fail('Permit number is required.');
@@ -157,7 +136,6 @@ export async function saveSale(input: SaleInput): Promise<Result<{ id: string }>
 }
 
 export async function signA3a(id: string, input: { signature: Signature; name: string; title: string }): Promise<Result> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (['submitted', 'processed'].includes(sale.status)) return fail('This sale was already submitted.');
@@ -181,7 +159,6 @@ async function ensureToken(id: string, existing: string | null): Promise<string>
 }
 
 export async function sendForSignature(id: string, input: { method: 'email' | 'sms'; to: string }): Promise<Result<{ delivered: string; status: string }>> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (!['draft', 'returned', 'awaiting_customer'].includes(sale.status)) return fail('This sale can’t be sent for signature now.');
@@ -213,7 +190,6 @@ export async function sendForSignature(id: string, input: { method: 'email' | 's
 }
 
 export async function startInPersonSigning(id: string): Promise<Result<{ token: string }>> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (!['draft', 'returned', 'awaiting_customer'].includes(sale.status)) return fail('This sale can’t be signed now.');
@@ -227,7 +203,6 @@ export async function startInPersonSigning(id: string): Promise<Result<{ token: 
 
 /** Unlock a sale for editing (clears the customer's signature — they must sign the new version). */
 export async function reopenSale(id: string): Promise<Result> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (!['awaiting_customer', 'signed', 'returned'].includes(sale.status)) return fail('This sale can’t be edited now.');
@@ -241,7 +216,6 @@ export async function reopenSale(id: string): Promise<Result> {
 }
 
 export async function submitSale(id: string): Promise<Result> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   if (sale.status !== 'signed') return fail('Both signatures are needed before submitting.');
@@ -254,7 +228,6 @@ export async function submitSale(id: string): Promise<Result> {
 }
 
 export async function deleteDraft(id: string): Promise<Result> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale || sale.status !== 'draft') return fail('Only drafts can be deleted.');
   await db().from('ohlq_demo_wholesale_sales').delete().eq('id', id);
@@ -265,7 +238,6 @@ export async function deleteDraft(id: string): Promise<Result> {
 // ─── Direct wholesale sales (OHLQ Ops) ────────────────────────────────────────
 
 export async function processSale(id: string): Promise<Result> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale || sale.status !== 'submitted') return fail('Only submitted sales can be processed.');
   await db().from('ohlq_demo_wholesale_sales').update({ status: 'processed', processed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', id);
@@ -275,7 +247,6 @@ export async function processSale(id: string): Promise<Result> {
 }
 
 export async function returnSale(id: string, note: string): Promise<Result<{ delivered: string }>> {
-  await assertDemoAccess();
   const reason = clean(note, 1000);
   if (!reason) return fail('Add a note for the supplier.');
   const sale = await getSale(id);
@@ -337,7 +308,6 @@ function tastingErrors(i: TastingInput, today: string): string[] {
 }
 
 export async function submitTasting(input: TastingInput): Promise<Result<{ id: string; delivered: string }>> {
-  await assertDemoAccess();
   const errs = tastingErrors(input, todayET());
   if (errs.length) return fail(errs.join(' '));
   const agency = (await getAgencies()).find((a) => a.id === clean(input.agency_id, 10));
@@ -379,7 +349,6 @@ export async function submitTasting(input: TastingInput): Promise<Result<{ id: s
 }
 
 export async function decideTasting(id: string, decision: 'approved' | 'rejected', note: string): Promise<Result<{ delivered: string }>> {
-  await assertDemoAccess();
   const t = await getTasting(id);
   if (!t || t.status !== 'submitted') return fail('Only pending applications can be decided.');
   const reason = clean(note, 1000);
@@ -404,7 +373,6 @@ export async function decideTasting(id: string, decision: 'approved' | 'rejected
 
 /** Used by the PDF route for "email me the PDF" — kept here so the A-3a renderer is exercised server-side. */
 export async function emailSalePdf(id: string): Promise<Result<{ delivered: string }>> {
-  await assertDemoAccess();
   const sale = await getSale(id);
   if (!sale) return fail('Sale not found.');
   const pdf = Buffer.from(await renderA3aPdf(sale));
@@ -417,11 +385,9 @@ export async function emailSalePdf(id: string): Promise<Result<{ delivered: stri
 }
 
 export async function getSinConfigAction() {
-  await assertDemoAccess();
   return getSinTaxConfig();
 }
 
 export async function allTastingsForConflicts() {
-  await assertDemoAccess();
   return getTastings();
 }

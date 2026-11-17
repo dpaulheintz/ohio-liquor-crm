@@ -1,21 +1,14 @@
 // OHLQ Ops concept demo — server-side data access. Service role only (the ohlq_demo_* tables have
-// RLS on and no policies). Reads ohlq_products and agency rows of accounts read-only.
-import { cookies, headers } from 'next/headers';
+// RLS on and no policies, so the browser can't touch them directly). The demo itself is public. Reads ohlq_products and agency rows of accounts read-only.
+import { headers } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmailStrict } from '@/lib/email';
-import { hasDemoAccess } from './access-token';
 import {
-  ACCESS_COOKIE, DEFAULT_SIN_TAX, DEMO_EMAIL, tastingFlags, toCents, wholesaleFlags,
+  DEFAULT_SIN_TAX, DEMO_EMAIL, tastingFlags, toCents, wholesaleFlags,
   type Agency, type AuditEntry, type Customer, type Product, type Sale, type SinTaxConfig, type Tasting,
 } from './shared';
 
 export const db = () => createAdminClient();
-
-/** Every demo server action and route calls this first (the proxy also gates the pages). */
-export async function assertDemoAccess() {
-  const jar = await cookies();
-  if (!(await hasDemoAccess(jar.get(ACCESS_COOKIE)?.value))) throw new Error('Demo access code required');
-}
 
 export async function requestOrigin(): Promise<string> {
   const h = await headers();
@@ -178,11 +171,12 @@ export async function sendDemoMessage(opts: {
   </div>`;
   let status: DemoMessageResult['status'] = 'sent';
   let error: string | null = null;
+  let providerResponse: string | null = null;
   if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
     status = 'not_configured';
   } else {
     try {
-      await sendEmailStrict({
+      const info = await sendEmailStrict({
         to: [DEMO_EMAIL],
         subject: `[OHLQ demo] ${opts.subject}`,
         html: banner + opts.html,
@@ -190,6 +184,9 @@ export async function sendDemoMessage(opts: {
         fromName: 'OHLQ Concept Demo',
         attachments: opts.attachments,
       });
+      const accepted = (info.accepted ?? []).map(String);
+      providerResponse = `${info.response ?? ''} · accepted: ${accepted.join(', ') || 'none'} · message-id: ${info.messageId ?? ''}`.slice(0, 500);
+      if (!accepted.includes(DEMO_EMAIL)) status = 'failed';
     } catch (e) {
       status = 'failed';
       error = e instanceof Error ? e.message : String(e);
@@ -197,6 +194,7 @@ export async function sendDemoMessage(opts: {
   }
   await db().from('ohlq_demo_messages').insert({
     channel, requested_to: opts.requestedTo, delivered_to: DEMO_EMAIL, subject: opts.subject, status, error,
+    provider_response: providerResponse,
   });
   return { status, deliveredTo: DEMO_EMAIL };
 }

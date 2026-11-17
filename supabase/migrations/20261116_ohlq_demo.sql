@@ -133,3 +133,6 @@ alter table public.ohlq_demo_messages enable row level security;
 revoke all on public.ohlq_demo_customers, public.ohlq_demo_wholesale_sales, public.ohlq_demo_wholesale_lines,
   public.ohlq_demo_tastings, public.ohlq_demo_settings, public.ohlq_demo_audit, public.ohlq_demo_messages
   from anon, authenticated;
+
+-- 2026-11-17: keep the SMTP server's answer for each demo email (proof of delivery to Paul)
+alter table public.ohlq_demo_messages add column if not exists provider_response text;

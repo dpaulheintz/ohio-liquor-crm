@@ -507,7 +507,7 @@ function SendDialog({ saleId, defaultEmail, onClose, onDone }: { saleId: string;
         <input className="ohlq-input" type={method === 'email' ? 'email' : 'tel'} value={to} onChange={(e) => setTo(e.target.value)} placeholder={method === 'email' ? 'manager@restaurant.com' : '614-555-0100'} autoFocus />
       </Field>
       {method === 'sms' && <p className="ohlq-warn">Texting needs an SMS provider; email used in demo.</p>}
-      <p className="ohlq-help">The customer gets a secure link to review the order and sign on their phone — no account or access code needed. <DemoDelivered /></p>
+      <p className="ohlq-help">The customer gets a secure link to review the order and sign on their phone — no account needed. <DemoDelivered /></p>
       {err && <p className="ohlq-error">{err}</p>}
       <button type="button" className="ohlq-btn" style={{ marginTop: 12, width: '100%' }} disabled={busy || !to.trim()} onClick={async () => {
         setBusy(true);

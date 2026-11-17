@@ -2,8 +2,6 @@
 
 export const DEMO_BASE = '/demo/ohlq';
 export const DEMO_EMAIL = 'pheintzman@highbankco.com'; // every demo email/text is delivered here
-export const ACCESS_COOKIE = 'ohlq_demo_access';
-export const ACCESS_COOKIE_DAYS = 30;
 
 export const PARTNER = {
   name: 'High Bank Distillery',

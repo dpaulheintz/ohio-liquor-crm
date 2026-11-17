@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { assertDemoAccess, getTasting } from '@/lib/ohlq-demo/server';
+import { getTasting } from '@/lib/ohlq-demo/server';
 import { renderTastingPdf } from '@/lib/ohlq-demo/pdf';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try { await assertDemoAccess(); } catch { return NextResponse.json({ error: 'Demo access code required' }, { status: 401 }); }
   const t = await getTasting((await params).id);
   if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const pdf = await renderTastingPdf(t);

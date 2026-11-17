@@ -1,7 +1,7 @@
 'use server';
 
-// Customer e-signature for a direct wholesale sale. Public (no access code): the unguessable token in
-// the link is the credential, and it only allows signing that one sale while it awaits a signature.
+// Customer e-signature for a direct wholesale sale. The unguessable token in the link only allows
+// signing that one sale while it awaits a signature.
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { addAudit, db, escapeHtml, getSaleByToken, requestOrigin, sendDemoMessage } from '@/lib/ohlq-demo/server';

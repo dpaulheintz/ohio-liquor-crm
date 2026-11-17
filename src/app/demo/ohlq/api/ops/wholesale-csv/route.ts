@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addAudit, assertDemoAccess, getSales } from '@/lib/ohlq-demo/server';
+import { addAudit, getSales } from '@/lib/ohlq-demo/server';
 import { OPS_ACTOR, PARTNER, dateET } from '@/lib/ohlq-demo/shared';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,6 @@ const cell = (v: unknown) => {
 
 /** Processed direct sales, one row per line item — straight into OHLQ's system, no retyping. */
 export async function GET() {
-  try { await assertDemoAccess(); } catch { return NextResponse.json({ error: 'Demo access code required' }, { status: 401 }); }
   const sales = (await getSales()).filter((s) => s.status === 'processed').sort((a, b) => a.sales_date.localeCompare(b.sales_date));
   const head = ['Ref', 'Sales Date', 'Vendor #', 'A-3a Name', 'Customer Name', 'Customer DBA', 'Permit Number', 'F2 Permit', 'Customer Address', 'City', 'State', 'Postal',
     'Brand Code', 'Product Name', 'Size', 'Quantity (Bottles)', 'Price Per Bottle', 'Item Subtotal', 'SIN Tax (invoice)', 'Invoice Total', 'A-3a Signed', 'Customer Signed', 'Processed (ET date)'];
