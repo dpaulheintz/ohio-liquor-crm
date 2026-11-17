@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { BOTTLE_SALES_PATH, SALE_TYPES, fiscalMonths, fiscalYearOf, fmtInt, fmtUsd, monthLabel, type BottleLocation } from '@/lib/bottle-sales';
+import { BOTTLE_SALES_PATH, SALE_TYPES, fiscalMonths, fiscalYearOf, fmtInt, fmtUsd, locNumbers, locOption, monthLabel, type BottleLocation } from '@/lib/bottle-sales';
 
 export interface EntrySummary {
   entry_id: string;
@@ -38,6 +38,7 @@ export function EntriesClient({ entries, locations, fyStart }: { entries: EntryS
       (!loc || e.location_code === loc) && (!type || e.type === type) &&
       (!needle || e.search.includes(needle) || e.sale_date.includes(needle)));
   }, [entries, fy, month, loc, type, q, fyStart]);
+  const locBy = useMemo(() => new Map(locations.map((l) => [l.code, l])), [locations]);
   const tot = rows.reduce((a, e) => ({ b: a.b + e.bottles, p: a.p + e.paid_c }), { b: 0, p: 0 });
 
   return (
@@ -53,7 +54,7 @@ export function EntriesClient({ entries, locations, fyStart }: { entries: EntryS
         </select>
         <select aria-label="Location" value={loc} onChange={(e) => setLoc(e.target.value)} className={selectCls}>
           <option value="">All locations</option>
-          {locations.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          {locations.map((l) => <option key={l.code} value={l.code}>{locOption(l)}</option>)}
         </select>
         <select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className={selectCls}>
           <option value="">All types</option>
@@ -78,7 +79,10 @@ export function EntriesClient({ entries, locations, fyStart }: { entries: EntryS
             {rows.slice(0, 500).map((e) => (
               <tr key={e.entry_id} className="hover:bg-muted/40">
                 <td className="whitespace-nowrap px-3 py-2"><Link href={`${BOTTLE_SALES_PATH}/entries/${e.entry_id}`} className="font-medium hover:underline">{e.sale_date}</Link></td>
-                <td className="px-3 py-2">{e.location_code}</td>
+                <td className="px-3 py-2">
+                  <span className="font-medium">{e.location_code}</span>
+                  {locBy.get(e.location_code) && <span className="block whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">{locNumbers(locBy.get(e.location_code)!)}</span>}
+                </td>
                 <td className="px-3 py-2">{e.type}</td>
                 <td className="hidden max-w-xs truncate px-3 py-2 text-muted-foreground sm:table-cell">{e.skus.join(', ')}{e.notes ? ` · ${e.notes}` : ''}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmtInt(e.bottles)}</td>

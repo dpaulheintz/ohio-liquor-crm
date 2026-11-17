@@ -44,6 +44,15 @@ export async function deleteBottleSalesEntry(entryId: string): Promise<number> {
   return Number(data);
 }
 
+// ─── Locations: agency # + GL sales account (admins + accounting) ───────────
+
+export async function updateBottleLocation(code: string, agencyNumber: string, glAccount: string): Promise<void> {
+  const sb = await requireBottleSalesAccess();
+  const { error } = await sb.rpc('bottle_sales_update_location', { p_code: code, p_agency_number: agencyNumber.trim(), p_gl_account: glAccount.trim() });
+  if (error) throw new Error(error.message);
+  revalidatePath(BOTTLE_SALES_PATH, 'layout');
+}
+
 // ─── OHLQ product file upload: diff first, then apply ────────────────────────
 
 export interface ProductDiff {

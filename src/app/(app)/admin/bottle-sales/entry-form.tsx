@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { deleteBottleSalesEntry, saveBottleSalesEntry, type SaveEntryResult } from '@/app/actions/bottle-sales';
 import {
-  BOTTLE_SALES_PATH, SALE_TYPES, fmtInt, fmtUsd, isDelisted, toCents,
+  BOTTLE_SALES_PATH, SALE_TYPES, fmtInt, fmtUsd, isDelisted, locNumbers, toCents,
   type BottleLocation, type OhlqProduct,
 } from '@/lib/bottle-sales';
 
@@ -119,7 +119,7 @@ export function EntryForm(props: EntryFormData & { mode: 'new'; today: string } 
       <div className="mx-auto max-w-md rounded-xl border bg-card p-6 text-center space-y-4">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Check className="h-7 w-7" /></div>
         <p className="text-2xl font-semibold">Logged {fmtInt(done.bottles)} bottles · {fmtUsd(done.paid_c)}</p>
-        <p className="text-sm text-muted-foreground">{date} · {locations.find((l) => l.code === location)?.name} · {type} · wholesale {fmtUsd(done.wholesale_c)}</p>
+        <p className="text-sm text-muted-foreground">{date} · {locations.find((l) => l.code === location)?.name} ({locNumbers(locations.find((l) => l.code === location) ?? { agency_number: null, gl_account: null })}) · {type} · wholesale {fmtUsd(done.wholesale_c)}</p>
         <div className="flex flex-col gap-2">
           <Button size="lg" className="h-12 text-base" onClick={() => { setDone(null); setQty({}); setNotes(''); router.refresh(); }}>Log another</Button>
           <Button variant="outline" asChild><Link href={`${BOTTLE_SALES_PATH}/entries/${done.entryId}`}>View this entry</Link></Button>
@@ -154,6 +154,14 @@ export function EntryForm(props: EntryFormData & { mode: 'new'; today: string } 
             </button>
           ))}
         </div>
+        {(() => {
+          const sel = locations.find((l) => l.code === location);
+          return sel ? (
+            <p className="text-sm tabular-nums text-muted-foreground" data-location-numbers>
+              {sel.name} · Agency # <span className="font-semibold text-foreground">{sel.agency_number ?? '—'}</span> · GL # <span className="font-semibold text-foreground">{sel.gl_account ?? '—'}</span>
+            </p>
+          ) : null;
+        })()}
       </section>
 
       <section className="space-y-2">

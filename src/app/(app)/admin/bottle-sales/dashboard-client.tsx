@@ -6,23 +6,18 @@ import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  REPORT_GROUPS, SALE_TYPES, fiscalMonths, fiscalYearOf, fmtCases, fmtInt, fmtUsd, monthLabel, type BottleLocation,
+  REPORT_GROUPS, SALE_TYPES, fiscalMonths, fiscalYearOf, fmtCases, fmtInt, fmtUsd, locOption, monthLabel, type BottleLocation,
 } from '@/lib/bottle-sales';
-import { exportCsv, exportXlsx, type Cell, type Table } from './export';
+import {
+  add, buildMonthEnd, buildScreenTables, byGl, glNote, sum, zero, type Agg, type DashLine, type Prod,
+} from '@/lib/bottle-sales-reports';
+import { exportCsv, exportXlsx } from './export';
 
-/** d date, loc, t type, sku, b bottles, u units/case, p/w/r paid/wholesale/retail in cents */
-export interface DashLine { d: string; loc: string; t: string; sku: string; b: number; u: number; p: number; w: number; r: number }
-interface Prod { sku: string; name: string; group: string; sort: number }
-interface Agg { b: number; c: number; p: number; w: number; r: number }
-
-const zero = (): Agg => ({ b: 0, c: 0, p: 0, w: 0, r: 0 });
-const add = (a: Agg, l: DashLine) => { a.b += l.b; a.c += l.b / l.u; a.p += l.p; a.w += l.w; a.r += l.r; return a; };
-const sum = (ls: DashLine[]) => ls.reduce(add, zero());
+export type { DashLine };
 const TYPE_COLORS: Record<string, string> = { Retail: '#2a78d6', Bar: '#eb6834', Batch: '#1baf7a' };
 type Metric = 'b' | 'c' | 'p' | 'w';
 const METRICS: { key: Metric; label: string }[] = [{ key: 'b', label: 'Bottles' }, { key: 'c', label: 'Cases' }, { key: 'p', label: 'Paid $' }, { key: 'w', label: 'Wholesale $' }];
 const fmtMetric = (m: Metric, v: number) => (m === 'b' ? fmtInt(v) : m === 'c' ? fmtCases(v) : fmtUsd(v));
-const cellMetric = (m: Metric, v: number): Cell => (m === 'p' || m === 'w' ? { usd: v } : m === 'c' ? Math.round(v * 10) / 10 : v);
 const selectCls = 'h-10 rounded-md border bg-background px-2 text-sm';
 
 export function DashboardClient({ lines, products, locations, fyStart, today }: { lines: DashLine[]; products: Prod[]; locations: BottleLocation[]; fyStart: number; today: string }) {
@@ -48,7 +43,8 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
   const total = useMemo(() => sum(period), [period]);
 
   const byType = useMemo(() => SALE_TYPES.map((t) => ({ key: t, label: t, a: sum(period.filter((l) => l.t === t)) })), [period]);
-  const byLoc = useMemo(() => locations.map((l) => ({ key: l.code, label: l.name, a: sum(period.filter((x) => x.loc === l.code)) })), [period, locations]);
+  const byLoc = useMemo(() => locations.map((l) => ({ key: l.code, label: l.name, loc: l, a: sum(period.filter((x) => x.loc === l.code)) })), [period, locations]);
+  const glRows = useMemo(() => byGl(period, locations), [period, locations]);
   const chart = useMemo(() => months.map((m) => {
     const row: Record<string, string | number> = { month: monthLabel(m) };
     for (const t of SALE_TYPES) row[t] = fyLines.filter((l) => l.t === t && l.d.startsWith(m)).reduce((s, l) => s + l.b, 0);
@@ -83,43 +79,16 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
   // ─── exports ───
   const periodLabel = `FY${fy}${month ? ` ${monthLabel(month, true)}` : ''}${loc ? ` ${loc}` : ''}${type ? ` ${type}` : ''}`;
   const fileBase = `bottle-sales-${periodLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-  const aggCells = (a: Agg): Cell[] => [a.b, Math.round(a.c * 10) / 10, { usd: a.p }, { usd: a.w }, { usd: a.r }];
-  const AGG_HEAD = ['Bottles', 'Cases', 'Paid to us (DSP)', 'Wholesale value', 'Retail value (MSRP)'];
-  function screenTables(): Table[] {
-    return [
-      { title: `Bottle Sales · ${periodLabel}`, header: ['', ...AGG_HEAD], rows: [['Total', ...aggCells(total)]] },
-      { title: 'By Type', header: ['Type', ...AGG_HEAD], rows: [...byType.map((r) => [r.label, ...aggCells(r.a)]), ['Total', ...aggCells(total)]] },
-      { title: 'By Location', header: ['Location', ...AGG_HEAD], rows: [...byLoc.map((r) => [r.label, ...aggCells(r.a)]), ['Total', ...aggCells(total)]] },
-      {
-        title: `Monthly matrix (${METRICS.find((m) => m.key === metric)!.label}) · FY${fy}`,
-        header: ['SKU', 'Product', 'Group', ...months.map((m) => monthLabel(m, true)), 'Total'],
-        rows: [
-          ...matrix.flatMap((g) => g.skus.map((s): Cell[] => [s.sku, s.name, g.group, ...months.map((m) => cellMetric(metric, mval(s.cells[m]))), cellMetric(metric, rowTotal(s.cells))])),
-          ['Total', '', '', ...months.map((m) => cellMetric(metric, colTotal(m))), cellMetric(metric, months.reduce((s, m) => s + colTotal(m), 0))],
-        ],
-      },
-      { title: 'Top SKUs', header: ['SKU', 'Product', ...AGG_HEAD], rows: topSkus.map(([sku, a]) => [sku, prodMap.get(sku)?.name ?? sku, ...aggCells(a)]) },
-    ];
+  function screenTables() {
+    return buildScreenTables({
+      lines: period, products, locations, periodLabel, months, matrixLines: fyLines,
+      matrixMetric: METRICS.find((m) => m.key === metric)!,
+    });
   }
+  const SCREEN_SHEETS = ['Summary', 'By Type', 'By Location', 'By GL Account', 'Monthly Matrix', 'Top SKUs', 'Detail'];
   function monthEnd() {
     const m = month || [...months].reverse().find((x) => lines.some((l) => l.d.startsWith(x))) || months[0];
-    const ls = lines.filter((l) => l.d.startsWith(m)); // all locations and types
-    const tl: Cell[][] = [];
-    for (const t of SALE_TYPES) for (const lc of locations) {
-      const a = sum(ls.filter((l) => l.t === t && l.loc === lc.code));
-      if (a.b) tl.push([t, lc.name, ...aggCells(a)]);
-    }
-    tl.push(['Total', '', ...aggCells(sum(ls))]);
-    const bySku = new Map<string, Agg>();
-    for (const l of ls) bySku.set(l.sku, add(bySku.get(l.sku) ?? zero(), l));
-    const skuRows: Cell[][] = [...bySku.entries()].sort((a, b) => (prodMap.get(a[0])?.sort ?? 0) - (prodMap.get(b[0])?.sort ?? 0))
-      .map(([sku, a]) => [sku, prodMap.get(sku)?.name ?? sku, prodMap.get(sku)?.group ?? '', ...aggCells(a)]);
-    skuRows.push(['Total', '', '', ...aggCells(sum(ls))]);
-    const title = `Month-End Summary · ${monthLabel(m, true)} · all locations`;
-    exportXlsx([
-      { title, header: ['Type', 'Location', ...AGG_HEAD], rows: tl },
-      { title, header: ['SKU', 'Product', 'Group', ...AGG_HEAD], rows: skuRows },
-    ], `bottle-sales-month-end-${m}.xlsx`, ['By Type x Location', 'By SKU']);
+    exportXlsx(buildMonthEnd(m, lines, products, locations).sheets, `bottle-sales-month-end-${m}.xlsx`);
   }
 
   const card = (label: string, value: string, sub?: string) => (
@@ -129,6 +98,8 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
       {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
+  const th = 'px-3 py-1.5';
+  const td = 'px-3 py-1.5';
   const aggTable = (title: string, rows: { key: string; label: string; a: Agg }[]) => (
     <section className="rounded-lg border bg-card">
       <h2 className="border-b px-3 py-2 text-sm font-semibold">{title}</h2>
@@ -160,7 +131,7 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
         </select>
         <select aria-label="Location" value={loc} onChange={(e) => setLoc(e.target.value)} className={selectCls}>
           <option value="">All locations</option>
-          {locations.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          {locations.map((l) => <option key={l.code} value={l.code}>{locOption(l)}</option>)}
         </select>
         <select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className={selectCls}>
           <option value="">All types</option>
@@ -168,7 +139,7 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
         </select>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => exportCsv(screenTables(), `${fileBase}.csv`)}><FileText className="mr-1.5 h-4 w-4" />CSV</Button>
-          <Button variant="outline" size="sm" onClick={() => exportXlsx(screenTables(), `${fileBase}.xlsx`, ['Summary', 'By Type', 'By Location', 'Monthly Matrix', 'Top SKUs'])}><FileSpreadsheet className="mr-1.5 h-4 w-4" />XLSX</Button>
+          <Button variant="outline" size="sm" onClick={() => exportXlsx(screenTables().map((t, i) => ({ name: SCREEN_SHEETS[i] ?? t.title, tables: [t] })), `${fileBase}.xlsx`)}><FileSpreadsheet className="mr-1.5 h-4 w-4" />XLSX</Button>
           <Button size="sm" onClick={monthEnd}><Download className="mr-1.5 h-4 w-4" />Month-End Summary</Button>
         </div>
       </div>
@@ -182,8 +153,43 @@ export function DashboardClient({ lines, products, locations, fyStart, today }: 
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-lg border bg-card" data-by-location>
+          <h2 className="border-b px-3 py-2 text-sm font-semibold">By Location</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr><th className={th} /><th className={th}>Agency #</th><th className={th}>GL #</th><th className={`${th} text-right`}>Bottles</th><th className={`${th} text-right`}>Paid</th><th className={`${th} text-right`}>Wholesale</th><th className={`${th} text-right`}>MSRP</th></tr>
+              </thead>
+              <tbody className="divide-y tabular-nums">
+                {byLoc.map((r) => (
+                  <tr key={r.key}><td className={`${td} font-medium`}>{r.label}</td><td className={td}>{r.loc.agency_number ?? '—'}</td><td className={td}>{r.loc.gl_account ?? '—'}</td>
+                    <td className={`${td} text-right`}>{fmtInt(r.a.b)}</td><td className={`${td} text-right`}>{fmtUsd(r.a.p)}</td><td className={`${td} text-right`}>{fmtUsd(r.a.w)}</td><td className={`${td} text-right`}>{fmtUsd(r.a.r)}</td></tr>
+                ))}
+                <tr className="font-semibold"><td className={td}>Total</td><td className={td} /><td className={td} /><td className={`${td} text-right`}>{fmtInt(total.b)}</td><td className={`${td} text-right`}>{fmtUsd(total.p)}</td><td className={`${td} text-right`}>{fmtUsd(total.w)}</td><td className={`${td} text-right`}>{fmtUsd(total.r)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className="rounded-lg border bg-card" data-by-gl>
+          <h2 className="border-b px-3 py-2 text-sm font-semibold">By GL Account</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr><th className={th}>GL #</th><th className={`${th} text-right`}>Bottles</th><th className={`${th} text-right`}>Paid</th><th className={`${th} text-right`}>Wholesale</th><th className={`${th} text-right`}>MSRP</th></tr>
+              </thead>
+              <tbody className="divide-y tabular-nums">
+                {glRows.map((g) => (
+                  <tr key={g.gl}>
+                    <td className={td}><span className="font-medium">GL {g.gl}</span><span className="block text-[11px] text-muted-foreground">{glNote(g)}</span></td>
+                    <td className={`${td} text-right`}>{fmtInt(g.a.b)}</td><td className={`${td} text-right`}>{fmtUsd(g.a.p)}</td><td className={`${td} text-right`}>{fmtUsd(g.a.w)}</td><td className={`${td} text-right`}>{fmtUsd(g.a.r)}</td>
+                  </tr>
+                ))}
+                <tr className="font-semibold"><td className={td}>Total</td><td className={`${td} text-right`}>{fmtInt(total.b)}</td><td className={`${td} text-right`}>{fmtUsd(total.p)}</td><td className={`${td} text-right`}>{fmtUsd(total.w)}</td><td className={`${td} text-right`}>{fmtUsd(total.r)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
         {aggTable('By Type', byType)}
-        {aggTable('By Location', byLoc)}
       </div>
 
       <section className="rounded-lg border bg-card p-3">

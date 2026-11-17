@@ -11,7 +11,15 @@ export const SALE_TYPES = ['Retail', 'Bar', 'Batch'] as const;
 export type SaleType = (typeof SALE_TYPES)[number];
 export const REPORT_GROUPS = ['Whiskey', 'Vodka', 'Gin', 'Rum', 'RTD', '200 mL'] as const;
 
-export interface BottleLocation { code: string; name: string; sort_order: number }
+export interface BottleLocation { code: string; name: string; sort_order: number; agency_number: string | null; gl_account: string | null }
+
+/** "30174 · GL 4323" */
+export const locNumbers = (l: Pick<BottleLocation, 'agency_number' | 'gl_account'>) =>
+  [l.agency_number, l.gl_account && `GL ${l.gl_account}`].filter(Boolean).join(' · ');
+/** "Grandview (30174 · GL 4323)" — filter dropdowns */
+export const locOption = (l: BottleLocation) => (locNumbers(l) ? `${l.name} (${locNumbers(l)})` : l.name);
+/** "GRANDVIEW · 30174 · GL 4323" — header */
+export const locTag = (l: BottleLocation) => [l.name.toUpperCase(), locNumbers(l)].filter(Boolean).join(' · ');
 
 export interface OhlqProduct {
   sku: string;

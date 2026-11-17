@@ -37,9 +37,15 @@ export async function loadProducts(sb: Supabase): Promise<OhlqProduct[]> {
 }
 
 export async function loadLocations(sb: Supabase): Promise<BottleLocation[]> {
-  const { data, error } = await sb.from('bottle_locations').select('code, name, sort_order').eq('active', true).order('sort_order');
+  const { data, error } = await sb.from('bottle_locations').select('code, name, sort_order, agency_number, gl_account').eq('active', true).order('sort_order');
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+/** Agency # and GL account are editable by Bottle Sales admins + accounting (bottle_sales_can_edit_locations()). */
+export async function canEditLocations(sb: Supabase): Promise<boolean> {
+  const { data } = await sb.rpc('bottle_sales_can_edit_locations');
+  return data === true;
 }
 
 export async function loadFiscalStartMonth(sb: Supabase): Promise<number> {
