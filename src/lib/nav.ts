@@ -9,7 +9,7 @@ import {
   Home, Building2, Users, Shield, FileUp, BarChart3, ClipboardCheck, ClipboardList, UserCog,
   GlassWater, BarChart2, Layers, TrendingUp, UtensilsCrossed, AlertTriangle, Package, Sparkles,
   Wine, Eye, FileText, Wallet, LayoutDashboard, Gauge, Target, CheckSquare, Lightbulb, Newspaper,
-  Handshake, ClipboardPen, Trophy, Receipt, ShieldAlert,
+  Handshake, ClipboardPen, Trophy, Receipt, ShieldAlert, Landmark,
 } from 'lucide-react';
 import { isEosOnly, isEosUser } from '@/lib/eos-auth';
 import { canUseBottleSales } from '@/lib/bottle-sales';
@@ -53,6 +53,7 @@ export const NAV_MODULES: NavModule[] = [
   { href: '/admin/retail-requisitions', label: 'Retail Requisitions', short: 'Requisitions', icon: ClipboardPen, group: 'Operations', priority: 78 },
   { href: '/admin/bottle-sales', label: 'Bottle Sales', short: 'Bottles', icon: Receipt, group: 'Operations', priority: 76 },
   { href: '/payroll', label: 'Payroll', icon: Wallet, group: 'Operations', priority: 45 },
+  { href: '/accounting', label: 'Accounting', icon: Landmark, group: 'Operations', priority: 44 },
   { href: '/admin/sales-upload', label: 'Sales Upload', short: 'Upload', icon: BarChart2, group: 'Operations', priority: 10 },
   { href: '/admin/import', label: 'Import Agencies', short: 'Import', icon: FileUp, group: 'Operations', priority: 5 },
 
@@ -76,6 +77,7 @@ export interface NavUser {
   role: string | null;
   visible_pages: string[] | null;
   payroll_access: boolean;
+  accounting_access: boolean;
 }
 
 export function isRestricted(u: Pick<NavUser, 'visible_pages'>): boolean {
@@ -90,7 +92,7 @@ export function pathInVisiblePages(visiblePages: string[], path: string): boolea
 /**
  * Whether this user can open `path` — the same chain of checks the request goes through:
  * proxy (pending, visible_pages, /admin for admins) → EOS layout (email allowlist) → Payroll layout
- * (payroll_access) → (app) layout (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, bottle sales, secret shopper, arcade leaderboards, fraud training).
+ * (payroll_access) → (app) layout → Accounting layout (accounting_access) (EOS-only emails go to /eos) → page checks (wholesale, retail requisitions, bottle sales, secret shopper, arcade leaderboards, fraud training).
  */
 export function canOpenPath(u: NavUser, path: string): boolean {
   if (u.role === 'pending') return path === '/pending-approval';
@@ -106,6 +108,9 @@ export function canOpenPath(u: NavUser, path: string): boolean {
   if (path === '/payroll' || path.startsWith('/payroll/')) return u.payroll_access;
 
   if (isEosOnly(u.email)) return false;
+
+  // src/app/(app)/accounting/layout.tsx (has_accounting_access() = profiles.accounting_access)
+  if (path === '/accounting' || path.startsWith('/accounting/')) return u.accounting_access;
 
   if (path === '/admin/wholesale-forms' || path.startsWith('/admin/wholesale-forms/')) {
     const canUse = u.role === 'admin' || (u.visible_pages ?? []).includes('/admin/wholesale-forms');
@@ -185,7 +190,7 @@ export function pickTabModules(modules: NavModule[], counts: Record<string, numb
 }
 
 export function navUserFromProfile(
-  p: { email?: string | null; role?: string | null; visible_pages?: string[] | null; payroll_access?: boolean | null } | null,
+  p: { email?: string | null; role?: string | null; visible_pages?: string[] | null; payroll_access?: boolean | null; accounting_access?: boolean | null } | null,
   fallbackEmail: string | null = null,
 ): NavUser {
   return {
@@ -193,5 +198,6 @@ export function navUserFromProfile(
     role: p?.role ?? null,
     visible_pages: p?.visible_pages ?? null,
     payroll_access: p?.payroll_access === true,
+    accounting_access: p?.accounting_access === true,
   };
 }

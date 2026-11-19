@@ -6,13 +6,14 @@
 //     checks below) for every static page route — so the nav never shows a page that would bounce,
 //     and never hides one the user can open.
 //  2. Desktop sidebar list === mobile list (tab bar ⊆ More menu, More menu === sidebar).
-//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages, Retail Requisitions, Arcade Leaderboards, Bottle Sales and Fraud Training.
+//  3. Nothing the old desktop sidebar showed is gone; the only additions are EOS sub-pages, Retail Requisitions, Arcade Leaderboards, Bottle Sales, Fraud Training and Accounting.
 //  4. Spot checks for the reported bug and the user types in the brief.
 
 import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { isEosAdmin, isEosOnly, isEosUser } from '../src/lib/eos-auth';
 const BOTTLE_SALES = ['distillery@highbankco.com', 'pheintzman@highbankco.com', 'accounting@highbankco.com']; // bottle_sales_can_use()
+const ACCOUNTING = ['pheintzman@highbankco.com', 'accounting@highbankco.com']; // profiles.accounting_access, expected
 import {
   canOpenPath, contextNavModules, navModulesForUser, navUserFromProfile, pickTabModules, tabCandidates, NAV_MODULES, type NavUser,
 } from '../src/lib/nav';
@@ -32,6 +33,8 @@ const ROUTES = [
   '/eos', '/eos/scorecard', '/eos/barrels', '/eos/todos', '/eos/opportunities', '/eos/headlines', '/eos/meetings',
   '/payroll', '/payroll/employees', '/payroll/jobs', '/payroll/paycodes', '/payroll/locations',
   '/payroll/template', '/payroll/settings', '/payroll/examples', '/payroll/audit',
+  '/accounting', '/accounting/pnl', '/accounting/location', '/accounting/flags', '/accounting/checklist',
+  '/accounting/cross-checks', '/accounting/upload', '/accounting/settings', '/accounting/account/4100',
 ];
 
 // ─── The route gates, as written in the route code (independent of src/lib/nav.ts) ─────────────
@@ -51,6 +54,8 @@ function routeGateAllows(u: NavUser, path: string): boolean {
   if (path.startsWith('/payroll')) return u.payroll_access;
   // src/app/(app)/layout.tsx
   if (isEosOnly(u.email)) return false;
+  // src/app/(app)/accounting/layout.tsx (has_accounting_access() = profiles.accounting_access)
+  if (path.startsWith('/accounting')) return u.accounting_access;
   // src/app/(app)/admin/wholesale-forms/layout.tsx (wholesale_forms_can_use) + settings/price-list pages
   if (path.startsWith('/admin/wholesale-forms')) {
     const canUse = u.role === 'admin' || (vp ?? []).includes('/admin/wholesale-forms');
@@ -107,12 +112,12 @@ async function main() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing (.env.local)');
   const sb = createClient(url, key, { auth: { persistSession: false } });
-  const { data, error } = await sb.from('profiles').select('email, full_name, role, visible_pages, payroll_access').order('email');
+  const { data, error } = await sb.from('profiles').select('email, full_name, role, visible_pages, payroll_access, accounting_access').order('email');
   if (error) throw new Error(error.message);
 
   const users = [
     ...(data ?? []).map((p) => ({ label: p.full_name || p.email, u: navUserFromProfile(p) })),
-    { label: 'Demo user (synthetic: no demo-role profile exists)', u: { email: 'demo@example.test', role: 'demo', visible_pages: null, payroll_access: false } },
+    { label: 'Demo user (synthetic: no demo-role profile exists)', u: { email: 'demo@example.test', role: 'demo', visible_pages: null, payroll_access: false, accounting_access: false } },
   ];
 
   const failures: string[] = [];
@@ -135,10 +140,10 @@ async function main() {
     // 3. nothing lost vs the old sidebar
     const old = oldSidebar(u);
     for (const h of old) if (!desktop.includes(h)) fail(`${label}: lost ${h} from the sidebar`);
-    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h) && h !== '/admin/retail-requisitions' && h !== '/admin/arcade-leaderboards' && h !== '/admin/bottle-sales' && h !== '/admin/fraud-training') fail(`${label}: new non-EOS item ${h}`);
+    for (const h of desktop) if (!old.includes(h) && !EOS_PAGES.includes(h) && h !== '/admin/retail-requisitions' && h !== '/admin/arcade-leaderboards' && h !== '/admin/bottle-sales' && h !== '/admin/fraud-training' && h !== '/accounting') fail(`${label}: new non-EOS item ${h}`);
 
     const allowed = PAGE_ROUTES.filter((r) => routeGateAllows(u, r));
-    console.log(`\n■ ${label} <${u.email}>  role=${u.role}${u.visible_pages ? ' visible_pages=' + u.visible_pages.join(',') : ''}${u.payroll_access ? ' payroll' : ''}`);
+    console.log(`\n■ ${label} <${u.email}>  role=${u.role}${u.visible_pages ? ' visible_pages=' + u.visible_pages.join(',') : ''}${u.payroll_access ? ' payroll' : ''}${u.accounting_access ? ' accounting' : ''}`);
     console.log(`  desktop sidebar (${desktop.length}): ${desktop.join('  ') || '—'}`);
     console.log(`  mobile tabs: ${tabs.join('  ') || '—'}  + More (${more.length}): ${JSON.stringify(more) === JSON.stringify(desktop) ? 'same list as desktop ✓' : 'DIFFERENT'}`);
     console.log(`  routes open (${allowed.length}/${PAGE_ROUTES.length}): ${allowed.join('  ') || '—'}`);
@@ -171,6 +176,15 @@ async function main() {
     const want = u.role !== 'pending' && BOTTLE_SALES.includes((u.email ?? '').toLowerCase());
     if (has !== want) fail(`bottle sales: ${label} ${has ? 'should not' : 'should'} see it`);
   }
+  // Accounting: exactly Paul and accounting@ — not Jeff, Amy, Adam, reps, distillery or demo
+  for (const { label, u } of users) {
+    const has = navModulesForUser(u).some((m) => m.href === '/accounting');
+    const opens = routeGateAllows(u, '/accounting');
+    const want = ACCOUNTING.includes((u.email ?? '').toLowerCase());
+    if (has !== want || opens !== want) fail(`accounting: ${label} ${want ? 'should' : 'should not'} see/open it (nav=${has}, route=${opens})`);
+  }
+  for (const e of ['jireland@highbankco.com', 'ajones@highbankco.com', 'ahines@highbankco.com', 'distillery@highbankco.com', 'demo@example.test'])
+    if (routeGateAllows(by(e), '/accounting/pnl')) fail(`${e} must not open /accounting`);
   if (pickTabModules(navModulesForUser(by('distillery@highbankco.com')), {}).length !== 4) fail('distillery: expected 4 tabs');
   if (list('ajones@highbankco.com').some((h) => h.startsWith('/eos'))) fail('Amy should not see EOS (not on the allowlist)');
   if (!list('pheintzman@highbankco.com').includes('/eos') || !list('ahines@highbankco.com').includes('/eos')) fail('Paul/Adam should see EOS');

@@ -70,7 +70,7 @@ export function MobileNav({
   const modules = useMemo(
     () => navModulesForUser(user),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user.email, user.role, user.payroll_access, user.visible_pages?.join('|')],
+    [user.email, user.role, user.payroll_access, user.accounting_access, user.visible_pages?.join('|')],
   );
   const key = usageKey(user.email);
   const usage = useFrozenUsage(key);

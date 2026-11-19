@@ -31,7 +31,7 @@ export default async function EosLayout({ children }: { children: React.ReactNod
   const activeMeetingId = activeMeeting?.id ?? null;
   const { data: profile } = await supabase
     .from('profiles')
-    .select('email, full_name, role, visible_pages, payroll_access')
+    .select('email, full_name, role, visible_pages, payroll_access, accounting_access')
     .eq('id', user.id)
     .maybeSingle();
   const navUser = navUserFromProfile(profile, user.email ?? null);

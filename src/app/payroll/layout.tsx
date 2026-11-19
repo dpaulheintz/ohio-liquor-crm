@@ -21,7 +21,7 @@ export default async function PayrollLayout({ children }: { children: React.Reac
   const backHref = isEosOnly(access.email) ? '/eos' : '/';
   const { data: profile } = await supabase
     .from('profiles')
-    .select('email, full_name, role, visible_pages, payroll_access')
+    .select('email, full_name, role, visible_pages, payroll_access, accounting_access')
     .eq('id', access.userId)
     .maybeSingle();
 
